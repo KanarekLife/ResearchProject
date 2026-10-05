@@ -48,6 +48,7 @@ Read `mcbench/docs/` first:
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`), with an optional scope such as `feat(engine): ...`.
 - Never commit or push to `main` directly. Work on a branch and open a pull request with `gh pr create`. Don't merge it yourself unless the user asks.
 - Never commit `results/`, `bin/` or logs.
+- Never add `Co-Authored-By` trailers (or any AI attribution) to commits.
 
 ## Notes on upstream
 
