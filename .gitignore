@@ -1,3 +1,4 @@
 results/
 bin/
 *.log
+.claude/settings.local.json
