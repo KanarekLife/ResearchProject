@@ -47,7 +47,8 @@ Marvel Champions terms, as used in this project's code, data and reports.
 - **Session**: one game in progress, played through the contract (see [architecture](architecture.md)).
 - **Contract / tools**: the deterministic tools a player uses: `get_state`, `get_decision`, `choose_option`, `get_log`, `get_card`.
 - **Player / agent**: anything that plays a session: a language model, a scripted baseline or a human.
-- **Agentic loop**: a game played as one model conversation, one turn per decision (the last `-history` turns are kept). `-history 0` makes every decision independent.
+- **Agentic loop**: a game played as one append-only model conversation, one turn per decision, sent in full on every request.
+- **Live trace**: the per-game JSONL file written as the game happens (`live/` in the run directory).
 - **Instruction set**: the documents given to the model (`instructions/*.md`); the main variable under study.
 - **Criteria / score**: the per-game measurements and their weighted mean (see [architecture](architecture.md#scoring)).
 - **Round limit**: games still running after `max_rounds` stop and are scored as not won.

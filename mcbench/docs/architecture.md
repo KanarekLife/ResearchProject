@@ -70,7 +70,7 @@ The model can answer in two ways (`-protocol`):
 
 Both protocols reach the game only through the tools.
 
-- **Context:** only the last `-history` decision turns are sent (default 8). Each turn begins with the current decision, and in json mode the full state too, so trimming loses earlier reasoning but never game state. `-history 0` makes every decision independent.
+- **Context:** the conversation is append-only and sent in full on every request: system prompt, every turn, every reply including its reasoning (`reasoning_content`), and every tool result. Nothing is trimmed or rewritten, so each request's prompt starts with the previous request's prompt and the server's prompt cache can reuse it. Very long games can therefore reach the model's context limit, which ends the game as `agent_error`. The chat template decides what the model actually sees: LM Studio's Gemma template drops earlier reasoning when rendering, so for Gemma it is stored but not read.
 - **Retries:** a decision may take up to `-max-steps` model requests. Malformed answers and invalid options get an error reply, and the model tries again. If it still fails, the game ends as `agent_error` with score 0.
 
 ## Scoring
@@ -89,11 +89,13 @@ The score is the weighted mean. Reports show every criterion and the score (mean
 
 ## Records
 
-`mcbench run` writes `results/<time>-<agent>/games.jsonl`, one JSON record per game. A record holds:
-- the scenario, seed, agent and instruction set (names and content hash)
-- the status and the final stats, criteria and score
-- token usage
-- every choice (round, kind, option key, the model's reasoning)
-- the full game log
+`mcbench run` writes to `results/<time>-<agent>/`:
 
-`mcbench report` summarizes one or more files.
+- **`live/<scenario>_seed<N>_s<K>.jsonl`**: written as the game happens, one JSON line per event, so a running or crashed game can be inspected (`tail -f`).
+  - `start`: scenario, seed, agent, instruction set.
+  - `message`: one conversation message (system, user, assistant with `reasoning_content`, tool result). Assistant messages also carry `prompt_tokens`, `completion_tokens` and `truncated`.
+  - `choice`: the decision made (round, kind, option key and text, reasoning), the events that followed, and the new status.
+  - `end`: status, error, rounds, criteria, score, token usage.
+- **`games.jsonl`**: one record per finished game. It holds the scenario, seed, agent and instruction set (names and content hash), the status, final stats, criteria and score, token usage, every choice, and the full game log.
+
+`mcbench report` summarizes `games.jsonl` files.

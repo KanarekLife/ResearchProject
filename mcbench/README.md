@@ -22,9 +22,10 @@ go run ./cmd/mcbench run -agent heuristic
 go run ./cmd/mcbench report results/*/games.jsonl
 ```
 
+Each run writes a live trace per game to `results/<run>/live/` (`tail -f` to watch a game) and one record per finished game to `games.jsonl`.
+
 Useful `run` flags:
 - `-protocol tools`: the model calls the game tools itself (default `json`)
-- `-history N`: decisions kept in the conversation; `0` makes every decision independent
 - `-seeds N`: play only the first N seeds
 - `-samples K`: games per seed, with `-temperature > 0`
 - `-parallel N`: games run concurrently
