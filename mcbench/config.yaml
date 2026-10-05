@@ -1,0 +1,30 @@
+data:
+  scenarios: data/scenarios
+  root: data
+
+inference:
+  server: http://localhost:1234/v1
+  api_key_env: OPENAI_API_KEY
+  model: ""
+  temperature: 0
+  max_tokens: 32768
+  retries: 3
+
+player:
+  name: model
+  max_steps: 5
+  instructions_dir: data/instructions
+  instructions: [rules]
+
+run:
+  seeds: 10
+  samples: 1
+  parallel: 1
+  out: results
+
+scoring:
+  win: 0.40
+  villain_damage: 0.25
+  hero_hp: 0.10
+  threat: 0.10
+  speed: 0.15

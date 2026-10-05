@@ -1,0 +1,154 @@
+# Standard encounter set, Bomb Scare modular set, and Spider-Man's
+# obligation and nemesis set (Vulture).
+cards:
+  # --- Standard ---------------------------------------------------------------
+  - code: "01186"
+    name: Advance
+    type: treachery
+    text: "The villain schemes."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: scheme}
+
+  - code: "01187"
+    name: Assault
+    type: treachery
+    text: "Alter-ego: surge. Hero: the villain attacks you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [alter_ego], verb: surge}
+          - {when: [hero], verb: villain_attack}
+
+  - code: "01188"
+    name: Caught Off Guard
+    type: treachery
+    boost: 1
+    text: "Discard an upgrade or support you control. If you cannot, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: discard_chosen
+            target: upgrade_support
+            prompt: "Caught Off Guard: choose an upgrade or support you control to discard."
+            if_empty:
+              - {verb: surge}
+
+  - code: "01189"
+    name: Gang-Up
+    type: treachery
+    boost: 1
+    text: "Alter-ego: surge. Hero: the villain and each engaged minion attack you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [alter_ego], verb: surge}
+          - {when: [hero], verb: villain_and_minions_attack}
+
+  - code: "01190"
+    name: Shadow of the Past
+    type: treachery
+    boost: 2
+    text: "Your nemesis minion enters play engaged with you and your nemesis side scheme enters play; the rest of your nemesis set is shuffled into the encounter deck. If no nemesis minion entered play, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: nemesis}
+
+  # --- Bomb Scare (modular) ---------------------------------------------------
+  - code: "01111"
+    name: Explosion
+    type: treachery
+    boost: 2
+    text: "If Bomb Scare is in play, deal X damage divided as you choose among your hero and allies (X = threat on Bomb Scare). Otherwise surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [bomb_scare], verb: assign_damage}
+          - {when: [not_bomb_scare], verb: surge}
+
+  - code: "01112"
+    name: False Alarm
+    type: treachery
+    boost: 1
+    text: "You are confused. If you already are, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: confuse
+            target: hero
+            if_already:
+              - {verb: surge}
+
+  # --- Spider-Man obligation and nemesis set ----------------------------------
+  - code: "01165"
+    name: Eviction Notice
+    type: obligation
+    boost: 2
+    text: "Choose: exhaust Peter Parker (flipping to alter-ego if needed) to remove this card from the game, or discard a random card from your hand and surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Eviction Notice (obligation): choose how to resolve it."
+            options:
+              - text: "Exhaust Peter Parker: remove Eviction Notice from the game"
+                key: "effect:Eviction Notice>exhaust"
+                when: [hero_ready]
+                effects:
+                  - {verb: flip_alter_ego}
+                  - {verb: exhaust, target: hero}
+                  - {verb: remove_from_game, target: self}
+              - text: "Discard a random card from your hand; Eviction Notice surges"
+                key: "effect:Eviction Notice>discard"
+                effects:
+                  - {verb: discard_random}
+                  - {verb: to_encounter_discard}
+                  - {verb: surge}
+
+  - code: "01166"
+    name: Highway Robbery
+    type: side_scheme
+    boost: 3
+    starting_threat: 3
+    acceleration: 1
+    text: "Acceleration. When revealed, a random card from your hand is placed here face-down; it returns to your hand when this scheme is defeated."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: take_random_card}
+      - trigger: defeated
+        effects:
+          - {verb: return_attached}
+
+  - code: "01167"
+    name: Vulture
+    type: minion
+    unique: true
+    hp: 4
+    atk: 3
+    sch: 1
+    boost: 2
+    quickstrike: true
+    text: "Quickstrike (attacks you as soon as he engages you in hero form)."
+
+  - code: "01168"
+    name: Sweeping Swoop
+    type: treachery
+    text: "Your identity is stunned. If Vulture is in play, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: stun, target: hero}
+          - {verb: surge, when: [vulture]}
+
+  - code: "01169"
+    name: The Vulture's Plans
+    type: treachery
+    boost: 2
+    text: "Discard a random card from your hand; place 1 threat on the main scheme for each different resource type on it."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: discard_random_place_threat}

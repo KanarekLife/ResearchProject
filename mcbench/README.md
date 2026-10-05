@@ -1,49 +1,71 @@
 # mcbench
 
-A benchmark that measures how well a language model plays full solo games of **Marvel Champions: The Card Game**, given only the instruction documents we provide. The rules engine is a minimal Go reimplementation (Rules Reference v1.8, solo only), based on [z00lus/marvel-lcg](https://github.com/z00lus/marvel-lcg).
+A benchmark that measures how well a language model plays full solo games of
+**Marvel Champions: The Card Game**, given only the instruction documents we
+provide. The rules engine is a small Go reimplementation of the solo game
+(Rules Reference v1.8), modelled on
+[z00lus/marvel-lcg](https://github.com/z00lus/marvel-lcg), not a general
+card-game platform.
 
-Each game starts from regular setup with a fixed seed and is played to the end by an agent that talks to the game through a small set of deterministic tools. Games are scored from the final state on win, villain damage dealt, hero HP left, final threat and speed.
+Each game starts from regular setup with a fixed seed and is played to the end
+by a player that talks to the game through a small set of deterministic tools.
+A game is then scored from its final state on win, villain damage dealt, hero HP
+left, final threat and speed.
 
 ## Quick start
 
 ```bash
-go test ./...                       # determinism, every seed playable, rule checks
-go run ./cmd/mcbench list           # scenarios
-go run ./cmd/mcbench tools          # the agent <-> game contract
-go run ./cmd/mcbench validate       # play every seed with the baselines
+GOTOOLCHAIN=auto go test ./...      # determinism, every seed playable, scoring, rules, contract
+go run ./cmd list                   # scenarios
+go run ./cmd tools                  # the player <-> game contract
+go run ./cmd validate               # play every seed with the scripted players
 
-# A model through any OpenAI-compatible API (LM Studio on :1234 by default)
-go run ./cmd/mcbench run -model google/gemma-4-26b-a4b-qat -instructions rules,strategy
+# A model through any OpenAI-compatible API (LM Studio on :1234 by default).
+# The model plays by calling the game tools; see config.yaml for defaults.
+go run ./cmd run -model google/gemma-4-26b-a4b-qat -instructions rules,strategy
 
-# Baselines - report them next to model results
-go run ./cmd/mcbench run -agent random
-go run ./cmd/mcbench run -agent heuristic
+# Scripted players - report them next to model results
+go run ./cmd run -player random
+go run ./cmd run -player heuristic
 
-go run ./cmd/mcbench report results/*/games.jsonl
+go run ./cmd report results/*/games.jsonl
 ```
 
-Each run writes a live trace per game to `results/<run>/live/` (`tail -f` to watch a game) and one record per finished game to `games.jsonl`.
+Each run writes, per game, a human-readable board to
+`results/<run>/live/<game>.txt` (tail it to watch) and a JSON trace to
+`<game>.jsonl`, plus one record per finished game in `games.jsonl`. Progress is
+logged as structured `slog` to stderr.
 
-Useful `run` flags:
-- `-protocol tools`: the model calls the game tools itself (default `json`)
-- `-seeds N`: play only the first N seeds
-- `-samples K`: games per seed, with `-temperature > 0`
-- `-parallel N`: games run concurrently
-- `OPENAI_BASE_URL` / `OPENAI_API_KEY`: use another endpoint
+Configuration lives in `config.yaml` (grouped into `data`, `inference`,
+`player`, `run`, `scoring`); flags override it. Key flags:
+
+- `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
+  `-temperature`, `-max-tokens`, `-max-steps`
+- `-instructions rules,strategy` and `-instructions-dir data/instructions`
+- `-seeds N`, `-samples K`, `-parallel N`, `-out results`
+- `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
+- `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key
 
 ## Docs
 
-- [How it works](docs/architecture.md): engine, game tools contract, agentic loop, scoring, records
-- [Creating scenarios](docs/scenarios.md): decks, villains, encounter sets, adding cards
-- [Glossary](docs/glossary.md): Marvel Champions and benchmark terms
+- [How it works](../docs/architecture.md): packages, engine, the tool contract,
+  the agentic loop, scoring, records
+- [Creating scenarios](../docs/scenarios.md): YAML content, the card schema and
+  effect vocabulary
+- [Glossary](../docs/glossary.md): Marvel Champions and benchmark terms
 
 ## Current content
 
-Spider-Man with his Justice starter deck (with Eviction Notice and the Vulture nemesis set) against Rhino (stages I–II) plus the Standard and Bomb Scare encounter sets, over 10 seeds.
+Spider-Man with his Justice starter deck (with Eviction Notice and the Vulture
+nemesis set) against Rhino (stages I–II) plus the Standard and Bomb Scare
+encounter sets, over 10 seeds. Decks and scenarios are data under `data/`;
+adding more needs no Go changes.
 
 Known simplifications:
+
 - Spider-Sense draws automatically.
-- Always-beneficial optional responses (Interrogation Room, Daredevil) trigger automatically.
+- Always-beneficial optional responses (Interrogation Room, Daredevil) trigger
+  automatically.
 - Great Responsibility applies only in the villain phase.
 - Star boost abilities are ignored.
 - Main schemes have a single stage.
