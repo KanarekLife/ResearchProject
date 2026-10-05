@@ -24,20 +24,20 @@ const (
 
 // LLM plays through an OpenAI-compatible chat API (local or hosted).
 //
-// A game is one conversation (the agentic loop). Each decision is a turn
-// that starts with a user message giving the events since the last decision
-// and the current decision. Only the last History turns are sent, so long
-// games fit in context; History 0 makes every decision independent.
+// A game is one append-only conversation (the agentic loop): each decision
+// adds a user message with the events since the last decision and the
+// current decision, then the model's replies (with their reasoning) and any
+// tool results. Nothing is ever removed or rewritten, so each request's
+// prompt is a prefix of the next and the server's prompt cache stays valid.
 type LLM struct {
 	Chat         Chat
 	Protocol     string
-	History      int
 	MaxSteps     int // model requests allowed per decision
 	Instructions Instructions
 }
 
 func (l *LLM) Name() string {
-	return fmt.Sprintf("llm:%s:%s:h%d:t%g", l.Chat.Model, l.Protocol, l.History, l.Chat.Temperature)
+	return fmt.Sprintf("llm:%s:%s:t%g", l.Chat.Model, l.Protocol, l.Chat.Temperature)
 }
 
 const harnessPrompt = `You are playing a solo game of Marvel Champions: The Card Game as the hero player, from setup until the game ends.
@@ -61,23 +61,26 @@ func (l *LLM) system() string {
 
 func (l *LLM) Play(ctx context.Context, s *game.Session) (Usage, error) {
 	var u Usage
-	var turns [][]Message
+	msgs := add(s, nil, Message{Role: "system", Content: l.system()}, nil)
 	events := []string{"The game is set up."}
 	for s.Status() == game.AwaitingDecision {
-		turn := []Message{{Role: "user", Content: l.turnPrompt(s, events)}}
-		// The window always starts with a turn's user message.
-		msgs := []Message{{Role: "system", Content: l.system()}}
-		for _, t := range turns[max(0, len(turns)-l.History):] {
-			msgs = append(msgs, t...)
-		}
-		turn, next, err := l.decide(ctx, s, msgs, turn, &u)
-		turns = append(turns, turn)
-		if err != nil {
+		msgs = add(s, msgs, Message{Role: "user", Content: l.turnPrompt(s, events)}, nil)
+		var err error
+		if msgs, events, err = l.decide(ctx, s, msgs, &u); err != nil {
 			return u, err
 		}
-		events = next
 	}
 	return u, nil
+}
+
+// add appends a message to the conversation and writes it to the trace.
+func add(s *game.Session, msgs []Message, m Message, r *Reply) []Message {
+	entry := map[string]any{"type": "message", "decision": len(s.Choices) + 1, "message": m}
+	if r != nil {
+		entry["prompt_tokens"], entry["completion_tokens"], entry["truncated"] = r.InputTokens, r.OutputTokens, r.Truncated
+	}
+	s.Trace(entry)
+	return append(msgs, m)
 }
 
 func (l *LLM) turnPrompt(s *game.Session, events []string) string {
@@ -94,42 +97,42 @@ func (l *LLM) turnPrompt(s *game.Session, events []string) string {
 }
 
 // decide runs one decision: model requests until choose_option succeeds.
-// It returns the turn's messages and the events that followed the choice.
-func (l *LLM) decide(ctx context.Context, s *game.Session, history, turn []Message, u *Usage) ([]Message, []string, error) {
+// It returns the extended conversation and the events after the choice.
+func (l *LLM) decide(ctx context.Context, s *game.Session, msgs []Message, u *Usage) ([]Message, []string, error) {
 	tools := []game.Tool(nil)
 	if l.Protocol == ProtocolTools {
 		tools = game.Tools
 	}
 	truncated := 0
 	for step := 0; step < l.MaxSteps; step++ {
-		reply, err := l.Chat.Complete(ctx, append(history, turn...), tools)
+		reply, err := l.Chat.Complete(ctx, msgs, tools)
 		if err != nil {
-			return turn, nil, err
+			return msgs, nil, err
 		}
 		u.Requests++
 		u.InputTokens += reply.InputTokens
 		u.OutputTokens += reply.OutputTokens
-		turn = append(turn, reply.Message)
 		if reply.Truncated {
 			truncated++
 		}
+		msgs = add(s, msgs, reply.Message, &reply)
 
 		if l.Protocol == ProtocolJSON {
 			args, ok := parseAnswer(reply.Message.Content)
 			if !ok {
-				turn = append(turn, Message{Role: "user", Content: "Not a valid answer. " + jsonPrompt})
+				msgs = add(s, msgs, Message{Role: "user", Content: "Not a valid answer. " + jsonPrompt}, nil)
 				continue
 			}
 			result := s.Call("choose_option", args)
 			if events, ok := chosen(result); ok {
-				return turn, events, nil
+				return msgs, events, nil
 			}
-			turn = append(turn, Message{Role: "user", Content: "choose_option failed: " + result})
+			msgs = add(s, msgs, Message{Role: "user", Content: "choose_option failed: " + result}, nil)
 			continue
 		}
 
 		if len(reply.Message.ToolCalls) == 0 {
-			turn = append(turn, Message{Role: "user", Content: "Make the decision by calling choose_option."})
+			msgs = add(s, msgs, Message{Role: "user", Content: "Make the decision by calling choose_option."}, nil)
 			continue
 		}
 		var events []string
@@ -142,13 +145,13 @@ func (l *LLM) decide(ctx context.Context, s *game.Session, history, turn []Messa
 					events, done = chosen(result)
 				}
 			}
-			turn = append(turn, Message{Role: "tool", ToolCallID: tc.ID, Content: result})
+			msgs = add(s, msgs, Message{Role: "tool", ToolCallID: tc.ID, Content: result}, nil)
 		}
 		if done {
-			return turn, events, nil
+			return msgs, events, nil
 		}
 	}
-	return turn, nil, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", l.MaxSteps, truncated)
+	return msgs, nil, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", l.MaxSteps, truncated)
 }
 
 // chosen reports whether a choose_option result succeeded, with its events.

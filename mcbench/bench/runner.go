@@ -4,6 +4,9 @@ package bench
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -34,17 +37,27 @@ type Record struct {
 	Log          []string           `json:"log"`
 }
 
-// PlayGame plays one game of a scenario on a seed and scores it.
-func PlayGame(ctx context.Context, sc *scenario.Scenario, ag agent.Agent, instr agent.Instructions, seed uint64, sample int) Record {
+// PlayGame plays one game of a scenario on a seed and scores it. With a
+// traceDir, the game is written live to <traceDir>/<scenario>_seed<N>_s<K>.jsonl.
+func PlayGame(ctx context.Context, sc *scenario.Scenario, ag agent.Agent, instr agent.Instructions, seed uint64, sample int, traceDir string) Record {
 	start := time.Now()
 	rec := Record{Scenario: sc.ID, Agent: ag.Name(), Instructions: instr, Seed: seed, Sample: sample}
-	s, err := game.New(sc, seed, game.Options{
-		MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, ShuffleOptions: true, Sample: uint64(sample),
-	})
+	opts := game.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, ShuffleOptions: true, Sample: uint64(sample)}
+	if traceDir != "" {
+		f, err := os.Create(filepath.Join(traceDir, fmt.Sprintf("%s_seed%d_s%d.jsonl", sc.ID, seed, sample)))
+		if err != nil {
+			rec.Status, rec.Error = "agent_error", err.Error()
+			return rec
+		}
+		defer f.Close()
+		opts.Trace = f
+	}
+	s, err := game.New(sc, seed, opts)
 	if err != nil {
 		rec.Status, rec.Error = game.EngineError, err.Error()
 		return rec
 	}
+	s.Trace(map[string]any{"type": "start", "scenario": sc.ID, "seed": seed, "sample": sample, "agent": ag.Name(), "instructions": instr})
 	usage, err := ag.Play(ctx, s)
 	rec.Status, rec.Usage = s.Status(), usage
 	if rec.Status == game.EngineError {
@@ -64,6 +77,7 @@ func PlayGame(ctx context.Context, sc *scenario.Scenario, ag agent.Agent, instr 
 		rec.Score = 0 // a broken game never earns credit
 	}
 	rec.Millis = time.Since(start).Milliseconds()
+	s.Trace(map[string]any{"type": "end", "status": rec.Status, "error": rec.Error, "rounds": rec.Rounds, "criteria": rec.Criteria, "score": rec.Score, "usage": rec.Usage})
 	return rec
 }
 
@@ -72,6 +86,7 @@ type Config struct {
 	Seeds    int // first N seeds of each scenario (0 = all)
 	Samples  int // games per seed
 	Parallel int
+	TraceDir string // live per-game traces ("" = none)
 }
 
 type job struct {
@@ -111,7 +126,7 @@ func Run(ctx context.Context, scs []*scenario.Scenario, ag agent.Agent, instr ag
 		go func() {
 			defer wg.Done()
 			for j := range next {
-				rec := PlayGame(ctx, j.sc, ag, instr, j.seed, j.sample)
+				rec := PlayGame(ctx, j.sc, ag, instr, j.seed, j.sample, cfg.TraceDir)
 				rec.RunID = runID
 				mu.Lock()
 				emit(rec)

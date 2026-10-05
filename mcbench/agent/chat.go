@@ -24,8 +24,11 @@ type Chat struct {
 }
 
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	// Reasoning is the model's thinking (reasoning_content). It is kept in
+	// the history so every request's prefix matches the previous one.
+	Reasoning  string     `json:"reasoning_content,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 }

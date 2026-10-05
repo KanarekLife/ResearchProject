@@ -168,7 +168,7 @@ func cmdPlay(args []string) error {
 	if *seed == 0 {
 		*seed = scs[0].Seeds[0]
 	}
-	rec := bench.PlayGame(context.Background(), scs[0], &agent.Human{In: bufio.NewReader(os.Stdin), Out: os.Stdout}, agent.Instructions{}, *seed, 0)
+	rec := bench.PlayGame(context.Background(), scs[0], &agent.Human{In: bufio.NewReader(os.Stdin), Out: os.Stdout}, agent.Instructions{}, *seed, 0, "")
 	out, _ := json.MarshalIndent(map[string]any{"status": rec.Status, "rounds": rec.Rounds, "criteria": rec.Criteria, "score": rec.Score}, "", "  ")
 	fmt.Println(string(out))
 	return nil
@@ -181,7 +181,6 @@ func cmdRun(args []string) error {
 	baseURL := fs.String("base-url", envOr("OPENAI_BASE_URL", "http://localhost:1234/v1"), "OpenAI-compatible API base URL (local LM Studio by default)")
 	model := fs.String("model", "", "model id (required for -agent llm)")
 	protocol := fs.String("protocol", agent.ProtocolJSON, "json (harness fetches state; any model) or tools (model calls the game tools)")
-	history := fs.Int("history", 8, "earlier decisions kept in the game conversation (0 = each decision independent)")
 	maxSteps := fs.Int("max-steps", 5, "model requests allowed per decision")
 	temp := fs.Float64("temperature", 0, "sampling temperature")
 	maxTokens := fs.Int("max-tokens", 32768, "max completion tokens per request (reasoning models need room)")
@@ -216,7 +215,7 @@ func cmdRun(args []string) error {
 		}
 		ag = &agent.LLM{
 			Chat:     agent.Chat{BaseURL: *baseURL, APIKey: os.Getenv("OPENAI_API_KEY"), Model: *model, Temperature: *temp, MaxTokens: *maxTokens},
-			Protocol: *protocol, History: *history, MaxSteps: *maxSteps, Instructions: instr,
+			Protocol: *protocol, MaxSteps: *maxSteps, Instructions: instr,
 		}
 	case "random":
 		ag = agent.Random{Seed: 1}
@@ -228,11 +227,12 @@ func cmdRun(args []string) error {
 		return fmt.Errorf("unknown agent %q", *agentName)
 	}
 
-	cfg := bench.Config{Seeds: *seeds, Samples: *samples, Parallel: *parallel}
 	dir := filepath.Join(*out, time.Now().UTC().Format("20060102T150405Z")+"-"+strings.NewReplacer("/", "_", ":", "_").Replace(ag.Name()))
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	cfg := bench.Config{Seeds: *seeds, Samples: *samples, Parallel: *parallel, TraceDir: filepath.Join(dir, "live")}
+	if err := os.MkdirAll(cfg.TraceDir, 0o755); err != nil {
 		return err
 	}
+	fmt.Fprintf(os.Stderr, "live traces: %s\n", cfg.TraceDir)
 	f, err := os.Create(filepath.Join(dir, "games.jsonl"))
 	if err != nil {
 		return err

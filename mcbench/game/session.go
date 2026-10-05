@@ -7,9 +7,12 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"runtime/debug"
+	"time"
 
 	"mcbench/engine"
 	"mcbench/scenario"
@@ -57,6 +60,9 @@ type Options struct {
 	ShuffleOptions bool
 	// Sample varies the option order between games on the same seed.
 	Sample uint64
+	// Trace, if set, receives a JSON line for every choice as it happens,
+	// plus anything players add with Session.Trace (e.g. model messages).
+	Trace io.Writer
 }
 
 // Session is one game in progress.
@@ -164,11 +170,25 @@ func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 		s.Invalid++
 		return nil, fmt.Errorf("option %d does not exist; choose 1-%d", id, len(d.Options))
 	}
-	s.Choices = append(s.Choices, Choice{Round: s.g.S.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning})
+	c := Choice{Round: s.g.S.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning}
+	s.Choices = append(s.Choices, c)
 	s.guard(func() { s.g.Choose(s.order[id-1]) })
 	events := append([]string(nil), s.g.Log[s.mark:]...)
 	s.mark = len(s.g.Log)
+	s.Trace(map[string]any{"type": "choice", "decision": len(s.Choices), "choice": c, "text": d.Options[id-1].Text, "events": events, "status": s.Status()})
 	return events, nil
+}
+
+// Trace writes one JSON line to the session's trace, if it has one.
+func (s *Session) Trace(entry map[string]any) {
+	if s.opts.Trace == nil {
+		return
+	}
+	entry["time"] = time.Now().Format(time.RFC3339)
+	b, err := json.Marshal(entry)
+	if err == nil {
+		s.opts.Trace.Write(append(b, '\n'))
+	}
 }
 
 // Log returns the last n lines of the game log (all when n <= 0).
