@@ -40,6 +40,8 @@ decision, stop and ask before making it.
   must stay green.
 - Keep work concise and readable. If the human cannot see why something exists,
   it is not ready.
+- All rules should be following the official Marvel Champions rules available [here](./docs/references/rules_reference_v18.pdf).
+- Source of truth for cards in available in the [marvelcdb.com](https://marvelcdb.com/).
 
 ## Commits
 
