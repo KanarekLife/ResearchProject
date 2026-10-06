@@ -21,6 +21,7 @@ mcbench/integrations/inference/
 mcbench/benchmark/  the harness: play, score, record, report
 mcbench/cmd/        the CLI and its config.yaml
 mcbench/constants/  string literals shared across packages
+mcbench/ui/         terminal panels and colour, used by `human` and the trace viewer
 mcbench/data/       scenarios/, decks/, villains/, encounter-sets/, cards/, instructions/
 docs/               this file, scenario authoring, glossary
 ```

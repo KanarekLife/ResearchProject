@@ -9,6 +9,7 @@ import (
 
 	"mcbench/benchmark"
 	"mcbench/trace"
+	"mcbench/ui"
 )
 
 func cmdView(args []string) error {
@@ -46,9 +47,9 @@ func cmdView(args []string) error {
 		return err
 	}
 	if *follow {
-		return followGame(g)
+		return followGame(g, terminalTheme())
 	}
-	return printGame(g)
+	return printGame(g, terminalTheme())
 }
 
 // listRuns prints every run and the games it holds.
@@ -66,14 +67,14 @@ func listRuns(runs []trace.Run) {
 }
 
 // printGame renders a game's whole trace.
-func printGame(g trace.Game) error {
+func printGame(g trace.Game, theme ui.Theme) error {
 	entries, err := trace.ReadFile(g.Trace)
 	if err != nil {
 		return err
 	}
 	var b strings.Builder
 	for _, e := range entries {
-		trace.Write(&b, e)
+		trace.Write(&b, e, theme)
 	}
 	fmt.Print(b.String())
 	return nil
@@ -82,7 +83,7 @@ func printGame(g trace.Game) error {
 // followGame prints entries as they are appended, until the game ends. It reads
 // the trace the same way the game writes it, so it can attach to a game already
 // in progress and needs no restart once the game finishes.
-func followGame(g trace.Game) error {
+func followGame(g trace.Game, theme ui.Theme) error {
 	f, err := trace.Follow(g.Trace)
 	if err != nil {
 		return err
@@ -96,7 +97,7 @@ func followGame(g trace.Game) error {
 		}
 		var b strings.Builder
 		for _, e := range entries {
-			trace.Write(&b, e)
+			trace.Write(&b, e, theme)
 			if trace.IsEnd(e) {
 				fmt.Print(b.String())
 				return nil

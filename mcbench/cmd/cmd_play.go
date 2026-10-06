@@ -27,9 +27,13 @@ func cmdPlay(args []string) error {
 	if *seed == 0 {
 		*seed = scs[0].Seeds[0]
 	}
-	p := &human.Human{In: bufio.NewReader(os.Stdin), Out: os.Stdout}
+	setupLogging(playLogLevel)
+	p := &human.Human{In: bufio.NewReader(os.Stdin), Out: os.Stdout, Theme: terminalTheme()}
 	rec := benchmark.Play(context.Background(), scs[0], p, instruction.Instructions{}, *seed, 0, "", benchmark.DefaultWeights)
 	out, _ := json.MarshalIndent(map[string]any{"status": rec.Status, "rounds": rec.Rounds, "criteria": rec.Criteria, "score": rec.Score}, "", "  ")
 	fmt.Println(string(out))
 	return nil
 }
+
+// playLogLevel hides the action log: the panels already show every event.
+const playLogLevel = "warn"
