@@ -42,6 +42,8 @@ func damageVerbs(g *e.Game, c *e.Card, ev *e.Event, target *e.Card, eff *Effect)
 			amount = ev.Amount
 		}
 		g.DamageHero(amount)
+	case constants.VerbHeal:
+		g.Heal(target, eff.Amount)
 	case constants.VerbHealHero:
 		g.HealHero(eff.Amount)
 	case constants.VerbHealVillain:
@@ -69,7 +71,7 @@ func threatVerbs(g *e.Game, c *e.Card, ev *e.Event, target *e.Card, eff *Effect)
 			g.RemoveThreat(target, eff.Amount)
 		}
 	case constants.VerbPlaceThreat:
-		g.PlaceThreat(g.S.MainScheme, eff.Amount)
+		g.PlaceThreatWindowed(g.S.MainScheme, eff.Amount)
 	case constants.VerbScheme:
 		g.Do(func() { g.EnemyScheme(g.S.Villain, true) })
 	default:

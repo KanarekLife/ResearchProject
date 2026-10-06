@@ -12,7 +12,9 @@ func (g *Game) PlaceThreat(s *Card, n int) {
 	}
 }
 
-// CrisisActive reports whether a crisis icon blocks main-scheme thwarting.
+// CrisisActive reports whether a crisis icon stops player cards removing
+// threat from the main scheme. Encounter cards are not affected, but none of
+// them removes threat, so RemoveThreat always comes from a player card.
 func (g *Game) CrisisActive() bool {
 	for _, s := range g.S.SideSchemes {
 		if s.Face().Crisis {
@@ -37,7 +39,7 @@ func (g *Game) RemoveThreat(s *Card, n int) {
 		if sc := s.Def.Script; sc != nil && sc.OnDefeated != nil {
 			sc.OnDefeated(g, s)
 		}
-		g.discardAttachments(s)
+		g.leavePlay(s)
 		g.S.EncDiscard = append(g.S.EncDiscard, s)
 	}
 }

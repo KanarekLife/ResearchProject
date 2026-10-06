@@ -32,7 +32,7 @@ func (g *Game) basicOptions() []Option {
 		for _, target := range g.Enemies() {
 			opts = append(opts, g.attackOption(h, target))
 		}
-		for _, scheme := range g.ThwartableSchemes() {
+		for _, scheme := range g.thwartTargets(h) {
 			opts = append(opts, g.thwartOption(h, scheme))
 		}
 		return opts
@@ -104,6 +104,16 @@ func (g *Game) thwartOption(h *Card, scheme *Card) Option {
 		func() { g.Thwart(h, scheme, g.HeroTHW(), 0) }})
 }
 
+// thwartTargets lists the schemes actor may make a basic thwart against. A
+// confused character may attempt one (only removing the confuse) even when
+// no scheme has threat.
+func (g *Game) thwartTargets(actor *Card) []*Card {
+	if schemes := g.ThwartableSchemes(); len(schemes) > 0 || !actor.Confused {
+		return schemes
+	}
+	return append([]*Card{g.S.MainScheme}, g.S.SideSchemes...)
+}
+
 func (g *Game) allyAttackOptions(ally *Card) []Option {
 	var opts []Option
 	for _, target := range g.Enemies() {
@@ -116,7 +126,7 @@ func (g *Game) allyAttackOptions(ally *Card) []Option {
 
 func (g *Game) allyThwartOptions(ally *Card) []Option {
 	var opts []Option
-	for _, scheme := range g.ThwartableSchemes() {
+	for _, scheme := range g.thwartTargets(ally) {
 		opts = append(opts, g.strikeOption(strike{constants.PrefixThwart, ally, g.Label(ally), scheme,
 			fmt.Sprintf("Ally thwart: %s removes %d threat from %s (exhaust; takes %d consequential damage)", g.Label(ally), g.AllyTHW(ally), g.Label(scheme), ally.Def.ThwCons),
 			func() { g.Thwart(ally, scheme, g.AllyTHW(ally), ally.Def.ThwCons) }}))
@@ -186,10 +196,6 @@ func (g *Game) playOptions(c *Card) []Option {
 		return nil
 	case TypeEvent:
 		if sc == nil || sc.OnPlay == nil || sc.PlayWindow != "" {
-			return nil
-		}
-	case TypeAlly:
-		if g.allyCount() >= MaxAllies {
 			return nil
 		}
 	}

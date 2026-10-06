@@ -32,8 +32,9 @@ Marvel Champions terms, as used in this project's code, data and reports.
 ## Rounds and phases
 
 - **Round**: one player phase followed by one villain phase.
-- **Player phase / turn**: you take any actions, then end your turn. You draw
-  up to your **hand size**, then ready your exhausted cards.
+- **Player phase / turn**: you take any actions, then end your turn. You
+  discard down to and draw up to your **hand size**, then ready your exhausted
+  cards.
 - **Villain phase**: threat is placed on the main scheme; the villain then
   **activates** (it attacks you in hero form, or schemes against your
   alter-ego), and so does each engaged minion; finally encounter cards are dealt
@@ -60,12 +61,14 @@ Marvel Champions terms, as used in this project's code, data and reports.
   attached to the villain.
 - **Side scheme**: an extra scheme. It is defeated when its threat reaches 0.
   Icons: **acceleration** (+1 threat each round), **hazard** (+1 encounter card
-  each round), **crisis** (main-scheme threat cannot be removed).
+  each round), **crisis** (player cards cannot remove main-scheme threat).
 - **Threat**: tokens on schemes. **Thwart**: remove threat. **Scheme**: place
   threat.
-- **Boost**: when the villain activates, a face-down encounter card adds its
-  boost icons to the attack or scheme.
-- **Surge**: reveal one more encounter card.
+- **Boost**: when the villain activates, it is dealt a face-down encounter card
+  (before a defender is declared) that is then flipped and adds its boost icons
+  to the attack or scheme.
+- **Surge**: you are dealt one more face-down encounter card, revealed with the
+  other dealt cards in the villain phase.
 
 ## Keywords and statuses
 

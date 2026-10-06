@@ -115,6 +115,9 @@ type Card struct {
 
 	Stunned, Confused, Tough bool
 
+	// Facedown cards attached to a card in play are themselves out of play.
+	Facedown bool
+
 	Attached []*Card
 }
 
@@ -149,6 +152,9 @@ type Script struct {
 	OnReveal func(g *Game, c *Card)
 	// OnDefeated runs when a side scheme is defeated.
 	OnDefeated func(g *Game, c *Card)
+	// BoostOnDamaged is a boost card's "Boost" ability: it runs for each
+	// friendly character damaged by the activation the card boosts.
+	BoostOnDamaged func(g *Game, c, damaged *Card)
 
 	// Forced abilities of a card in play.
 	Forced map[Trigger]func(g *Game, c *Card, ev *Event)

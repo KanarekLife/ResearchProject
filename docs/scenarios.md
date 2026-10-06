@@ -101,7 +101,7 @@ cards:
     resources: [mental] # physical, mental, energy, wild
     text: "Hero Action (attack): deal 8 damage to an enemy."
     abilities:
-      - trigger: play # play, action, reveal, defeated, interrupt, forced, resource, stat
+      - trigger: play # play, action, reveal, defeated, interrupt, forced, resource, stat, boost
         when: [hero] # predicates; the card can only be played while they hold
         target: enemy # selector for the effect's target
         effects:
@@ -109,11 +109,13 @@ cards:
 ```
 
 An ability is a trigger plus declarative effects. `when` gates the whole
-ability; every effect may have its own `when`. Effects support branches:
+ability; every effect may have its own `when`. A `boost` ability is a card's
+"Boost:" text: it runs for each friendly character damaged by the activation
+the card boosts (`event_target` is that character). Effects support branches:
 `if_zero`, `if_already`, `if_empty`, and `choose` with named `options`.
 
 **Effect verbs** (the values of `verb`): `attack`, `damage_enemy`, `damage_hero`,
-`thwart`, `remove_threat`, `place_threat`, `draw`, `heal_hero`, `heal_villain`,
+`thwart`, `remove_threat`, `place_threat`, `draw`, `heal`, `heal_hero`, `heal_villain`,
 `stun`, `stun_chosen`, `confuse`, `give_tough`, `exhaust`, `ready`,
 `flip_alter_ego`, `discard_random`, `discard_random_place_threat`, `surge`,
 `scheme`, `villain_attack`, `villain_and_minions_attack`, `remove_from_game`,
@@ -126,11 +128,12 @@ ability; every effect may have its own `when`. Effects support branches:
 `villain_tough`, `schemes`, `minions`, `not_exhausted`, `exhausted`,
 `counters_positive`, `hero_exhausted`, `hero_ready`, `source_self`,
 `host_is_source`, `host_is_target`, `bomb_scare`, `not_bomb_scare`, `vulture`,
-`upgrades_supports`, `amount_positive`, `paid:<resource>`.
+`upgrades_supports`, `amount_positive`, `paid:<resource>`,
+`not_paid:<resource>` (a wild resource counts as any type).
 
 **Selectors** (`target`): `enemy`, `all_enemy`, `minion`, `scheme`,
-`upgrade_support`, `enemy_without_webbed_up`, `event_source`, `event_target`,
-`chosen`, `hero`, `villain`, `self`.
+`upgrade_support`, `enemy_without_webbed_up`, `damaged_character`,
+`event_source`, `event_target`, `chosen`, `hero`, `villain`, `self`.
 
 The vocabulary lives in `mcbench/constants`; the interpreter is
 `game/cards/effects.go`. Prefer an existing verb; a new one is a small case

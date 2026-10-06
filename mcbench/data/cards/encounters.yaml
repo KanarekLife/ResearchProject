@@ -136,12 +136,15 @@ cards:
   - code: "01168"
     name: Sweeping Swoop
     type: treachery
-    text: "Your identity is stunned. If Vulture is in play, surge."
+    text: "Your identity is stunned. If Vulture is in play, surge. Boost: each friendly character damaged by this activation is stunned."
     abilities:
       - trigger: reveal
         effects:
           - {verb: stun, target: hero}
           - {verb: surge, when: [vulture]}
+      - trigger: boost
+        effects:
+          - {verb: stun, target: event_target}
 
   - code: "01169"
     name: The Vulture's Plans

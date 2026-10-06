@@ -44,7 +44,7 @@ cards:
     aspect: Justice
     cost: 0
     resources: [mental]
-    text: "Hero Interrupt: when threat would be placed on a scheme during the villain phase, take that much damage instead."
+    text: "Hero Interrupt: when threat would be placed on a scheme, take that much damage instead."
     abilities:
       - trigger: interrupt
         on: threat_would_be_placed

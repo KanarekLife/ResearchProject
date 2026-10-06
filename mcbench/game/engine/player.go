@@ -59,40 +59,83 @@ func (g *Game) playCard(c *Card, target *Card) {
 		s.Play = append(s.Play, c)
 	}
 	c.Counters = d.Uses
-	if d.Script != nil && d.Script.OnPlay != nil {
-		d.Script.OnPlay(g, c, target)
-	}
+	g.Do(func() { g.enforceAllyLimit(c) }, func() {
+		// A card discarded for the ally limit never resolves its abilities.
+		if d.Script != nil && d.Script.OnPlay != nil && g.isInPlay(c) {
+			d.Script.OnPlay(g, c, target)
+		}
+	})
 }
 
-// Draw draws n cards, reshuffling the discard pile when the deck runs out
-// (which deals an encounter card face-down to the hero).
+// enforceAllyLimit makes the player discard allies until they control no
+// more than MaxAllies. It runs before the played card's enters-play abilities.
+func (g *Game) enforceAllyLimit(played *Card) {
+	n := g.allyCount()
+	if n <= MaxAllies {
+		return
+	}
+	var opts []Option
+	for _, a := range g.S.Play {
+		if a.Def.Type != TypeAlly {
+			continue
+		}
+		ally := a
+		label := g.Label(ally)
+		opts = append(opts, NewAction(constants.PrefixEffect+played.Def.Name+constants.SepTarget+label, "Discard "+label, func() {
+			g.Logf("%s is discarded (ally limit).", label)
+			g.Detach(ally)
+			g.Do(func() { g.enforceAllyLimit(played) })
+		}))
+	}
+	g.Ask(&Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("Ally limit: you control %d allies but may control only %d. Choose an ally to discard.", n, MaxAllies), Options: opts})
+}
+
+// Draw draws n cards one at a time.
 func (g *Game) Draw(n int) {
 	s := g.S
 	for i := 0; i < n; i++ {
+		g.ResetEmptyDeck()
 		if len(s.Deck) == 0 {
-			if len(s.Discard) == 0 {
-				return
-			}
-			s.Deck, s.Discard = s.Discard, nil
-			g.shuffle(s.Deck)
-			g.Logf("Player deck reshuffled; an encounter card is dealt to %s.", s.Hero.Name())
-			if c := g.drawEncounter(); c != nil {
-				s.Dealt = append(s.Dealt, c)
-			}
+			return
 		}
 		s.Hand = append(s.Hand, s.Deck[0])
 		s.Deck = s.Deck[1:]
 	}
+	g.ResetEmptyDeck()
 	g.Logf("%s draws %d card(s).", s.Hero.Name(), n)
+}
+
+// ResetEmptyDeck shuffles the discard pile into a new deck as soon as the
+// deck is empty, and deals the hero a face-down encounter card. With an empty
+// discard pile the reset waits until a card is there.
+func (g *Game) ResetEmptyDeck() {
+	s := g.S
+	if len(s.Deck) > 0 || len(s.Discard) == 0 {
+		return
+	}
+	s.Deck, s.Discard = s.Discard, nil
+	g.shuffle(s.Deck)
+	g.Logf("Player deck reshuffled; an encounter card is dealt to %s.", s.Hero.Name())
+	if c := g.drawEncounter(); c != nil {
+		s.Dealt = append(s.Dealt, c)
+	}
 }
 
 func (g *Game) endPlayerPhase() {
 	g.Do(g.askDiscard)
 }
 
+// askDiscard lets the player discard from hand at the end of the turn. Over
+// the hand size, the player must discard down to it before being done.
 func (g *Game) askDiscard() {
 	s := g.S
-	opts := []Option{{Key: constants.KeyDiscardDone, Text: "Done discarding; draw up to hand size", do: func() { g.Do(g.drawAndReady) }}}
+	handSize := s.Hero.Face().HandSize
+	var opts []Option
+	prompt := fmt.Sprintf("End of turn. You must discard down to your hand size of %d (you have %d cards).", handSize, len(s.Hand))
+	if len(s.Hand) <= handSize {
+		opts = append(opts, Option{Key: constants.KeyDiscardDone, Text: "Done discarding; draw up to hand size", do: func() { g.Do(g.drawAndReady) }})
+		prompt = fmt.Sprintf("End of turn. You may discard cards from hand before drawing up to your hand size of %d.", handSize)
+	}
 	seen := map[string]bool{}
 	for _, c := range s.Hand {
 		card := c
@@ -110,11 +153,11 @@ func (g *Game) askDiscard() {
 			},
 		})
 	}
-	if len(opts) == 1 {
+	if len(s.Hand) == 0 {
 		g.Do(g.drawAndReady)
 		return
 	}
-	g.Ask(&Decision{Kind: constants.KindDiscard, Prompt: fmt.Sprintf("End of turn. You may discard cards from hand before drawing up to your hand size of %d.", s.Hero.Face().HandSize), Options: opts})
+	g.Ask(&Decision{Kind: constants.KindDiscard, Prompt: prompt, Options: opts})
 }
 
 func (g *Game) drawAndReady() {

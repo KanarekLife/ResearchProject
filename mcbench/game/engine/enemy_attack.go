@@ -10,7 +10,7 @@ import (
 type AttackState struct {
 	Enemy    *Card
 	Overkill bool
-	boostN   int
+	boost    *Card // the villain's facedown boost card
 	defender *Card // nil = undefended; hero or an ally
 }
 
@@ -31,6 +31,7 @@ func (g *Game) EnemyAttack(enemy *Card, isVillain bool, onDamaged func(*Card)) {
 	atk := &AttackState{Enemy: enemy}
 	if isVillain {
 		g.fireForced(&Event{Trigger: TrigVillainAttacks, Source: enemy})
+		atk.boost = g.drawEncounter() // dealt before the defender is declared
 	}
 	g.Logf("%s attacks %s.", enemy.Name(), s.Hero.Name())
 
@@ -48,7 +49,7 @@ func (g *Game) EnemyAttack(enemy *Card, isVillain bool, onDamaged func(*Card)) {
 // defendOptions lists the ready characters that may defend the attack.
 func (g *Game) defendOptions(atk *AttackState) []Option {
 	var opts []Option
-	if h := g.S.Hero; !h.Exhausted {
+	if h := g.S.Hero; !h.Exhausted && g.IsHero() {
 		opts = append(opts, Option{
 			Key:  constants.PrefixDefend + h.Name(),
 			Text: fmt.Sprintf("Defend with %s (exhaust; DEF %d reduces the damage)", h.Name(), g.HeroDEF()),
@@ -80,20 +81,24 @@ func (g *Game) defendPrompt(enemy *Card, isVillain bool) string {
 func (g *Game) resolveAttack(atk *AttackState, isVillain bool, onDamaged func(*Card)) {
 	s := g.S
 	enemy := atk.Enemy
-	if isVillain {
-		atk.boostN = g.boost()
-	}
 	for _, a := range enemy.Attached {
 		if a.Face().AttachOverkill {
 			atk.Overkill = true
 		}
 	}
-	amount := enemy.Face().ATK + g.attachedATK(enemy) + atk.boostN
+	amount := enemy.Face().ATK + g.attachedATK(enemy) + g.flipBoost(atk.boost)
+	onDamaged = withBoost(g, atk.boost, onDamaged)
 	g.Logf("%s's attack has %d ATK.", enemy.Name(), amount)
 
 	finish := func() { g.fireForced(&Event{Trigger: TrigAttackEnded, Source: enemy}) }
 	toHero := g.defenderDamage(atk, amount, onDamaged)
 	if toHero <= 0 {
+		g.Do(finish)
+		return
+	}
+	if s.Hero.Tough {
+		// A status card resolves before any interrupt to the damage.
+		g.DamageHero(toHero)
 		g.Do(finish)
 		return
 	}
@@ -104,6 +109,20 @@ func (g *Game) resolveAttack(atk *AttackState, isVillain bool, onDamaged func(*C
 		}
 		g.Do(finish)
 	})
+}
+
+// withBoost adds the boost card's "Boost" ability, if any, to the attack's
+// onDamaged callback.
+func withBoost(g *Game, boost *Card, onDamaged func(*Card)) func(*Card) {
+	if boost == nil || boost.Def.Script == nil || boost.Def.Script.BoostOnDamaged == nil {
+		return onDamaged
+	}
+	return func(c *Card) {
+		if onDamaged != nil {
+			onDamaged(c)
+		}
+		boost.Def.Script.BoostOnDamaged(g, boost, c)
+	}
 }
 
 // defenderDamage applies the attack to the declared defender and returns the
