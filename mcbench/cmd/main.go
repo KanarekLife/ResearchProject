@@ -9,12 +9,13 @@ import (
 const usage = `mcbench - Marvel Champions full-game benchmark
 
 Commands:
-  list      list scenarios
-  validate  play every scenario seed with the scripted players (engine smoke test)
-  play      play a scenario yourself in the terminal
-  run       play scenarios with a player and write game records
-  report    summarize games.jsonl files
-  view      read a run's traces: a game transcript, a live game, or final results
+  list       list scenarios
+  validate   play every scenario seed with the scripted players (engine smoke test)
+  play       play a scenario yourself in the terminal
+  run        play scenarios with a player and write game records
+  report     summarize games.jsonl files
+  view       read a run's traces: a game transcript, a live game, or final results
+  board_gui  show a game trace as a board in the browser, step by step
 
 Run "mcbench <command> -h" for flags.
 `
@@ -28,7 +29,7 @@ func main() {
 	cmds := map[string]func([]string) error{
 		cmdNameList: cmdList, cmdNameValidate: cmdValidate,
 		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport,
-		cmdNameView: cmdView,
+		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI,
 	}
 	cmd, ok := cmds[os.Args[1]]
 	if !ok {

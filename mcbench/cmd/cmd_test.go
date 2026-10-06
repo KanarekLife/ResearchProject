@@ -52,3 +52,26 @@ func TestLoaderOnly(t *testing.T) {
 		t.Errorf("only unknown id: err=%v, want no scenarios selected", err)
 	}
 }
+
+func TestResolveSelection(t *testing.T) {
+	results := t.TempDir()
+	run := filepath.Join(results, "20260101T000000Z-x")
+	live := filepath.Join(run, "live")
+	os.MkdirAll(live, 0o755)
+	for _, n := range []string{"a_seed1_s0.jsonl", "a_seed2_s0.jsonl"} {
+		os.WriteFile(filepath.Join(live, n), nil, 0o644)
+	}
+	for _, tc := range []struct{ path, results, game, want string }{
+		{filepath.Join(live, "a_seed1_s0.jsonl"), "", "", "a_seed1_s0"},
+		{"", results, "", ""}, // no game pinned: follow the run
+		{run, "", "seed1", "a_seed1_s0"},
+	} {
+		res, id, game, err := resolveSelection(tc.path, tc.results, "", tc.game)
+		if err != nil || res != results || id != filepath.Base(run) || game != tc.want {
+			t.Fatalf("resolveSelection(%q, %q, %q) = %q, %q, %q, %v; want game %q", tc.path, tc.results, tc.game, res, id, game, err, tc.want)
+		}
+	}
+	if _, _, _, err := resolveSelection(filepath.Join(t.TempDir(), "g.jsonl"), "", "", ""); err == nil {
+		t.Fatal("a trace outside a run was accepted")
+	}
+}

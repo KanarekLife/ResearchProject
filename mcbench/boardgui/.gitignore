@@ -1,0 +1,4 @@
+# The page is built by `go generate`; only its placeholder is committed.
+/static/*
+!/static/not-built.txt
+/web/node_modules/

@@ -35,6 +35,30 @@ Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl`
 in `games.jsonl`. Progress is
 logged as structured `slog` to stderr.
 
+To see a game as a board in the browser, step by step (arrow keys, Home/End or
+the buttons), run the `board_gui` command from `mcbench/` and open
+http://127.0.0.1:8090/:
+
+```bash
+go generate ./boardgui                                   # build the page (React, in boardgui/web/) once; needs Node and npm
+go run ./cmd board_gui                                   # follow the run that is newest under results/ at start
+go run ./cmd board_gui results/<run> -game seed3         # open a game of one run
+go run ./cmd board_gui results/<run>/live/<game>.jsonl   # open one trace file
+```
+
+The command line only picks what opens first: the page's pickers open any run
+and game under the results directory, and the address (`?run=…&game=…#step`)
+keeps the choice for reload and links. A game still being played is followed as
+its trace grows. Without a game picked, the page follows the run: it shows the
+earliest-started game still being played and moves on to the next game when
+that one ends (with `-parallel`, it stays on one game until it ends). Clicking a
+card opens it full size; the side panel lists the current round's decisions
+with the player's reasoning (and, for a model, its thinking). `board_gui` only
+reads: it rebuilds each board by replaying the recorded choices on the same
+scenario and seed, and stops with an error if the replay no longer matches the
+trace (the engine or data changed since it was recorded). Card images load from
+marvelcdb.com by card code; a card without one is drawn as text.
+
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `scoring`); flags override it. Key flags:
 
