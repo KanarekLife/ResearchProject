@@ -1,0 +1,143 @@
+// Package model plays a game as one append-only conversation with a model
+// reached through an inference.Client. The model acts only by calling the
+// game tools; there is no other protocol.
+package model
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"mcbench/constants"
+	"mcbench/game/session"
+	"mcbench/integrations/inference"
+	"mcbench/player"
+	"mcbench/player/instruction"
+)
+
+// Model is the LLM player.
+//
+// A game is one append-only conversation (the agentic loop): each decision
+// adds a user message with the events since the last decision and the
+// current decision, then the model's replies (with their reasoning) and any
+// tool results. Nothing is ever removed or rewritten, so each request's
+// prompt is a prefix of the next and the provider's prompt cache stays valid.
+type Model struct {
+	Client       inference.Client
+	Label        string // identifies the model in results
+	MaxSteps     int    // model requests allowed per decision
+	Instructions instruction.Instructions
+}
+
+func (m *Model) Name() string { return "model:" + m.Label }
+
+// Play answers every decision until the game is no longer awaiting one.
+func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, error) {
+	var u player.Usage
+	msgs := m.add(s, nil, inference.Message{Role: inference.RoleSystem, Content: m.system()}, nil)
+	events := []string{"The game is set up."}
+	for s.Status() == constants.AwaitingDecision {
+		msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: m.turnPrompt(s, events)}, nil)
+		var err error
+		if msgs, events, err = m.decide(ctx, s, msgs, &u); err != nil {
+			return u, err
+		}
+	}
+	return u, nil
+}
+
+// messageTrace is the trace line of one conversation message. The token
+// fields are set only for assistant replies.
+type messageTrace struct {
+	session.TraceHeader
+	Decision     int               `json:"decision"`
+	Message      inference.Message `json:"message"`
+	InputTokens  int64             `json:"prompt_tokens,omitempty"`
+	OutputTokens int64             `json:"completion_tokens,omitempty"`
+	CachedTokens int64             `json:"cached_tokens,omitempty"`
+	Truncated    bool              `json:"truncated,omitempty"`
+}
+
+// add appends a message to the conversation and writes it to the trace.
+func (m *Model) add(s *session.Session, msgs []inference.Message, msg inference.Message, r *inference.Reply) []inference.Message {
+	entry := &messageTrace{Decision: len(s.Choices) + 1, Message: msg}
+	if r != nil {
+		entry.InputTokens, entry.OutputTokens = r.InputTokens, r.OutputTokens
+		entry.CachedTokens, entry.Truncated = r.CachedTokens, r.Truncated
+	}
+	s.Trace(constants.TraceMessage, entry)
+	return append(msgs, msg)
+}
+
+func (m *Model) turnPrompt(s *session.Session, events []string) string {
+	var b strings.Builder
+	b.WriteString("Events since your last decision:\n")
+	for _, e := range events {
+		b.WriteString("- " + e + "\n")
+	}
+	b.WriteString("\nDecision (" + constants.ToolGetDecision + "):\n" + call(s, constants.ToolGetDecision, nil))
+	return b.String()
+}
+
+// decide runs one decision: model requests until choose_option succeeds.
+// It returns the extended conversation and the events after the choice.
+func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference.Message, u *player.Usage) ([]inference.Message, []string, error) {
+	truncated := 0
+	for step := 0; step < m.MaxSteps; step++ {
+		reply, err := m.Client.Complete(ctx, msgs, tools)
+		if err != nil {
+			return msgs, nil, err
+		}
+		s.Logger().Debug("model reply", "decision", len(s.Choices)+1, "step", step+1,
+			"input_tokens", reply.InputTokens, "output_tokens", reply.OutputTokens, "truncated", reply.Truncated)
+		u.Requests++
+		u.InputTokens += reply.InputTokens
+		u.OutputTokens += reply.OutputTokens
+		u.CachedTokens += reply.CachedTokens
+		if reply.Truncated {
+			truncated++
+		}
+		msgs = m.add(s, msgs, reply.Message, &reply)
+
+		if len(reply.Message.ToolCalls) == 0 {
+			content := "Make the decision by calling " + constants.ToolChooseOption + "."
+			msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: content}, nil)
+			continue
+		}
+		result := runTools(s, reply.Message.ToolCalls)
+		for _, msg := range result.messages {
+			msgs = m.add(s, msgs, msg, nil)
+		}
+		if result.chosen {
+			return msgs, result.events, nil
+		}
+	}
+	return msgs, nil, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", m.MaxSteps, truncated)
+}
+
+// toolResult is the outcome of one assistant reply's tool calls.
+type toolResult struct {
+	messages []inference.Message // tool result messages to append
+	events   []string            // events from a successful choose_option
+	chosen   bool                // a choose_option succeeded
+}
+
+// runTools executes the tool calls in order. Only the first choose_option is
+// applied; later ones get an error result.
+func runTools(s *session.Session, calls []inference.ToolCall) toolResult {
+	var res toolResult
+	for _, tc := range calls {
+		out := `{"error":"the decision was already made in this reply"}`
+		if !res.chosen {
+			var events []string
+			var ok bool
+			out, events, ok = exec(s, tc.Function.Name, json.RawMessage(tc.Function.Arguments))
+			if ok {
+				res.events, res.chosen = events, true
+			}
+		}
+		res.messages = append(res.messages, inference.Message{Role: inference.RoleTool, ToolCallID: tc.ID, Content: out})
+	}
+	return res
+}

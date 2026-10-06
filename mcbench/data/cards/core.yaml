@@ -1,0 +1,435 @@
+# Core Set: Spider-Man, a few aspect/basic cards, and the Rhino scenario.
+# Stats follow the printed cards for one player; text is our own paraphrase.
+cards:
+  - code: "01001a"
+    name: Spider-Man
+    type: hero
+    unique: true
+    hp: 10
+    atk: 2
+    thw: 1
+    def: 3
+    hand_size: 5
+    text: "Spider-Sense - when the villain attacks you, draw 1 card (applied automatically)."
+    abilities:
+      - trigger: forced
+        on: villain_attacks
+        effects:
+          - {verb: draw, n: 1}
+    back:
+      code: "01001b"
+      name: Peter Parker
+      type: alter-ego
+      unique: true
+      hp: 10
+      rec: 3
+      hand_size: 6
+      text: "Scientist - Resource: generate a mental resource (once per round)."
+      abilities:
+        - trigger: resource
+          gives: mental
+          once_per_round: true
+
+  - code: "01002"
+    name: Black Cat
+    type: ally
+    unique: true
+    aspect: Hero
+    cost: 2
+    resources: [energy]
+    hp: 2
+    atk: 1
+    thw: 1
+    thw_cons: 1
+    text: "When played: discard the top 2 cards of your deck; put each one with a printed mental resource into your hand."
+    abilities:
+      - trigger: play
+        effects:
+          - {verb: mill_keep, n: 2, resource: mental}
+
+  - code: "01003"
+    name: Backflip
+    type: event
+    aspect: Hero
+    cost: 0
+    resources: [physical]
+    text: "Interrupt: when you would take damage from an attack, prevent all of it."
+    abilities:
+      - trigger: interrupt
+        on: would_take_attack_damage
+        effects:
+          - {verb: prevent_damage}
+
+  - code: "01004"
+    name: Enhanced Spider-Sense
+    type: event
+    aspect: Hero
+    cost: 1
+    resources: [mental]
+    text: "Hero Interrupt: when a treachery is revealed, cancel its When Revealed effects."
+    abilities:
+      - trigger: interrupt
+        on: treachery_revealed
+        when: [hero]
+        effects:
+          - {verb: cancel}
+
+  - code: "01005"
+    name: Swinging Web Kick
+    type: event
+    aspect: Hero
+    cost: 3
+    resources: [mental]
+    text: "Hero Action (attack): deal 8 damage to an enemy."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - {verb: attack, damage: 8}
+
+  - code: "01006"
+    name: Aunt May
+    type: support
+    unique: true
+    aspect: Hero
+    cost: 1
+    resources: [energy]
+    text: "Alter-Ego Action: exhaust Aunt May to heal 4 damage from Peter Parker."
+    abilities:
+      - trigger: action
+        when: [alter_ego, not_exhausted, hero_damaged]
+        key: "use:Aunt May"
+        text: "Use Aunt May: heal 4 damage from Peter Parker (exhaust Aunt May)"
+        effects:
+          - {verb: exhaust}
+          - {verb: heal_hero, amount: 4}
+
+  - code: "01007"
+    name: Spider-Tracer
+    type: upgrade
+    aspect: Hero
+    cost: 1
+    resources: [energy]
+    text: "Attach to a minion. When that minion is defeated, remove 3 threat from a scheme."
+    abilities:
+      - trigger: play
+        target: minion
+      - trigger: forced
+        on: minion_defeated
+        when: [host_is_target]
+        effects:
+          - {verb: remove_threat, amount: 3, choose: true}
+
+  - code: "01008"
+    name: Web-Shooter
+    type: upgrade
+    aspect: Hero
+    cost: 1
+    resources: [physical]
+    uses: 3
+    text: "Uses 3 web counters. Hero Resource: exhaust and remove a counter to generate a wild resource; discard when empty."
+    abilities:
+      - trigger: resource
+        gives: wild
+        usable: [hero, not_exhausted, counters_positive]
+        effects:
+          - {verb: exhaust}
+          - {verb: counter, n: -1, detach_when_empty: true}
+
+  - code: "01009"
+    name: Webbed Up
+    type: upgrade
+    aspect: Hero
+    cost: 4
+    resources: [physical]
+    text: "Hero form only. Attach to an enemy (max 1 per enemy). When that enemy would attack, discard Webbed Up instead and stun the enemy."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy_without_webbed_up
+      - trigger: forced
+        on: enemy_would_attack
+        when: [host_is_source]
+        effects:
+          - {verb: cancel}
+          - {verb: detach}
+          - {verb: stun, target: event_source}
+
+  - code: "01087"
+    name: Haymaker
+    type: event
+    aspect: Basic
+    cost: 2
+    resources: [energy]
+    text: "Hero Action (attack): deal 3 damage to an enemy."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - {verb: attack, damage: 3}
+
+  - code: "01060"
+    name: For Justice!
+    type: event
+    aspect: Justice
+    cost: 2
+    resources: [energy]
+    text: "Hero Action (thwart): remove 3 threat from a scheme (4 if you paid with a mental resource)."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: scheme
+        effects:
+          - {verb: thwart, amount: 3}
+          - {verb: thwart, amount: 1, when: ["paid:mental"]}
+
+  - code: "01086"
+    name: First Aid
+    type: event
+    aspect: Basic
+    cost: 1
+    resources: [mental]
+    text: "Action: heal 2 damage from your identity."
+    abilities:
+      - trigger: play
+        when: [hero_damaged]
+        effects:
+          - {verb: heal_hero, amount: 2}
+
+  - code: "01083"
+    name: Mockingbird
+    type: ally
+    unique: true
+    aspect: Basic
+    cost: 3
+    resources: [physical]
+    hp: 3
+    atk: 1
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    text: "When she enters play, stun an enemy."
+    abilities:
+      - trigger: play
+        effects:
+          - {verb: stun_chosen}
+
+  - code: "01088"
+    name: Energy
+    type: resource
+    aspect: Basic
+    resources: [energy, energy]
+
+  - code: "01089"
+    name: Genius
+    type: resource
+    aspect: Basic
+    resources: [mental, mental]
+
+  - code: "01090"
+    name: Strength
+    type: resource
+    aspect: Basic
+    resources: [physical, physical]
+
+  # --- Rhino scenario -------------------------------------------------------
+  - code: "01094"
+    name: Rhino
+    type: villain
+    unique: true
+    hp: 14
+    atk: 2
+    sch: 1
+
+  - code: "01095"
+    name: Rhino
+    type: villain
+    unique: true
+    hp: 15
+    atk: 3
+    sch: 1
+    text: "When revealed: find Breakin' & Takin' in the encounter deck or discard and reveal it; shuffle the encounter deck."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: find_and_reveal, code: "01107"}
+
+  - code: "01096"
+    name: Rhino
+    type: villain
+    unique: true
+    hp: 16
+    atk: 4
+    sch: 1
+    toughness: true
+    text: "Toughness. When revealed: stun your hero."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: stun, target: hero}
+
+  - code: "01097"
+    name: The Break-In!
+    type: main_scheme
+    target_threat: 7
+    escalation: 1
+    text: "If threat reaches the target, you lose."
+
+  - code: "01098"
+    name: Armored Rhino Suit
+    type: attachment
+    text: "Damage that would be dealt to Rhino is placed here instead; discarded once it holds 5 or more."
+    abilities:
+      - trigger: forced
+        on: enemy_would_take_damage
+        when: [host_is_target]
+        effects:
+          - {verb: absorb_damage, max: 5}
+
+  - code: "01099"
+    name: Charge
+    type: attachment
+    boost: 2
+    attach_atk: 3
+    attach_overkill: true
+    text: "Rhino gets +3 ATK and his attacks gain overkill. Discarded after Rhino's next attack."
+    abilities:
+      - trigger: forced
+        on: attack_ended
+        when: [host_is_source]
+        effects:
+          - {verb: detach}
+
+  - code: "01100"
+    name: Enhanced Ivory Horn
+    type: attachment
+    boost: 2
+    attach_atk: 1
+    text: "Rhino gets +1 ATK. Hero Action: spend 3 physical resources to discard this card."
+    abilities:
+      - trigger: action
+        when: [hero]
+        key: "use:Enhanced Ivory Horn"
+        text: "Discard Enhanced Ivory Horn by spending 3 physical resources"
+        paid: {count: 3, resources: [physical, physical, physical]}
+        effects:
+          - {verb: detach}
+
+  - code: "01101"
+    name: Hydra Mercenary
+    type: minion
+    hp: 3
+    atk: 1
+    sch: 0
+    boost: 1
+    guard: true
+    text: "Guard (while engaged with you, you cannot attack the villain)."
+
+  - code: "01102"
+    name: Sandman
+    type: minion
+    unique: true
+    hp: 4
+    atk: 3
+    sch: 2
+    boost: 2
+    toughness: true
+    text: "Toughness."
+
+  - code: "01103"
+    name: Shocker
+    type: minion
+    unique: true
+    hp: 3
+    atk: 2
+    sch: 1
+    boost: 2
+    text: "When revealed: deal 1 damage to your hero."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: damage_hero, amount: 1}
+
+  - code: "01104"
+    name: Hard to Keep Down
+    type: treachery
+    text: "Rhino heals 4 damage. If nothing was healed, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: heal_villain
+            amount: 4
+            if_zero:
+              - {verb: surge}
+
+  - code: "01105"
+    name: I'm Tough
+    type: treachery
+    text: "Give Rhino a tough status. If he already has one, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: give_tough
+            target: villain
+            if_already:
+              - {verb: surge}
+
+  - code: "01106"
+    name: Stampede
+    type: treachery
+    boost: 1
+    text: "Alter-ego: surge. Hero: Rhino attacks you; a character damaged by this attack is stunned."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [alter_ego], verb: surge}
+          - {when: [hero], verb: villain_attack, result: stun}
+
+  - code: "01107"
+    name: Breakin' & Takin'
+    type: side_scheme
+    boost: 2
+    starting_threat: 3
+    hazard: 1
+    text: "Hazard: deal 1 extra encounter card each villain phase."
+
+  - code: "01108"
+    name: Crowd Control
+    type: side_scheme
+    boost: 2
+    starting_threat: 2
+    crisis: true
+    text: "Crisis: threat cannot be removed from the main scheme."
+
+  - code: "01109"
+    name: Bomb Scare
+    type: side_scheme
+    boost: 2
+    starting_threat: 3
+    acceleration: 1
+    text: "Acceleration: +1 threat on the main scheme each villain phase."
+
+  - code: "01110"
+    name: Hydra Bomber
+    type: minion
+    hp: 2
+    atk: 1
+    sch: 1
+    boost: 1
+    text: "When revealed: you either take 2 damage or place 1 threat on the main scheme."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Hydra Bomber: take 2 damage, or place 1 threat on the main scheme?"
+            options:
+              - text: "Take 2 damage"
+                key: "effect:Hydra Bomber>damage"
+                effects:
+                  - {verb: damage_hero, amount: 2}
+              - text: "Place 1 threat on the main scheme"
+                key: "effect:Hydra Bomber>threat"
+                effects:
+                  - {verb: place_threat, amount: 1}

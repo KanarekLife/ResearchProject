@@ -1,0 +1,207 @@
+# Remaining cards of the Spider-Man starter deck (Justice + basic).
+cards:
+  - code: "01058"
+    name: Daredevil
+    type: ally
+    unique: true
+    aspect: Justice
+    cost: 4
+    resources: [physical]
+    hp: 3
+    atk: 2
+    atk_cons: 1
+    thw: 2
+    thw_cons: 1
+    text: "After Daredevil thwarts, deal 1 damage to an enemy."
+    abilities:
+      - trigger: forced
+        on: thwarted
+        when: [source_self]
+        effects:
+          - {verb: damage_enemy, amount: 1, choose: true}
+
+  - code: "01059"
+    name: Jessica Jones
+    type: ally
+    unique: true
+    aspect: Justice
+    cost: 3
+    resources: [energy]
+    hp: 3
+    atk: 2
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    text: "Gets +1 THW for each side scheme in play."
+    abilities:
+      - trigger: stat
+        stat: thw
+        bonus: side_schemes
+
+  - code: "01061"
+    name: Great Responsibility
+    type: event
+    aspect: Justice
+    cost: 0
+    resources: [mental]
+    text: "Hero Interrupt: when threat would be placed on a scheme during the villain phase, take that much damage instead."
+    abilities:
+      - trigger: interrupt
+        on: threat_would_be_placed
+        when: [hero, amount_positive]
+        effects:
+          - {verb: take_threat_as_damage}
+
+  - code: "01062"
+    name: The Power of Justice
+    type: resource
+    aspect: Justice
+    resources: [wild]
+    double_for: Justice
+    text: "Generates 2 wild resources when paying for a Justice card."
+
+  - code: "01063"
+    name: Interrogation Room
+    type: support
+    aspect: Justice
+    cost: 1
+    resources: [energy]
+    max_in_play: 1
+    text: "Max 1. After a minion is defeated, exhaust Interrogation Room to remove 1 threat from a scheme (used automatically)."
+    abilities:
+      - trigger: forced
+        on: minion_defeated
+        when: [not_exhausted, schemes]
+        effects:
+          - {verb: exhaust}
+          - {verb: remove_threat, amount: 1, choose: true}
+
+  - code: "01064"
+    name: Surveillance Team
+    type: support
+    aspect: Justice
+    cost: 2
+    resources: [mental]
+    uses: 3
+    text: "Uses 3 counters. Action: exhaust and remove a counter to remove 1 threat from a scheme; discard when empty."
+    abilities:
+      - trigger: action
+        when: [not_exhausted]
+        key: "use:Surveillance Team"
+        text: "Use Surveillance Team: remove 1 threat from a scheme (exhaust, remove a counter)"
+        effects:
+          - {verb: exhaust}
+          - {verb: counter, n: -1, detach_when_empty: true}
+          - {verb: remove_threat, amount: 1, choose: true}
+
+  - code: "01065"
+    name: Heroic Intuition
+    type: upgrade
+    aspect: Justice
+    cost: 2
+    resources: [energy]
+    max_in_play: 1
+    hero_thw: 1
+    text: "Max 1. Your hero gets +1 THW."
+
+  - code: "01084"
+    name: Nick Fury
+    type: ally
+    unique: true
+    aspect: Basic
+    cost: 4
+    resources: [mental]
+    hp: 3
+    atk: 2
+    atk_cons: 1
+    thw: 2
+    thw_cons: 1
+    text: "When he enters play, choose: remove 2 threat from a scheme, draw 3 cards, or deal 4 damage to an enemy. Discarded at the end of the round."
+    abilities:
+      - trigger: play
+        effects:
+          - verb: choose
+            prompt: "Nick Fury enters play: choose one effect."
+            options:
+              - text: "Draw 3 cards"
+                key: "effect:Nick Fury>draw"
+                effects:
+                  - {verb: draw, n: 3}
+              - text: "Deal 4 damage to an enemy"
+                key: "effect:Nick Fury>damage"
+                effects:
+                  - {verb: damage_enemy, amount: 4, choose: true}
+              - text: "Remove 2 threat from a scheme"
+                key: "effect:Nick Fury>thwart"
+                when: [schemes]
+                effects:
+                  - {verb: remove_threat, amount: 2, choose: true}
+      - trigger: forced
+        on: round_end
+        effects:
+          - {verb: detach}
+
+  - code: "01085"
+    name: Emergency
+    type: event
+    aspect: Basic
+    cost: 0
+    resources: [energy]
+    text: "Interrupt: when the villain schemes, reduce the threat it places by 1."
+    abilities:
+      - trigger: interrupt
+        on: villain_schemes
+        when: [amount_positive]
+        effects:
+          - {verb: reduce_amount, amount: 1}
+
+  - code: "01091"
+    name: Avengers Mansion
+    type: support
+    aspect: Basic
+    cost: 4
+    resources: [mental]
+    max_in_play: 1
+    text: "Max 1. Action: exhaust to draw 1 card."
+    abilities:
+      - trigger: action
+        when: [not_exhausted]
+        key: "use:Avengers Mansion"
+        text: "Use Avengers Mansion: draw 1 card (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: draw, n: 1}
+
+  - code: "01092"
+    name: Helicarrier
+    type: support
+    aspect: Basic
+    cost: 3
+    resources: [physical]
+    max_in_play: 1
+    text: "Max 1. Action: exhaust to reduce the cost of the next card you play this phase by 1."
+    abilities:
+      - trigger: action
+        when: [not_exhausted]
+        key: "use:Helicarrier"
+        text: "Use Helicarrier: the next card you play this phase costs 1 less (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: cost_reduction, n: 1}
+
+  - code: "01093"
+    name: Tenacity
+    type: upgrade
+    aspect: Basic
+    cost: 2
+    resources: [energy]
+    text: "Hero Action: spend a physical resource and discard Tenacity to ready your hero."
+    abilities:
+      - trigger: action
+        when: [hero, hero_exhausted]
+        key: "use:Tenacity"
+        text: "Use Tenacity: ready your hero (discard Tenacity)"
+        paid: {count: 1, resources: [physical]}
+        effects:
+          - {verb: detach}
+          - {verb: ready, target: hero}

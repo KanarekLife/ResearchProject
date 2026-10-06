@@ -1,55 +1,71 @@
-# AGENTS.md
+# Agent Instructions
 
-Guidance for coding agents working in this repository.
+`mcbench/` is a benchmark for one research question: how well can a language
+model play a full solo game of Marvel Champions: The Card Game when the only
+thing it is given is a set of instruction documents? The rules engine is a small
+Go reimplementation of the solo game, not a general card-game platform. The
+human researcher owns the methodology; agents implement the agreed scope.
 
-## Project goal
+See `mcbench/AGENTS.md` for Go conventions.
 
-A benchmark (`mcbench/`) that measures how well an LLM plays **Marvel Champions: The Card Game** when given only the instruction documents we provide. Each game is a full solo game of a **scenario** (hero deck + villain) from a fixed seed, played to the end and scored from its final state.
+## Approval gate
 
-The rules follow <https://github.com/z00lus/marvel-lcg> (Rules Reference v1.8, solo).
+Benchmark and research decisions belong to the human. Get explicit approval
+before changing any of these, because they define what the benchmark measures
+and make past runs incomparable:
 
-Read `mcbench/docs/` first:
-- `architecture.md`: engine, contract, agentic loop, scoring
-- `scenarios.md`: how to add content
-- `glossary.md`: the terms to use in code, data, docs and conversation
+- the scoring criteria or their weights (`benchmark/score.go`);
+- the instruction documents or the harness system prompt;
+- scenario, deck, villain or encounter-set content, and scenario seeds;
+- the player <-> game contract (tools, statuses, decision kinds, option keys);
+- how seeds or options are ordered (determinism).
 
-## Priorities
+Present the proposed change, its scope, the rationale and the alternatives, then
+wait for approval. Do not infer approval from a ticket, an earlier discussion,
+an implementation request or silence. If a request hides an unstated benchmark
+decision, stop and ask before making it.
 
-- **Research value over implementation.** The engine is a tool. Judge every change by what it adds to the measurement: can a model play well from the provided instructions alone, and is the measurement trustworthy? If a change doesn't produce or improve a measurement, skip it or ask the user first.
-- **Simple solutions.** No overcomplication, no speculative abstractions, no configuration nobody asked for. Prefer deleting code to adding it.
-- **Small, sensible packages** with one job each. Keep this layering:
-  - `engine/`: rules only; knows nothing about players
-  - `cards/`, `scenario/`: content
-  - `game/`: the contract
-  - `agent/`: players
-  - `bench/`: harness
-  - `cmd/mcbench/`: CLI
-- **Tests only where they can fail.** Test real behaviour that could regress: determinism, every seed playing to the end, rule interactions, answer parsing. Don't write tests for things that always pass.
-- **Go, standard library only.** Go is pinned in `mise.toml`. Use the upstream Python repo as a reference for rules and card data; don't run or wrap it.
-- **Port only what scenarios need.** Add a card or rule only when a scenario uses it, and check its behaviour against Rules Reference v1.8 and upstream.
+## Guardrails
 
-## The agent <-> game contract
+- Work only on the requested scope. No unrelated cleanup, refactor or
+  future-proofing.
+- Prefer the smallest clear solution; delete code rather than add it.
+- Never invent rules, card text, sources or results. Card behavior follows Rules
+  Reference v1.8 and the upstream implementation; a card's text is our own
+  paraphrase of what the code does.
+- Keep benchmark and training data traceable to its source. Never copy upstream
+  code or data verbatim, and check licensing before publishing derived content.
+- Preserve determinism: the same seed and the same choices must give the same
+  game. `TestDeterministic` and `TestGamesComplete` are the guard for this and
+  must stay green.
+- Keep work concise and readable. If the human cannot see why something exists,
+  it is not ready.
 
-- Players (LLMs, scripted baselines, humans) use only `game.Session`: the deterministic tools `get_state`, `get_decision`, `choose_option`, `get_log` and `get_card`, or their typed Go equivalents. Players never import or touch `engine/`. The game must stay playable without AI.
-- The contract is documented in `mcbench/docs/architecture.md`, and its schemas live in `game/tools.go` (`mcbench tools`). Update both together.
+## Commits
 
-## Validity rules (do not regress)
+- Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`,
+  `chore:`) with an imperative summary; one logical change per commit.
+- Do not commit unless the human asks. Never commit `results/`, `bin/` or logs.
+- No `Co-Authored-By` trailers or other AI attribution.
+- Never commit to `main`; work on a branch.
 
-- The public view never contains deck order, encounter deck contents or face-down cards.
-- Option order is shuffled per decision, seeded by game seed and sample, never by player. Report the `random` and `heuristic` baselines next to model results.
-- The same seed and choices must give the same game (`bench.TestDeterministic`). Every scenario seed must play to the end (`bench.TestGamesComplete`, `mcbench validate`).
-- Scoring weights (`bench/score.go`) are part of the benchmark definition. Never change them between runs that will be compared.
-- Instruction documents are the independent variable. The harness prompt in `agent/llm.go` explains only the answer format, never game knowledge.
-- The default model endpoint is local LM Studio (`http://localhost:1234/v1`) through the OpenAI-compatible API. Never mix models within one comparison.
+## Documentation
 
-## Git workflow
+- Update a document only when an approved decision changes what it describes.
+- Keep documentation human-readable and research-focused: no filler, no
+  restating code, no generic best-practices text.
+- Keep each fact in its owning document and link instead of copying it.
+  `docs/architecture.md` owns how the engine, contract, agentic loop and scoring
+  work.
 
-- Remote: `git@github.com:KanarekLife/ResearchProject.git`.
-- Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`), with an optional scope such as `feat(engine): ...`.
-- Never commit or push to `main` directly. Work on a branch and open a pull request with `gh pr create`. Don't merge it yourself unless the user asks.
-- Never commit `results/`, `bin/` or logs.
+## Verify before done
 
-## Notes on upstream
+From `mcbench/`:
 
-- Upstream ships no LICENSE file. Don't copy its code or data verbatim, and check licensing before publishing anything derived from it.
-- Upstream's `docs/engine_architecture.md`, `docs/card_scripting_guide.md` and `unit_test/test_v18_*` tests are useful references for exact timing and rules behaviour.
+```bash
+GOTOOLCHAIN=auto go test ./...   # determinism, every seed finishes, rule checks
+go run ./cmd validate            # play every seed with the scripted players
+```
+
+`validate` is the smoke test: any `engine_error` or `decision_limit` it reports
+is a bug.

@@ -1,0 +1,46 @@
+id: spider-man-justice
+name: Spider-Man (Justice starter deck)
+identity: Spider-Man
+cards:
+  - Black Cat
+  - Backflip
+  - Backflip
+  - Enhanced Spider-Sense
+  - Enhanced Spider-Sense
+  - Swinging Web Kick
+  - Swinging Web Kick
+  - Swinging Web Kick
+  - Aunt May
+  - Spider-Tracer
+  - Spider-Tracer
+  - Web-Shooter
+  - Web-Shooter
+  - Webbed Up
+  - Webbed Up
+  - Daredevil
+  - Jessica Jones
+  - For Justice!
+  - For Justice!
+  - Great Responsibility
+  - Great Responsibility
+  - The Power of Justice
+  - The Power of Justice
+  - Interrogation Room
+  - Interrogation Room
+  - Surveillance Team
+  - Surveillance Team
+  - Heroic Intuition
+  - Heroic Intuition
+  - Mockingbird
+  - Nick Fury
+  - Emergency
+  - First Aid
+  - Haymaker
+  - Energy
+  - Genius
+  - Strength
+  - Avengers Mansion
+  - Helicarrier
+  - Tenacity
+obligation: Eviction Notice
+nemesis: [Vulture, Highway Robbery, Sweeping Swoop, Sweeping Swoop, The Vulture's Plans]
