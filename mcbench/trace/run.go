@@ -19,7 +19,6 @@ type Run struct {
 type Game struct {
 	Name  string // file base, e.g. spider-man-vs-rhino_seed2_s0
 	Trace string
-	Live  string
 }
 
 // Discover lists the runs under dir, newest first (run ids sort by timestamp).
@@ -62,11 +61,9 @@ func games(dir string) ([]Game, error) {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".jsonl") {
 			continue
 		}
-		base := strings.TrimSuffix(e.Name(), ".jsonl")
 		out = append(out, Game{
-			Name:  base,
+			Name:  strings.TrimSuffix(e.Name(), ".jsonl"),
 			Trace: filepath.Join(live, e.Name()),
-			Live:  filepath.Join(live, base+".txt"),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

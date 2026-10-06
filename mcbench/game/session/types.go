@@ -40,8 +40,6 @@ type Options struct {
 	// Trace, if set, receives a JSON line for every choice, plus anything
 	// players add with Session.Trace (e.g. model messages).
 	Trace io.Writer
-	// Live, if set, receives a human-readable block after every choice.
-	Live io.Writer
 	// Logger receives game actions and choices at info level. Nil uses
 	// slog.Default.
 	Logger *slog.Logger

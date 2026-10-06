@@ -147,5 +147,5 @@ go run ./cmd play -only <id> -seed 3             # play it yourself
 go run ./cmd run -player heuristic -only <id>    # scripted numbers to compare models against
 ```
 
-`validate` must report no engine errors. Read a few `live/*.txt` files to
+`validate` must report no engine errors. Read a few games with `go run ./cmd view` to
 confirm the new cards behave as their text says.
