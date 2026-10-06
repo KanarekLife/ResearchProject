@@ -89,6 +89,4 @@ Known simplifications:
 - Spider-Sense draws automatically.
 - Always-beneficial optional responses (Interrogation Room, Daredevil) trigger
   automatically.
-- Great Responsibility applies only in the villain phase.
-- Star boost abilities are ignored.
 - Main schemes have a single stage.

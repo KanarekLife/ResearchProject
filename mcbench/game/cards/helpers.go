@@ -17,11 +17,12 @@ func absorbDamage(g *e.Game, c *e.Card, ev *e.Event, maxDamage int) {
 	ev.Amount = 0
 	if c.Damage >= maxDamage {
 		g.Logf("%s is discarded.", c.Def.Name)
-		c.Damage = 0
 		g.Detach(c)
 	}
 }
 
+// millKeep discards the top n cards of the deck, keeping those with a keep
+// resource. It stops when the deck empties: the new deck is not milled.
 func millKeep(g *e.Game, c *e.Card, n int, keep e.Resource) {
 	for i := 0; i < n && len(g.S.Deck) > 0; i++ {
 		top := g.S.Deck[0]
@@ -34,6 +35,7 @@ func millKeep(g *e.Game, c *e.Card, n int, keep e.Resource) {
 			g.Logf("%s discards %s.", c.Def.Name, top.Def.Name)
 		}
 	}
+	g.ResetEmptyDeck()
 }
 
 func findAndReveal(g *e.Game, code string) {
@@ -57,12 +59,14 @@ func takeRandomCard(g *e.Game, c *e.Card) {
 		return
 	}
 	g.S.Hand = removeCard(g.S.Hand, x)
+	x.Facedown = true
 	c.Attached = append(c.Attached, x)
 	g.Logf("%s takes %s from your hand.", c.Def.Name, x.Def.Name)
 }
 
 func returnAttached(g *e.Game, c *e.Card) {
 	for _, x := range c.Attached {
+		x.Facedown = false
 		g.S.Hand = append(g.S.Hand, x)
 		g.Logf("%s returns to your hand.", x.Def.Name)
 	}
@@ -76,7 +80,7 @@ func discardRandomPlaceThreat(g *e.Game) {
 	}
 	g.DiscardFromHand(x)
 	kinds := slices.Compact(slices.Sorted(slices.Values(x.Def.Resources)))
-	g.PlaceThreat(g.S.MainScheme, len(kinds))
+	g.PlaceThreatWindowed(g.S.MainScheme, len(kinds))
 }
 
 func villainAndMinionsAttack(g *e.Game) {
@@ -131,36 +135,49 @@ func nemesisReveal(g *e.Game) {
 	g.Do(steps...)
 }
 
-// assignDamage lets the player split n damage among the hero and allies one
-// point at a time (all to the hero automatically when there are no allies).
+// assignDamage lets the player assign n damage among the hero and allies one
+// point at a time, then deals it all at once (so a tough status prevents all
+// of the damage assigned to its character). An ally cannot be assigned more
+// damage than would defeat it; the rest goes to the hero.
 func assignDamage(g *e.Game, source string, n int) {
-	if n <= 0 {
-		return
-	}
 	var allies []*e.Card
 	for _, c := range g.S.Play {
 		if c.Def.Type == e.TypeAlly {
 			allies = append(allies, c)
 		}
 	}
-	if len(allies) == 0 {
-		g.DamageHero(n)
-		return
-	}
-	g.Do(func() {
-		opts := []e.Option{e.NewAction(constants.PrefixEffect+source+">"+g.S.Hero.Name(), "Deal 1 to "+g.S.Hero.Name(), func() {
-			g.DamageHero(1)
-			assignDamage(g, source, n-1)
-		})}
+	assigned := map[*e.Card]int{}
+	var assign func(left int)
+	assign = func(left int) {
+		var open []*e.Card
 		for _, a := range allies {
-			ally := a
-			opts = append(opts, e.NewAction(constants.PrefixEffect+source+">"+g.Label(ally), fmt.Sprintf("Deal 1 to %s (%d HP left)", g.Label(ally), ally.RemainingHP()), func() {
-				g.DamageAlly(ally, 1)
-				assignDamage(g, source, n-1)
-			}))
+			if assigned[a] < a.RemainingHP() {
+				open = append(open, a)
+			}
 		}
-		g.Ask(&e.Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("%s: assign 1 damage (%d left to assign).", source, n), Options: opts})
-	})
+		if left <= 0 || len(open) == 0 {
+			assigned[g.S.Hero] += max(0, left)
+			dealAssigned(g, allies, assigned)
+			return
+		}
+		next := func(c *e.Card) func() {
+			return func() { assigned[c]++; assign(left - 1) }
+		}
+		opts := []e.Option{e.NewAction(constants.PrefixEffect+source+">"+g.S.Hero.Name(), "Assign 1 to "+g.S.Hero.Name(), next(g.S.Hero))}
+		for _, a := range open {
+			opts = append(opts, e.NewAction(constants.PrefixEffect+source+">"+g.Label(a), fmt.Sprintf("Assign 1 to %s (%d HP left)", g.Label(a), a.RemainingHP()-assigned[a]), next(a)))
+		}
+		g.Ask(&e.Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("%s: assign 1 damage (%d left to assign).", source, left), Options: opts})
+	}
+	g.Do(func() { assign(n) })
+}
+
+// dealAssigned deals the assigned damage, hero first.
+func dealAssigned(g *e.Game, allies []*e.Card, assigned map[*e.Card]int) {
+	g.DamageHero(assigned[g.S.Hero])
+	for _, a := range allies {
+		g.DamageAlly(a, assigned[a])
+	}
 }
 
 func evalBonus(g *e.Game, expr string) int {

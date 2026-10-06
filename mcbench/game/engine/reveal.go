@@ -4,27 +4,41 @@ import (
 	"fmt"
 )
 
-// drawEncounter takes the top encounter card, reshuffling the discard pile
-// into the deck (with an acceleration token) when the deck is empty.
+// drawEncounter takes the top encounter card. The deck is reset as soon as
+// it is empty, so the card being drawn is not shuffled back in.
 func (g *Game) drawEncounter() *Card {
 	s := g.S
+	g.resetEncounterDeck()
 	if len(s.EncDeck) == 0 {
-		if len(s.EncDiscard) == 0 {
-			return nil
-		}
-		s.EncDeck, s.EncDiscard = s.EncDiscard, nil
-		g.shuffle(s.EncDeck)
-		s.AccelTokens++
-		g.Logf("Encounter deck reshuffled; an acceleration token is added (%d total).", s.AccelTokens)
+		return nil
 	}
 	c := s.EncDeck[0]
 	s.EncDeck = s.EncDeck[1:]
+	g.resetEncounterDeck()
 	return c
 }
 
-// boost deals and immediately resolves a boost card, returning its icons.
-func (g *Game) boost() int {
-	c := g.drawEncounter()
+// resetEncounterDeck shuffles the encounter discard pile into a new deck
+// (with an acceleration token) as soon as the deck is empty. If the discard
+// pile is empty too, the reset loops forever and the players lose.
+func (g *Game) resetEncounterDeck() {
+	s := g.S
+	if len(s.EncDeck) > 0 {
+		return
+	}
+	if len(s.EncDiscard) == 0 {
+		g.lose("the encounter deck and its discard pile are both empty")
+		return
+	}
+	s.EncDeck, s.EncDiscard = s.EncDiscard, nil
+	g.shuffle(s.EncDeck)
+	s.AccelTokens++
+	g.Logf("Encounter deck reshuffled; an acceleration token is added (%d total).", s.AccelTokens)
+}
+
+// flipBoost flips a facedown boost card and discards it, returning its
+// boost icons.
+func (g *Game) flipBoost(c *Card) int {
 	if c == nil {
 		return 0
 	}
@@ -33,37 +47,41 @@ func (g *Game) boost() int {
 	return c.Def.Boost
 }
 
-// dealAndRevealEncounters deals 1 + hazard encounter cards and reveals them,
-// together with any cards dealt earlier in the round.
+// dealAndRevealEncounters deals 1 + hazard encounter cards, then reveals
+// every dealt card one at a time, including cards dealt earlier in the round
+// and cards dealt while revealing.
 func (g *Game) dealAndRevealEncounters() {
 	s := g.S
 	n := 1
 	for _, ss := range s.SideSchemes {
 		n += ss.Face().Hazard
 	}
-	dealt := s.Dealt
-	s.Dealt = nil
 	for i := 0; i < n; i++ {
 		if c := g.drawEncounter(); c != nil {
-			dealt = append(dealt, c)
+			s.Dealt = append(s.Dealt, c)
 		}
 	}
-	var steps []func()
-	for _, c := range dealt {
-		card := c
-		steps = append(steps, func() { g.Reveal(card) })
-	}
-	g.Do(steps...)
+	g.Do(g.revealDealt)
 }
 
-// Surge makes the current reveal reveal one more encounter card afterwards.
+// revealDealt reveals the next dealt card, then the rest of the queue.
+func (g *Game) revealDealt() {
+	s := g.S
+	if len(s.Dealt) == 0 {
+		return
+	}
+	c := s.Dealt[0]
+	s.Dealt = s.Dealt[1:]
+	g.Do(func() { g.Reveal(c) }, g.revealDealt)
+}
+
+// Surge deals the player one more facedown encounter card. It joins the
+// queue of dealt cards, revealed in the villain phase.
 func (g *Game) Surge() {
-	g.Logf("Surge!")
-	g.Do(func() {
-		if c := g.drawEncounter(); c != nil {
-			g.Reveal(c)
-		}
-	})
+	g.Logf("Surge! An encounter card is dealt facedown to %s.", g.S.Hero.Name())
+	if c := g.drawEncounter(); c != nil {
+		g.S.Dealt = append(g.S.Dealt, c)
+	}
 }
 
 func (g *Game) Reveal(c *Card) {

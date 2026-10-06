@@ -63,7 +63,7 @@ type CardDoc struct {
 }
 
 // Ability is one trigger plus the effects it runs. Trigger is one of play,
-// action, reveal, defeated, interrupt, forced, resource or stat.
+// action, reveal, defeated, interrupt, forced, resource, stat or boost.
 type Ability struct {
 	Trigger      string   `yaml:"trigger"`
 	On           string   `yaml:"on"`

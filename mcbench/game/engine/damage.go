@@ -76,13 +76,21 @@ func (g *Game) defeatMinion(m *Card) {
 	g.fireForced(&Event{Trigger: TrigMinionDefeated, Target: m})
 	g.Logf("%s is defeated.", m.Name())
 	g.S.Minions = remove(g.S.Minions, m)
-	g.discardAttachments(m)
-	m.Damage, m.Stunned, m.Confused, m.Tough = 0, false, false, false
+	g.leavePlay(m)
 	g.S.EncDiscard = append(g.S.EncDiscard, m)
+}
+
+// leavePlay resets a card that moved out of play: it keeps no memory of its
+// previous state, and each card attached to it is discarded.
+func (g *Game) leavePlay(c *Card) {
+	g.discardAttachments(c)
+	c.Exhausted, c.Damage, c.Threat, c.Counters = false, 0, 0, 0
+	c.Stunned, c.Confused, c.Tough, c.Facedown = false, false, false, false
 }
 
 func (g *Game) discardAttachments(c *Card) {
 	for _, a := range c.Attached {
+		g.leavePlay(a)
 		if a.Def.IsPlayerCard() {
 			g.S.Discard = append(g.S.Discard, a)
 		} else {
@@ -99,6 +107,7 @@ func (g *Game) Detach(a *Card) {
 		}
 	})
 	g.S.Play = remove(g.S.Play, a)
+	g.leavePlay(a)
 	if a.Def.IsPlayerCard() {
 		g.S.Discard = append(g.S.Discard, a)
 	} else {
@@ -143,18 +152,21 @@ func (g *Game) DamageAlly(a *Card, amount int) (dealt, excess int) {
 	if a.RemainingHP() <= 0 {
 		g.Logf("%s is defeated.", a.Name())
 		g.S.Play = remove(g.S.Play, a)
-		g.discardAttachments(a)
-		a.Damage, a.Exhausted, a.Stunned, a.Confused, a.Tough = 0, false, false, false, false
+		g.leavePlay(a)
 		g.S.Discard = append(g.S.Discard, a)
 	}
 	return amount, excess
 }
 
 func (g *Game) HealHero(n int) {
-	h := g.S.Hero
-	healed := min(n, h.Damage)
-	h.Damage -= healed
-	g.Logf("%s heals %d damage (%d HP left).", h.Name(), healed, h.RemainingHP())
+	g.Heal(g.S.Hero, n)
+}
+
+// Heal removes up to n damage from a character.
+func (g *Game) Heal(c *Card, n int) {
+	healed := min(n, c.Damage)
+	c.Damage -= healed
+	g.Logf("%s heals %d damage (%d HP left).", g.Label(c), healed, c.RemainingHP())
 }
 
 func (g *Game) HealVillain(n int) int {

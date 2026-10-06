@@ -18,7 +18,8 @@ func when(g *e.Game, c *e.Card, ev *e.Event, preds []string) bool {
 }
 
 // predicates are the named conditions card YAML can use in `when`. The
-// paid:<resource> family is handled separately by predicate.
+// paid:<resource> and not_paid:<resource> families are handled separately by
+// predicate.
 var predicates = map[string]func(g *e.Game, c *e.Card, ev *e.Event) bool{
 	constants.PredHero:             func(g *e.Game, c *e.Card, ev *e.Event) bool { return g.IsHero() },
 	constants.PredAlterEgo:         func(g *e.Game, c *e.Card, ev *e.Event) bool { return !g.IsHero() },
@@ -54,9 +55,19 @@ func predicate(p string) func(g *e.Game, c *e.Card, ev *e.Event) bool {
 	}
 	if r, ok := strings.CutPrefix(p, constants.PredPaidPrefix); ok {
 		res := resource(r)
-		return func(g *e.Game, _ *e.Card, _ *e.Event) bool { return slices.Contains(g.LastPaid, res) }
+		return func(g *e.Game, _ *e.Card, _ *e.Event) bool { return paidWith(g, res) }
+	}
+	if r, ok := strings.CutPrefix(p, constants.PredNotPaidPrefix); ok {
+		res := resource(r)
+		return func(g *e.Game, _ *e.Card, _ *e.Event) bool { return !paidWith(g, res) }
 	}
 	return nil
+}
+
+// paidWith reports whether the last payment included res. A wild resource
+// spent on a cost may be declared as any type.
+func paidWith(g *e.Game, res e.Resource) bool {
+	return slices.Contains(g.LastPaid, res) || slices.Contains(g.LastPaid, e.Wild)
 }
 
 func pred(g *e.Game, c *e.Card, ev *e.Event, p string) bool {
@@ -103,6 +114,8 @@ func selectTargets(g *e.Game, sel string) []*e.Card {
 		return controlledUpgradesSupports(g)
 	case constants.SelEnemyWithoutWebbed:
 		return enemiesWithoutWebbedUp(g)
+	case constants.SelDamagedCharacter:
+		return damagedCharacters(g)
 	}
 	return nil
 }

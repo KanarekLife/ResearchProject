@@ -35,6 +35,24 @@ func enemiesWithoutWebbedUp(g *e.Game) []*e.Card {
 	return out
 }
 
+// damagedCharacters lists every character with damage to heal: the identity,
+// its allies, the villain and the minions.
+func damagedCharacters(g *e.Game) []*e.Card {
+	chars := []*e.Card{g.S.Hero}
+	for _, c := range g.S.Play {
+		if c.Def.Type == e.TypeAlly {
+			chars = append(chars, c)
+		}
+	}
+	var out []*e.Card
+	for _, c := range append(chars, g.AllEnemies()...) {
+		if c.Damage > 0 {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 func findCode(zone []*e.Card, code string) *e.Card {
 	for _, c := range zone {
 		if c.Def.Code == code {

@@ -85,7 +85,7 @@ func (g *Game) EnemyScheme(enemy *Card, isVillain bool) {
 	}
 	n := enemy.Face().SCH + g.attachedSCH(enemy)
 	if isVillain {
-		n += g.boost()
+		n += g.flipBoost(g.drawEncounter())
 	}
 	g.Logf("%s schemes for %d.", enemy.Name(), n)
 	if !isVillain {
@@ -98,14 +98,17 @@ func (g *Game) EnemyScheme(enemy *Card, isVillain bool) {
 	})
 }
 
-// PlaceThreatWindowed places threat during the villain phase, first
-// offering interrupts such as Great Responsibility.
+// PlaceThreatWindowed places threat, first offering interrupts such as Great
+// Responsibility. The window is scheduled as a step, so effects that follow
+// it in the same list resolve after the player answers.
 func (g *Game) PlaceThreatWindowed(scheme *Card, n int) {
 	if n <= 0 {
 		return
 	}
 	ev := &Event{Trigger: TrigThreatWouldBePlaced, Target: scheme, Amount: n}
-	g.playerWindow(ev, fmt.Sprintf("%d threat is about to be placed on %s (now %d/%d).", n, scheme.Name(), scheme.Threat, scheme.Face().TargetThreat), func() {
-		g.PlaceThreat(scheme, ev.Amount)
+	g.Do(func() {
+		g.playerWindow(ev, fmt.Sprintf("%d threat is about to be placed on %s (now %d/%d).", n, scheme.Name(), scheme.Threat, scheme.Face().TargetThreat), func() {
+			g.PlaceThreat(scheme, ev.Amount)
+		})
 	})
 }

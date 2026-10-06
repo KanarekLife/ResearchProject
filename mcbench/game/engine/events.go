@@ -24,7 +24,7 @@ const (
 	TrigMinionDefeated Trigger = constants.TrigMinionDefeated
 	// The villain is about to place threat by scheming. Amount may be reduced.
 	TrigVillainSchemes Trigger = constants.TrigVillainSchemes
-	// Threat is about to be placed on a scheme in the villain phase.
+	// Threat is about to be placed on a scheme. Amount may be reduced.
 	TrigThreatWouldBePlaced Trigger = constants.TrigThreatWouldBePlaced
 	// A player character finished thwarting (Source is the thwarter).
 	TrigThwarted Trigger = constants.TrigThwarted

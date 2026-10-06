@@ -86,6 +86,9 @@ func applyAbility(sc *e.Script, d *CardDoc, a Ability) {
 		applyResource(sc, d.Code, a)
 	case constants.AbilityStat:
 		applyStat(sc, a)
+	case constants.AbilityBoost:
+		effs := a.Effects
+		sc.BoostOnDamaged = func(g *e.Game, c, damaged *e.Card) { run(g, c, &e.Event{Target: damaged}, nil, effs) }
 	default:
 		panic("cards: unknown ability trigger " + a.Trigger)
 	}
@@ -182,7 +185,7 @@ func actionOptions(abilities []Ability) func(*e.Game, *e.Card) []e.Option {
 
 func hasScript(sc *e.Script) bool {
 	return sc.CanPlay != nil || sc.Targets != nil || sc.OnPlay != nil ||
-		sc.OnReveal != nil || sc.OnDefeated != nil || sc.PlayWindow != "" ||
+		sc.OnReveal != nil || sc.OnDefeated != nil || sc.BoostOnDamaged != nil || sc.PlayWindow != "" ||
 		sc.OnPlayEvent != nil || len(sc.Forced) > 0 || sc.Actions != nil ||
 		sc.ResourceAbility != nil || sc.StatBonus != nil
 }

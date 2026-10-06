@@ -182,8 +182,8 @@ cards:
         when: [hero]
         target: scheme
         effects:
-          - {verb: thwart, amount: 3}
-          - {verb: thwart, amount: 1, when: ["paid:mental"]}
+          - {verb: thwart, amount: 3, when: ["not_paid:mental"]}
+          - {verb: thwart, amount: 4, when: ["paid:mental"]}
 
   - code: "01086"
     name: First Aid
@@ -191,12 +191,12 @@ cards:
     aspect: Basic
     cost: 1
     resources: [mental]
-    text: "Action: heal 2 damage from your identity."
+    text: "Action: heal 2 damage from any character."
     abilities:
       - trigger: play
-        when: [hero_damaged]
+        target: damaged_character
         effects:
-          - {verb: heal_hero, amount: 2}
+          - {verb: heal, amount: 2}
 
   - code: "01083"
     name: Mockingbird
@@ -401,7 +401,7 @@ cards:
     boost: 2
     starting_threat: 2
     crisis: true
-    text: "Crisis: threat cannot be removed from the main scheme."
+    text: "Crisis: you cannot remove threat from the main scheme."
 
   - code: "01109"
     name: Bomb Scare

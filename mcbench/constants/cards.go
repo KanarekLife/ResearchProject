@@ -51,6 +51,7 @@ const (
 	AbilityForced    = "forced"
 	AbilityResource  = "resource"
 	AbilityStat      = "stat"
+	AbilityBoost     = "boost"
 )
 
 // Effect verbs (the value of Effect.Verb).
@@ -62,6 +63,7 @@ const (
 	VerbRemoveThreat       = "remove_threat"
 	VerbPlaceThreat        = "place_threat"
 	VerbDraw               = "draw"
+	VerbHeal               = "heal"
 	VerbHealHero           = "heal_hero"
 	VerbHealVillain        = "heal_villain"
 	VerbStun               = "stun"
@@ -122,6 +124,7 @@ const (
 	PredUpgradesSupports = "upgrades_supports"
 	PredAmountPositive   = "amount_positive"
 	PredPaidPrefix       = "paid:"
+	PredNotPaidPrefix    = "not_paid:"
 )
 
 // Effect selectors (the values of Ability.Target and Effect.Target).
@@ -132,6 +135,7 @@ const (
 	SelScheme             = "scheme"
 	SelUpgradeSupport     = "upgrade_support"
 	SelEnemyWithoutWebbed = "enemy_without_webbed_up"
+	SelDamagedCharacter   = "damaged_character"
 	SelEventSource        = "event_source"
 	SelEventTarget        = "event_target"
 	SelChosen             = "chosen"

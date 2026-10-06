@@ -66,9 +66,15 @@ func (g *Game) Ask(d *Decision) {
 	g.pending = d
 }
 
-// Run advances until a decision is pending or the game is over.
+// Run advances until a decision is pending or the game is over. Emptied
+// decks are reset after every step, so a reset never waits for the next draw.
 func (g *Game) Run() {
-	for !g.result.Over && !g.halted && g.pending == nil && len(g.stack) > 0 {
+	for !g.result.Over && !g.halted {
+		g.ResetEmptyDeck()
+		g.resetEncounterDeck()
+		if g.result.Over || g.pending != nil || len(g.stack) == 0 {
+			return
+		}
 		step := g.stack[len(g.stack)-1]
 		g.stack = g.stack[:len(g.stack)-1]
 		step()
@@ -149,12 +155,12 @@ func (g *Game) shuffle(cards []*Card) {
 func (g *Game) Shuffle(cards []*Card) { g.shuffle(cards) }
 
 // inPlay visits every card in play (identity, villain, schemes, minions,
-// player cards and attachments).
+// player cards and faceup attachments).
 func (g *Game) inPlay(f func(*Card)) {
 	s := g.S
 	var visit func(c *Card)
 	visit = func(c *Card) {
-		if c == nil {
+		if c == nil || c.Facedown {
 			return
 		}
 		f(c)
@@ -170,6 +176,11 @@ func (g *Game) inPlay(f func(*Card)) {
 			visit(c)
 		}
 	}
+}
+
+func (g *Game) isInPlay(c *Card) (found bool) {
+	g.inPlay(func(x *Card) { found = found || x == c })
+	return found
 }
 
 func (g *Game) IsHero() bool { return g.S.Hero.Face().Type == TypeHero }

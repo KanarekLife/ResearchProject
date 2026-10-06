@@ -16,10 +16,9 @@ func (g *Game) Attack(attacker, target *Card, amount, consequential int) {
 		return
 	}
 	g.Logf("%s attacks %s for %d.", attacker.Name(), target.Name(), amount)
+	// Scheduled first so it runs after every ability the attack triggers.
+	g.Do(func() { g.consequentialDamage(attacker, consequential) })
 	g.DamageEnemy(target, amount)
-	if consequential > 0 && contains(g.S.Play, attacker) {
-		g.DamageAlly(attacker, consequential)
-	}
 }
 
 // Thwart performs a thwart by a player character, honoring confuse.
@@ -30,11 +29,16 @@ func (g *Game) Thwart(thwarter, scheme *Card, amount, consequential int) {
 		return
 	}
 	g.Logf("%s thwarts %s for %d.", thwarter.Name(), scheme.Name(), amount)
+	// Scheduled first so it runs after every ability the thwart triggers.
+	g.Do(func() { g.consequentialDamage(thwarter, consequential) })
 	g.RemoveThreat(scheme, amount)
-	if consequential > 0 && contains(g.S.Play, thwarter) {
-		g.DamageAlly(thwarter, consequential)
-	}
 	g.fireForced(&Event{Trigger: TrigThwarted, Source: thwarter, Target: scheme})
+}
+
+func (g *Game) consequentialDamage(ally *Card, n int) {
+	if n > 0 && contains(g.S.Play, ally) {
+		g.DamageAlly(ally, n)
+	}
 }
 
 // --- targeting --------------------------------------------------------------
