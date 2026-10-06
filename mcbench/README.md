@@ -17,7 +17,6 @@ left, final threat and speed.
 ```bash
 GOTOOLCHAIN=auto go test ./...      # determinism, every seed playable, scoring, rules, contract
 go run ./cmd list                   # scenarios
-go run ./cmd tools                  # the player <-> game contract
 go run ./cmd validate               # play every seed with the scripted players
 
 # A model through any OpenAI-compatible API (LM Studio on :1234 by default).

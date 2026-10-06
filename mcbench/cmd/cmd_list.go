@@ -1,16 +1,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 )
 
 func cmdList(args []string) error {
-	cfg, err := configFromArgs(args)
+	fs, cfg, err := newFlagSet(cmdNameList, args)
 	if err != nil {
 		return err
 	}
-	fs := flag.NewFlagSet(cmdNameList, flag.ExitOnError)
 	l := scenarioFlags(fs, cfg)
 	fs.Parse(args)
 	scs, err := l.load()

@@ -45,7 +45,7 @@ func TestGamesComplete(t *testing.T) {
 		for _, seed := range sc.Seeds {
 			for _, p := range []player.Player{heuristic.Random{Seed: seed}, heuristic.Heuristic{}} {
 				r := Play(context.Background(), sc, p, instruction.Instructions{}, seed, 0, "", DefaultWeights)
-				if r.Status == session.EngineError || r.Status == session.DecisionLimit || r.Status == constants.AgentError {
+				if r.Status == constants.EngineError || r.Status == constants.DecisionLimit || r.Status == constants.AgentError {
 					t.Fatalf("%s seed %d (%s): %s %s", sc.ID, seed, p.Name(), r.Status, r.Error)
 				}
 			}
@@ -72,6 +72,37 @@ func TestGameLogsActionsAndChoices(t *testing.T) {
 	for _, want := range []string{"msg=choice", "scenario=" + sc.ID, "round=1", "Player turn"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("log lacks %q", want)
+		}
+	}
+}
+
+// Replaying a game's recorded choices on a fresh session must reach the same
+// result: the choices alone determine the game.
+func TestReplayReachesSameResult(t *testing.T) {
+	for _, sc := range scenarios(t) {
+		seed := sc.Seeds[0]
+		rec := Play(context.Background(), sc, heuristic.Random{Seed: 7}, instruction.Instructions{}, seed, 0, "", DefaultWeights)
+		s, err := session.New(sc, seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, ShuffleOptions: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, c := range rec.Choices {
+			id := 0
+			for _, o := range s.Decision().Options {
+				if o.Key == c.Key {
+					id = o.ID
+					break
+				}
+			}
+			if id == 0 {
+				t.Fatalf("%s: choice %d (%s) is not offered on replay", sc.ID, i+1, c.Key)
+			}
+			if _, err := s.Choose(id, ""); err != nil {
+				t.Fatalf("%s: choice %d: %v", sc.ID, i+1, err)
+			}
+		}
+		if s.Status() != rec.Status || !reflect.DeepEqual(s.Stats(), rec.Stats) {
+			t.Errorf("%s: replay ended %s, original %s", sc.ID, s.Status(), rec.Status)
 		}
 	}
 }

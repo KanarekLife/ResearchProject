@@ -1,7 +1,8 @@
 // Package session is the contract between a player and a running game. Every
 // player plays through a Session: View the state, read the Decision, Choose
-// an option. The same contract is exposed as JSON tools for models. A
-// scenario, seed and sequence of choices always produce the same game.
+// an option. The model player exposes the same contract as JSON tools; see
+// player/model. A scenario, seed and sequence of choices always produce the
+// same game.
 package session
 
 import (
@@ -15,16 +16,6 @@ import (
 	"mcbench/constants"
 	"mcbench/game/engine"
 	"mcbench/game/scenario"
-)
-
-// Status of a session.
-const (
-	AwaitingDecision = constants.AwaitingDecision
-	Won              = constants.Won
-	Lost             = constants.Lost
-	RoundLimit       = constants.RoundLimit    // max rounds played without a result
-	DecisionLimit    = constants.DecisionLimit // runaway game
-	EngineError      = constants.EngineError
 )
 
 // Session is one game in progress.
@@ -88,20 +79,20 @@ func (s *Session) Status() string {
 	g := s.g
 	switch {
 	case s.err != "":
-		return EngineError
+		return constants.EngineError
 	case g.Result().Over && g.Result().Won:
-		return Won
+		return constants.Won
 	case g.Result().Over:
-		return Lost
+		return constants.Lost
 	case g.Halted():
-		return RoundLimit
+		return constants.RoundLimit
 	case s.opts.MaxDecisions > 0 && g.Decisions >= s.opts.MaxDecisions:
-		return DecisionLimit
+		return constants.DecisionLimit
 	case g.Pending() == nil:
 		s.err = "engine stopped without a decision or result"
-		return EngineError
+		return constants.EngineError
 	}
-	return AwaitingDecision
+	return constants.AwaitingDecision
 }
 
 // Error is the engine error behind an engine_error status.
@@ -112,7 +103,7 @@ func (s *Session) View() View { return buildView(s.g, s.stages) }
 
 // Decision is the current decision, or nil when the game is over.
 func (s *Session) Decision() *Decision {
-	if s.Status() != AwaitingDecision {
+	if s.Status() != constants.AwaitingDecision {
 		return nil
 	}
 	d := s.g.Pending()
@@ -158,24 +149,41 @@ func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 	s.guard(func() { s.g.Choose(s.order[id-1]) })
 	events := append([]string(nil), s.g.Log[s.mark:]...)
 	s.mark = len(s.g.Log)
-	s.Trace(map[string]any{
-		constants.TraceKeyType:     constants.TraceChoice,
-		constants.TraceKeyDecision: len(s.Choices),
-		constants.TraceKeyChoice:   choice,
-		constants.TraceKeyText:     d.Options[id-1].Text,
-		constants.TraceKeyEvents:   events,
-		constants.TraceKeyStatus:   s.Status(),
+	s.Trace(constants.TraceChoice, &choiceTrace{
+		Decision: len(s.Choices), Choice: choice, Text: d.Options[id-1].Text, Events: events, Status: s.Status(),
 	})
 	s.writeLive(d, d.Options[id-1], reasoning, events)
 	return events, nil
 }
 
-// Trace writes one JSON line to the session's trace, if it has one.
-func (s *Session) Trace(entry map[string]any) {
+// TraceHeader is embedded in every trace entry; Trace fills it in.
+type TraceHeader struct {
+	Type string `json:"type"`
+	Time string `json:"time"`
+}
+
+func (h *TraceHeader) header() *TraceHeader { return h }
+
+// TraceEntry is a trace line: a struct embedding TraceHeader.
+type TraceEntry interface{ header() *TraceHeader }
+
+type choiceTrace struct {
+	TraceHeader
+	Decision int      `json:"decision"`
+	Choice   Choice   `json:"choice"`
+	Text     string   `json:"text"`
+	Events   []string `json:"events"`
+	Status   string   `json:"status"`
+}
+
+// Trace writes one JSON line of the given type to the session's trace, if it
+// has one.
+func (s *Session) Trace(typ string, entry TraceEntry) {
 	if s.opts.Trace == nil {
 		return
 	}
-	entry[constants.TraceKeyTime] = time.Now().Format(time.RFC3339)
+	h := entry.header()
+	h.Type, h.Time = typ, time.Now().Format(time.RFC3339)
 	if b, err := json.Marshal(entry); err == nil {
 		s.opts.Trace.Write(append(b, '\n'))
 	}

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"mcbench/game/session"
+	"mcbench/constants"
 )
 
 // groupKey identifies one configuration (player + instruction set).
@@ -91,7 +91,7 @@ func summarize(rs []Record) summary {
 			}
 			s.criteria[c].add(r.Criteria[c])
 		}
-		if r.Status == session.Won {
+		if r.Status == constants.Won {
 			s.roundsWon.add(float64(r.Rounds))
 		}
 		s.decisions.add(float64(r.Decisions))

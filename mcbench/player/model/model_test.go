@@ -59,7 +59,7 @@ func TestPlayRunsTheGameToTheEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Status() == session.AwaitingDecision {
+	if s.Status() == constants.AwaitingDecision {
 		t.Fatalf("game still awaiting a decision")
 	}
 	if u.Requests != len(s.Choices) || u.InputTokens != int64(10*u.Requests) {

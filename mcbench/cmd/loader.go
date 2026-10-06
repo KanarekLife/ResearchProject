@@ -6,16 +6,22 @@ import (
 	"strings"
 
 	"mcbench/game/scenario"
-	"mcbench/game/session"
 )
 
 // loader holds the scenario selection flags shared by most commands.
 type loader struct{ dir, root, only *string }
 
-// scenarioFlags defines the shared scenario flags, with defaults from config.
-// It also defines -config so the pre-read of the config file parses cleanly.
-func scenarioFlags(fs *flag.FlagSet, cfg config) loader {
+// newFlagSet loads the config file named by -config (pre-read from args so it
+// can supply flag defaults) and returns a flag set that also accepts -config.
+func newFlagSet(name string, args []string) (*flag.FlagSet, config, error) {
+	cfg, err := loadConfig(flagValue(args, "config", defaultConfigFile))
+	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	fs.String("config", defaultConfigFile, "YAML config file")
+	return fs, cfg, err
+}
+
+// scenarioFlags defines the shared scenario flags, with defaults from config.
+func scenarioFlags(fs *flag.FlagSet, cfg config) loader {
 	return loader{
 		dir:  fs.String("scenarios", cfg.Data.Scenarios, "scenario directory"),
 		root: fs.String("root", cfg.Data.Root, "directory holding decks/, villains/ and encounter-sets/"),
@@ -29,9 +35,13 @@ func (l loader) load() ([]*scenario.Scenario, error) {
 		return nil, err
 	}
 	if *l.only != "" {
+		want := map[string]bool{}
+		for _, id := range strings.Split(*l.only, ",") {
+			want[strings.TrimSpace(id)] = true
+		}
 		var kept []*scenario.Scenario
 		for _, s := range scs {
-			if strings.Contains(","+*l.only+",", ","+s.ID+",") {
+			if want[s.ID] {
 				kept = append(kept, s)
 			}
 		}
@@ -41,16 +51,4 @@ func (l loader) load() ([]*scenario.Scenario, error) {
 		return nil, fmt.Errorf("no scenarios selected")
 	}
 	return scs, nil
-}
-
-// configFromArgs loads the config file named by -config (or config.yaml).
-func configFromArgs(args []string) (config, error) {
-	return loadConfig(flagValue(args, "config", defaultConfigFile))
-}
-
-func newSession(sc *scenario.Scenario, seed uint64) (*session.Session, error) {
-	if seed == 0 {
-		seed = sc.Seeds[0]
-	}
-	return session.New(sc, seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions})
 }

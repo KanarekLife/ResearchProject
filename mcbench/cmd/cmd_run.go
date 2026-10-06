@@ -38,14 +38,11 @@ type runSettings struct {
 }
 
 func cmdRun(args []string) error {
-	cfg, err := loadConfig(flagValue(args, "config", defaultConfigFile))
+	fs, cfg, err := newFlagSet(cmdNameRun, args)
 	if err != nil {
 		return err
 	}
-	l, o, err := parseRunFlags(args, cfg)
-	if err != nil {
-		return err
-	}
+	l, o := parseRunFlags(fs, args, cfg)
 	if err := setupLogging(o.logLevel); err != nil {
 		return err
 	}
@@ -64,15 +61,14 @@ func cmdRun(args []string) error {
 		BaseURL: o.server, APIKey: os.Getenv(cfg.Inference.APIKeyEnv), Model: o.modelID,
 		Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
 	})
-	p, err := buildPlayer(o.player, client, o.modelID, o.maxSteps, instr)
+	p, err := buildPlayer(o, client, instr)
 	if err != nil {
 		return err
 	}
 	return executeRun(scs, p, instr, o, cfg.Scoring)
 }
 
-func parseRunFlags(args []string, cfg config) (loader, runSettings, error) {
-	fs := flag.NewFlagSet(cmdNameRun, flag.ExitOnError)
+func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
 	l := scenarioFlags(fs, cfg)
 	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
@@ -99,7 +95,7 @@ func parseRunFlags(args []string, cfg config) (loader, runSettings, error) {
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, maxSteps: *maxSteps,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
-	}, nil
+	}
 }
 
 func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, scoring map[string]float64) error {

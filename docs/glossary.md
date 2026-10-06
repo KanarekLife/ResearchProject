@@ -25,9 +25,9 @@ Marvel Champions terms, as used in this project's code, data and reports.
   the villain; the **standard set** is in every scenario; a **modular set**
   (e.g. Bomb Scare) adds variety.
 - **Nemesis set**: your hero's personal enemies (Spider-Man's is Vulture). It is
-  set aside at setup and enters play through *Shadow of the Past*.
-- **Obligation**: a hero-specific encounter card (Spider-Man's is *Eviction
-  Notice*) that forces a choice when revealed.
+  set aside at setup and enters play through _Shadow of the Past_.
+- **Obligation**: a hero-specific encounter card (Spider-Man's is _Eviction
+  Notice_) that forces a choice when revealed.
 
 ## Rounds and phases
 

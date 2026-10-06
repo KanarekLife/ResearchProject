@@ -26,7 +26,7 @@ func (s *Session) writeLive(d *Decision, chosen Option, reasoning string, events
 	}
 	b.WriteString("\n")
 	b.WriteString(renderView(s.View()))
-	if st := s.Status(); st != AwaitingDecision {
+	if st := s.Status(); st != constants.AwaitingDecision {
 		fmt.Fprintf(&b, "GAME OVER: %s\n", st)
 	}
 	io.WriteString(w, b.String())

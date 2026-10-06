@@ -1,55 +1,65 @@
 package model
 
 import (
-	"encoding/json"
-
 	"mcbench/constants"
-	"mcbench/game/session"
 	"mcbench/integrations/inference"
 )
 
-// toolSchemas converts the game's tool contract into the inference client's
-// tool type. The game owns the schemas; this package only forwards them.
-func toolSchemas() []inference.Tool {
-	out := make([]inference.Tool, len(session.Tools))
-	for i, t := range session.Tools {
-		out[i] = inference.Tool{Name: t.Name, Description: t.Description, Parameters: t.Parameters}
-	}
-	return out
+// JSON Schema keywords.
+const (
+	schemaObject      = "object"
+	schemaType        = "type"
+	schemaProperties  = "properties"
+	schemaRequired    = "required"
+	schemaAdditional  = "additionalProperties"
+	schemaDescription = "description"
+	schemaInteger     = "integer"
+	schemaString      = "string"
+)
+
+// tools is the player <-> game contract: the five tools the model may call,
+// executed against a session by call. See ../../../docs/architecture.md.
+var tools = []inference.Tool{
+	{
+		Name:        constants.ToolGetState,
+		Description: "Get the public game state: your hero, hand, cards in play, the villain, schemes, minions and pile sizes.",
+		Parameters:  object(map[string]any{}),
+	},
+	{
+		Name:        constants.ToolGetDecision,
+		Description: "Get the decision you must make now and its numbered legal options, or the game status when it is over.",
+		Parameters:  object(map[string]any{}),
+	},
+	{
+		Name:        constants.ToolChooseOption,
+		Description: "Make the current decision. Returns the events that followed and the next decision (or the final status).",
+		Parameters: object(map[string]any{
+			constants.ArgOptionID:  map[string]any{schemaType: schemaInteger, schemaDescription: "id of a listed option"},
+			constants.ArgReasoning: map[string]any{schemaType: schemaString, schemaDescription: "brief justification (recorded, not used by the game)"},
+		}, constants.ArgOptionID),
+	},
+	{
+		Name:        constants.ToolGetLog,
+		Description: "Get the last lines of the game log.",
+		Parameters: object(map[string]any{
+			constants.ArgLast: map[string]any{schemaType: schemaInteger, schemaDescription: "number of lines (default 20)"},
+		}),
+	},
+	{
+		Name:        constants.ToolGetCard,
+		Description: "Get the reference text and stats of a card by name.",
+		Parameters:  object(map[string]any{constants.ArgName: map[string]any{schemaType: schemaString}}, constants.ArgName),
+	},
 }
 
-// toolResult is the outcome of one assistant reply's tool calls.
-type toolResult struct {
-	messages []inference.Message // tool result messages to append
-	events   []string            // events from a successful choose_option
-	chosen   bool                // a choose_option succeeded
-}
-
-// runTools executes the tool calls in order. Only the first choose_option is
-// applied; later ones get an error result.
-func runTools(s *session.Session, calls []inference.ToolCall) toolResult {
-	var res toolResult
-	for _, tc := range calls {
-		out := `{"error":"the decision was already made in this reply"}`
-		if !res.chosen {
-			out = s.Call(tc.Function.Name, json.RawMessage(tc.Function.Arguments))
-			if tc.Function.Name == constants.ToolChooseOption {
-				res.events, res.chosen = chosen(out)
-			}
-		}
-		res.messages = append(res.messages, inference.Message{Role: inference.RoleTool, ToolCallID: tc.ID, Content: out})
+func object(props map[string]any, required ...string) map[string]any {
+	if required == nil {
+		required = []string{}
 	}
-	return res
-}
-
-// chosen reports whether a choose_option result succeeded, with its events.
-func chosen(result string) ([]string, bool) {
-	var r struct {
-		Error  string   `json:"error"`
-		Events []string `json:"events"`
+	return map[string]any{
+		schemaType:       schemaObject,
+		schemaProperties: props,
+		schemaRequired:   required,
+		schemaAdditional: false,
 	}
-	if json.Unmarshal([]byte(result), &r) != nil || r.Error != "" {
-		return nil, false
-	}
-	return r.Events, true
 }

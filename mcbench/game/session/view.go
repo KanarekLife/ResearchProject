@@ -2,6 +2,7 @@ package session
 
 import (
 	"mcbench/constants"
+	"mcbench/game/cards"
 	"mcbench/game/engine"
 )
 
@@ -100,7 +101,7 @@ func buildView(g *engine.Game, totalStages int) View {
 		Round:               s.Round,
 		Phase:               string(s.Phase),
 		Hero:                heroView(g),
-		Hand:                mapCards(g.S.Hand, handCard),
+		Hand:                mapCards(g.S.Hand, func(c *engine.Card) Card { return handCard(c.Def) }),
 		InPlay:              mapCards(s.Play, playFn(g)),
 		DeckSize:            len(s.Deck),
 		Discard:             names(s.Discard),
@@ -143,8 +144,32 @@ func heroView(g *engine.Game) Hero {
 	return hero
 }
 
-func handCard(c *engine.Card) Card {
-	d := c.Def
+// EncounterCard is the reference view of a non-player card.
+type EncounterCard struct {
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	HP    int    `json:"hp,omitempty"`
+	ATK   int    `json:"atk,omitempty"`
+	SCH   int    `json:"sch,omitempty"`
+	Boost int    `json:"boost,omitempty"`
+	Text  string `json:"text"`
+}
+
+// Reference returns the reference view of a card by name: a Card for player
+// cards, an EncounterCard otherwise.
+func Reference(name string) (any, error) {
+	d, err := cards.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if d.IsPlayerCard() {
+		return handCard(d), nil
+	}
+	return EncounterCard{Name: d.Name, Type: string(d.Type), HP: d.HP, ATK: d.ATK, SCH: d.SCH, Boost: d.Boost, Text: d.Text}, nil
+}
+
+// handCard renders a card's reference view: name, type, cost, stats and text.
+func handCard(d *engine.CardDef) Card {
 	out := Card{Name: d.Name, Type: string(d.Type), Resources: resources(d.Resources), Text: d.Text}
 	if d.Type != engine.TypeResource {
 		cost := d.Cost

@@ -7,13 +7,14 @@ mcbench/game/
   engine/      rules only: the step machine, damage, threat, combat, payments
   cards/       card YAML and the effect interpreter
   scenario/    loads content and builds engine games
-  session/     the player<->game contract: Session, View, Tools, live view
+  session/     the player<->game contract: Session, View, live view
 mcbench/player/
   player.go    Player interface and Usage
   heuristic/   Random, First, Heuristic (scripted players)
   human/       a player at the terminal
   instruction/ loads the instruction documents
-  model/       the LLM player: agentic loop, tool dispatch, system prompt
+  model/       the LLM player: agentic loop, the JSON tool contract and its
+               dispatch, system prompt
 mcbench/integrations/inference/
   inference.go            the Client interface and Message/Tool/Reply types
   openai_compatible/      the HTTP implementation
@@ -25,10 +26,11 @@ docs/               this file, scenario authoring, glossary
 ```
 
 Dependencies point one way: `cmd -> benchmark -> player -> session ->
-{scenario, cards, engine}`, and `player/model -> integrations/inference`.
+{scenario, cards, engine}`, `player/model -> integrations/inference`, and
+`player/model -> game/cards` (the `get_card` lookup).
 **The game never imports the player or the integrations.** The model player
-reaches the game only through `session.Session`, so the same game can be played
-by a model, a script or a person. Only `cmd` reads `config.yaml` and
+reaches the game state only through `session.Session`, so the same game can be
+played by a model, a script or a person. Only `cmd` reads `config.yaml` and
 environment variables; every other package receives its settings as arguments.
 
 ## The engine
@@ -65,17 +67,18 @@ places and removes threat; `combat.go` handles attacks, thwarts and targeting;
 
 ## The contract: game tools
 
-A `session.Session` is one game in progress. Its five deterministic tools are
-the only way a player touches the game. Their JSON schemas come from
-`session.Tools` and are printed by `mcbench tools`.
+A `session.Session` is one game in progress — the game side of the contract.
+The player side is five deterministic JSON tools, the only way a model touches
+the game. Both live in `player/model`: `tools.go` declares the schemas,
+`call.go` executes them against the session. The game never sees a tool.
 
-| Tool | Arguments | Returns |
-|---|---|---|
-| `get_state` | none | The public state (`session.View`): hero, hand, cards in play, pile sizes, villain and next stages, schemes, minions. Never deck order or face-down cards. |
-| `get_decision` | none | `{"status", "decision": {"kind", "prompt", "options": [{"id", "text", "key"}]}}`. The decision is absent once the game is over. |
-| `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision. |
-| `get_log` | optional `last` (default 20) | The last lines of the game log. |
-| `get_card` | `name` | A card's type, cost/stats and text. |
+| Tool            | Arguments                         | Returns                                                                                                                                                   |
+| --------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_state`     | none                              | The public state (`session.View`): hero, hand, cards in play, pile sizes, villain and next stages, schemes, minions. Never deck order or face-down cards. |
+| `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": [{"id", "text", "key"}]}}`. The decision is absent once the game is over.                           |
+| `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision.                                                                  |
+| `get_log`       | optional `last` (default 20)      | The last lines of the game log.                                                                                                                           |
+| `get_card`      | `name`                            | A card's type, cost/stats and text.                                                                                                                       |
 
 - **Status** (`session`, from `constants`): `awaiting_decision`, `won`, `lost`,
   `round_limit`, `decision_limit`, `engine_error`. The harness adds
@@ -158,13 +161,13 @@ See [scenarios](scenarios.md) for the schema.
 
 When a game ends, `benchmark` scores its final state (`benchmark/score.go`).
 
-| Criterion | Meaning (each in [0, 1]) | Default weight |
-|---|---|---|
-| `win` | 1 if the villain was defeated | 0.40 |
-| `villain_damage` | share of the villain's total HP (all stages) removed | 0.25 |
-| `hero_hp` | share of the hero's HP left | 0.10 |
-| `threat` | 1 − main-scheme threat / threshold | 0.10 |
-| `speed` | for wins: 1 − (rounds − 1) / max rounds | 0.15 |
+| Criterion        | Meaning (each in [0, 1])                             | Default weight |
+| ---------------- | ---------------------------------------------------- | -------------- |
+| `win`            | 1 if the villain was defeated                        | 0.40           |
+| `villain_damage` | share of the villain's total HP (all stages) removed | 0.25           |
+| `hero_hp`        | share of the hero's HP left                          | 0.10           |
+| `threat`         | 1 − main-scheme threat / threshold                   | 0.10           |
+| `speed`          | for wins: 1 − (rounds − 1) / max rounds              | 0.15           |
 
 The score is the weighted mean. The weights are the benchmark definition and
 can be set in `config.yaml` under `scoring`; the defaults above are used when
@@ -195,11 +198,11 @@ All logging is structured `log/slog` on stderr, installed once by `cmd`
 logs through its session's logger, which is already tagged with `scenario`,
 `seed` and `sample`, so parallel games stay distinguishable.
 
-| level | what |
-|---|---|
-| `info` | every game action (the lines of the game log, with `round`) and every choice (`n`, `kind`, `key`), plus run and game start/finish |
-| `debug` | each model request: decision, step, token counts, truncation |
-| `warn` | a rejected choice, a failed API attempt, a game that ended abnormally |
+| level   | what                                                                                                                              |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `info`  | every game action (the lines of the game log, with `round`) and every choice (`n`, `kind`, `key`), plus run and game start/finish |
+| `debug` | each model request: decision, step, token counts, truncation                                                                      |
+| `warn`  | a rejected choice, a failed API attempt, a game that ended abnormally                                                             |
 
 The game log shown to the player is separate and unchanged: logging reads it, it
 never feeds back into the game, so it cannot affect determinism or scores.
@@ -209,7 +212,9 @@ never feeds back into the game, so it cannot affect determinism or scores.
 `go test ./...` covers what a result depends on: determinism and every seed
 finishing (`benchmark`), the scoring definition (`benchmark/score_test.go`),
 rule interactions (`game/cards`), the answer contract (`game/session`: invalid
-options, limits, tool errors), the agentic loop against a scripted client
-(`player/model`) and the HTTP client's retries (`integrations`). Card YAML is
+options, limits; `player/model`: tool errors and that every advertised tool
+executes), the agentic
+loop against a scripted client (`player/model`) and the HTTP client's retries
+(`integrations`). Card YAML is
 validated when it loads, so an unknown predicate fails at startup rather than
 mid-game.

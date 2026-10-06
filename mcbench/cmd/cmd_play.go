@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 
@@ -14,11 +13,10 @@ import (
 )
 
 func cmdPlay(args []string) error {
-	cfg, err := configFromArgs(args)
+	fs, cfg, err := newFlagSet(cmdNamePlay, args)
 	if err != nil {
 		return err
 	}
-	fs := flag.NewFlagSet(cmdNamePlay, flag.ExitOnError)
 	l := scenarioFlags(fs, cfg)
 	seed := fs.Uint64("seed", 0, "seed (default: the scenario's first)")
 	fs.Parse(args)

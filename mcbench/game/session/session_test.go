@@ -1,8 +1,6 @@
 package session_test
 
 import (
-	"encoding/json"
-	"slices"
 	"strings"
 	"testing"
 
@@ -45,8 +43,8 @@ func TestChooseRejectsUnknownOptions(t *testing.T) {
 	if s.Invalid != 3 || len(s.Choices) != 0 {
 		t.Errorf("invalid=%d choices=%d, want 3 and 0", s.Invalid, len(s.Choices))
 	}
-	if s.Status() != session.AwaitingDecision {
-		t.Errorf("status %s after rejected choices, want %s", s.Status(), session.AwaitingDecision)
+	if s.Status() != constants.AwaitingDecision {
+		t.Errorf("status %s after rejected choices, want %s", s.Status(), constants.AwaitingDecision)
 	}
 }
 
@@ -57,8 +55,8 @@ func TestDecisionLimitEndsTheGame(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if s.Status() != session.DecisionLimit || s.Decision() != nil {
-		t.Fatalf("status %s, decision %v; want %s and no decision", s.Status(), s.Decision(), session.DecisionLimit)
+	if s.Status() != constants.DecisionLimit || s.Decision() != nil {
+		t.Fatalf("status %s, decision %v; want %s and no decision", s.Status(), s.Decision(), constants.DecisionLimit)
 	}
 	if _, err := s.Choose(1, ""); err == nil {
 		t.Error("choose after the game ended succeeded")
@@ -95,55 +93,5 @@ func TestOptionOrder(t *testing.T) {
 	}
 	if len(distinct) < 2 {
 		t.Error("six samples all gave the same option order")
-	}
-}
-
-func call(t *testing.T, s *session.Session, tool, args string) map[string]any {
-	t.Helper()
-	var out map[string]any
-	if err := json.Unmarshal([]byte(s.Call(tool, json.RawMessage(args))), &out); err != nil {
-		t.Fatalf("%s: result is not a JSON object: %v", tool, err)
-	}
-	return out
-}
-
-func TestCallReportsErrorsAsJSON(t *testing.T) {
-	s := newSession(t, session.Options{})
-	for name, tc := range map[string]struct{ tool, args string }{
-		"unknown tool":        {"no_such_tool", ""},
-		"malformed arguments": {constants.ToolChooseOption, `{"option_id": "x"}`},
-		"option out of range": {constants.ToolChooseOption, `{"option_id": 999}`},
-		"unknown card":        {constants.ToolGetCard, `{"name": "No Such Card"}`},
-	} {
-		if _, ok := call(t, s, tc.tool, tc.args)["error"]; !ok {
-			t.Errorf("%s: no error in result", name)
-		}
-	}
-}
-
-func TestCallChooseAdvancesTheGame(t *testing.T) {
-	s := newSession(t, session.Options{})
-	r := call(t, s, constants.ToolChooseOption, `{"option_id": 1, "reasoning": "test"}`)
-	if _, ok := r["events"]; !ok {
-		t.Fatalf("choose_option result has no events: %v", r)
-	}
-	if len(s.Choices) != 1 || s.Choices[0].Reasoning != "test" {
-		t.Errorf("choices = %+v, want one choice carrying the reasoning", s.Choices)
-	}
-	log := call(t, s, constants.ToolGetLog, `{"last": 2}`)["log"].([]any)
-	if len(log) > 2 {
-		t.Errorf("get_log last=2 returned %d lines", len(log))
-	}
-}
-
-func TestContractHasEveryTool(t *testing.T) {
-	names := []string{}
-	for _, tool := range session.Tools {
-		names = append(names, tool.Name)
-	}
-	for _, want := range []string{constants.ToolGetState, constants.ToolGetDecision, constants.ToolChooseOption, constants.ToolGetLog, constants.ToolGetCard} {
-		if !slices.Contains(names, want) {
-			t.Errorf("contract lacks tool %s", want)
-		}
 	}
 }

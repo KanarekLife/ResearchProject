@@ -8,10 +8,12 @@ policy — also apply here.
 
 - Dependencies point one way:
   `cmd -> benchmark -> player -> game/session -> {scenario, cards, engine}`, and
-  `player/model -> integrations/inference`. The game never imports the player or
-  the integrations.
-- A player reaches the game only through `session.Session`, so the same game can
-  be played by a model, a script or a person.
+  `player/model -> {integrations/inference, game/cards}`. The game never imports
+  the player or the integrations.
+- The JSON tool contract (schemas and `Call`) belongs to `player/model`; the
+  game exposes only the typed methods.
+- A player reaches the game state only through `session.Session`, so the same
+  game can be played by a model, a script or a person.
 - Only `cmd` reads `config.yaml` or environment variables. Every other package
   receives its settings as arguments.
 - All randomness comes from the engine's seeded RNG. Do not call `math/rand`

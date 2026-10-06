@@ -26,18 +26,25 @@ cards:
   - Backflip
   # ... 40-50 cards: the hero's signature cards plus aspect and basic cards
 obligation: Eviction Notice
-nemesis: [Vulture, Highway Robbery, Sweeping Swoop, Sweeping Swoop, The Vulture's Plans]
+nemesis:
+  [
+    Vulture,
+    Highway Robbery,
+    Sweeping Swoop,
+    Sweeping Swoop,
+    The Vulture's Plans,
+  ]
 ```
 
 The obligation is shuffled into the encounter deck at setup. The nemesis set is
-set aside until *Shadow of the Past* brings it in.
+set aside until _Shadow of the Past_ brings it in.
 
 ## 2. Villain: `data/villains/<id>.yaml`
 
 ```yaml
 id: rhino
 name: Rhino
-stages: ["01094", "01095"]   # I, II, ... (standard uses I and II, expert II and III)
+stages: ["01094", "01095"] # I, II, ... (standard uses I and II, expert II and III)
 main_scheme: The Break-In!
 cards:
   - Armored Rhino Suit
@@ -50,7 +57,8 @@ cards:
 ```yaml
 id: bomb-scare
 name: Bomb Scare
-cards: [Bomb Scare, Hydra Bomber, Hydra Bomber, Explosion, False Alarm, False Alarm]
+cards:
+  [Bomb Scare, Hydra Bomber, Hydra Bomber, Explosion, False Alarm, False Alarm]
 ```
 
 The standard set and modular sets share this format.
@@ -84,19 +92,20 @@ referenced card is defined.
 cards:
   - code: "01005"
     name: Swinging Web Kick
-    type: event            # hero, alter-ego, ally, event, support, upgrade, resource,
-                           # villain, main_scheme, side_scheme, minion, treachery,
-                           # attachment, obligation
-    aspect: Hero           # Hero, Justice, Aggression, Leadership, Protection, Basic
+    type:
+      event # hero, alter-ego, ally, event, support, upgrade, resource,
+      # villain, main_scheme, side_scheme, minion, treachery,
+      # attachment, obligation
+    aspect: Hero # Hero, Justice, Aggression, Leadership, Protection, Basic
     cost: 3
-    resources: [mental]    # physical, mental, energy, wild
+    resources: [mental] # physical, mental, energy, wild
     text: "Hero Action (attack): deal 8 damage to an enemy."
     abilities:
-      - trigger: play      # play, action, reveal, defeated, interrupt, forced, resource, stat
-        when: [hero]       # predicates; the card can only be played while they hold
-        target: enemy      # selector for the effect's target
+      - trigger: play # play, action, reveal, defeated, interrupt, forced, resource, stat
+        when: [hero] # predicates; the card can only be played while they hold
+        target: enemy # selector for the effect's target
         effects:
-          - {verb: attack, damage: 8}
+          - { verb: attack, damage: 8 }
 ```
 
 An ability is a trigger plus declarative effects. `when` gates the whole
@@ -133,7 +142,6 @@ helper in the same file.
 
 ```bash
 go run ./cmd list                                # does it load?
-go run ./cmd show -only <id>                     # the opening state and decision
 go run ./cmd validate -only <id>                 # every seed, played by the scripted players
 go run ./cmd play -only <id> -seed 3             # play it yourself
 go run ./cmd run -player heuristic -only <id>    # scripted numbers to compare models against

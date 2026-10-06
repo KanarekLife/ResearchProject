@@ -3,8 +3,6 @@ package main
 // Command names accepted on the command line.
 const (
 	cmdNameList     = "list"
-	cmdNameTools    = "tools"
-	cmdNameShow     = "show"
 	cmdNameValidate = "validate"
 	cmdNamePlay     = "play"
 	cmdNameRun      = "run"
@@ -18,6 +16,9 @@ const (
 	playerRandom    = "random"
 	playerFirst     = "first"
 )
+
+// randomPlayerSeed makes the random baseline reproducible.
+const randomPlayerSeed = 1
 
 // Default configuration values, overridden by config.yaml and flags.
 const (
