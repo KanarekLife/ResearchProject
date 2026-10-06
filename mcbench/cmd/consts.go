@@ -8,6 +8,7 @@ const (
 	cmdNameRun      = "run"
 	cmdNameReport   = "report"
 	cmdNameView     = "view"
+	cmdNameBoardGUI = "board_gui"
 )
 
 // Player names accepted by -player.
