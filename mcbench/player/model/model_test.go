@@ -67,6 +67,22 @@ func TestPlayRunsTheGameToTheEnd(t *testing.T) {
 	}
 }
 
+// The first decision is the only user turn: later decisions arrive in the
+// choose_option results and are not repeated.
+func TestDecisionIsSentOnce(t *testing.T) {
+	c := &scripted{reply: func(int, []inference.Message) inference.Message { return assistant(choose(1)) }}
+	(&Model{Client: c, MaxSteps: 3}).Play(context.Background(), newSession(t))
+	users := 0
+	for _, msg := range c.seen[len(c.seen)-1] {
+		if msg.Role == inference.RoleUser {
+			users++
+		}
+	}
+	if users != 1 {
+		t.Errorf("%d user messages, want 1", users)
+	}
+}
+
 // The conversation is append-only: each request's messages extend the
 // previous request's, which keeps the provider's prompt cache valid.
 func TestConversationIsAppendOnly(t *testing.T) {

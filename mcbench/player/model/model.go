@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"mcbench/constants"
 	"mcbench/game/session"
@@ -18,10 +17,10 @@ import (
 
 // Model is the LLM player.
 //
-// A game is one append-only conversation (the agentic loop): each decision
-// adds a user message with the events since the last decision and the
-// current decision, then the model's replies (with their reasoning) and any
-// tool results. Nothing is ever removed or rewritten, so each request's
+// A game is one append-only conversation (the agentic loop): a user message
+// with the first decision, then the model's replies (with their reasoning)
+// and the tool results. Each successful choose_option result carries the
+// events and the next decision, so no further user turn repeats it. Nothing is ever removed or rewritten, so each request's
 // prompt is a prefix of the next and the provider's prompt cache stays valid.
 type Model struct {
 	Client       inference.Client
@@ -36,11 +35,10 @@ func (m *Model) Name() string { return "model:" + m.Label }
 func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, error) {
 	var u player.Usage
 	msgs := m.add(s, nil, inference.Message{Role: inference.RoleSystem, Content: m.system()}, nil)
-	events := []string{"The game is set up."}
+	msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: firstPrompt(s)}, nil)
 	for s.Status() == constants.AwaitingDecision {
-		msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: m.turnPrompt(s, events)}, nil)
 		var err error
-		if msgs, events, err = m.decide(ctx, s, msgs, &u); err != nil {
+		if msgs, err = m.decide(ctx, s, msgs, &u); err != nil {
 			return u, err
 		}
 	}
@@ -70,24 +68,19 @@ func (m *Model) add(s *session.Session, msgs []inference.Message, msg inference.
 	return append(msgs, msg)
 }
 
-func (m *Model) turnPrompt(s *session.Session, events []string) string {
-	var b strings.Builder
-	b.WriteString("Events since your last decision:\n")
-	for _, e := range events {
-		b.WriteString("- " + e + "\n")
-	}
-	b.WriteString("\nDecision (" + constants.ToolGetDecision + "):\n" + call(s, constants.ToolGetDecision, nil))
-	return b.String()
+// firstPrompt opens the game with the first decision.
+func firstPrompt(s *session.Session) string {
+	return "The game is set up.\n\nDecision (" + constants.ToolGetDecision + "):\n" + call(s, constants.ToolGetDecision, nil)
 }
 
 // decide runs one decision: model requests until choose_option succeeds.
-// It returns the extended conversation and the events after the choice.
-func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference.Message, u *player.Usage) ([]inference.Message, []string, error) {
+// It returns the extended conversation.
+func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference.Message, u *player.Usage) ([]inference.Message, error) {
 	truncated := 0
 	for step := 0; step < m.MaxSteps; step++ {
 		reply, err := m.Client.Complete(ctx, msgs, tools)
 		if err != nil {
-			return msgs, nil, err
+			return msgs, err
 		}
 		s.Logger().Debug("model reply", "decision", len(s.Choices)+1, "step", step+1,
 			"input_tokens", reply.InputTokens, "output_tokens", reply.OutputTokens, "truncated", reply.Truncated)
@@ -110,16 +103,15 @@ func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference
 			msgs = m.add(s, msgs, msg, nil)
 		}
 		if result.chosen {
-			return msgs, result.events, nil
+			return msgs, nil
 		}
 	}
-	return msgs, nil, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", m.MaxSteps, truncated)
+	return msgs, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", m.MaxSteps, truncated)
 }
 
 // toolResult is the outcome of one assistant reply's tool calls.
 type toolResult struct {
 	messages []inference.Message // tool result messages to append
-	events   []string            // events from a successful choose_option
 	chosen   bool                // a choose_option succeeded
 }
 
@@ -130,12 +122,7 @@ func runTools(s *session.Session, calls []inference.ToolCall) toolResult {
 	for _, tc := range calls {
 		out := `{"error":"the decision was already made in this reply"}`
 		if !res.chosen {
-			var events []string
-			var ok bool
-			out, events, ok = exec(s, tc.Function.Name, json.RawMessage(tc.Function.Arguments))
-			if ok {
-				res.events, res.chosen = events, true
-			}
+			out, res.chosen = exec(s, tc.Function.Name, json.RawMessage(tc.Function.Arguments))
 		}
 		res.messages = append(res.messages, inference.Message{Role: inference.RoleTool, ToolCallID: tc.ID, Content: out})
 	}

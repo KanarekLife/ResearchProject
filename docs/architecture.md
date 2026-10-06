@@ -112,12 +112,16 @@ instruction documents are appended at runtime and are the variable under study.
 
 ```
 system: embedded format prompt + the instruction documents
+user: the first decision (get_decision)
 for each decision:
-    user: events since the last decision + the current decision (get_decision)
     model: tool calls (get_state / get_card / get_log / choose_option)
     the model player runs them against the session
 until the status is no longer awaiting_decision
 ```
+
+A successful `choose_option` result carries the events that followed and the
+next decision, so it is the only place the model receives later decisions;
+no user turn repeats it.
 
 - **Context:** the conversation is append-only and sent in full every request:
   system prompt, every turn, every reply including its reasoning, and every tool
