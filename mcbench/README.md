@@ -30,9 +30,9 @@ go run ./cmd run -player heuristic
 go run ./cmd report results/*/games.jsonl
 ```
 
-Each run writes, per game, a human-readable board to
-`results/<run>/live/<game>.txt` (tail it to watch) and a JSON trace to
-`<game>.jsonl`, plus one record per finished game in `games.jsonl`. Progress is
+Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl`
+(watch it with `go run ./cmd view -follow`), plus one record per finished game
+in `games.jsonl`. Progress is
 logged as structured `slog` to stderr.
 
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,

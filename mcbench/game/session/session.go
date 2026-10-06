@@ -152,7 +152,6 @@ func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 	s.Trace(constants.TraceChoice, &choiceTrace{
 		Decision: len(s.Choices), Choice: choice, Text: d.Options[id-1].Text, Events: events, Status: s.Status(),
 	})
-	s.writeLive(d, d.Options[id-1], reasoning, events)
 	return events, nil
 }
 

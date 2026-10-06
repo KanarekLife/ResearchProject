@@ -95,8 +95,8 @@ Marvel Champions terms, as used in this project's code, data and reports.
 - **Agentic loop**: a game played by the model as one append-only conversation,
   one turn per decision, sent in full on every request. The model acts by
   calling the game tools.
-- **Live trace**: the per-game files written as the game happens (`live/` in the
-  run directory): a readable `.txt` board and a `.jsonl` event stream.
+- **Live trace**: the per-game `.jsonl` event stream written as the game happens
+  (`live/` in the run directory); `cmd view` renders it.
 - **Card ability / effect**: a card's YAML `abilities` list; each ability has a
   trigger and a list of declarative effects interpreted by `game/cards`.
 - **Instruction set**: the documents given to the model

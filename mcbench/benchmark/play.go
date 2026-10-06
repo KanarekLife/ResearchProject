@@ -15,21 +15,22 @@ import (
 	"mcbench/player/instruction"
 )
 
-// Play plays one game and scores it. With a traceDir it also writes a
-// readable board to <dir>/<scenario>_seed<N>_s<K>.txt and a JSON trace to
-// <...>.jsonl, both as the game happens.
+// Play plays one game and scores it. With a traceDir it also writes a JSON
+// trace to <dir>/<scenario>_seed<N>_s<K>.jsonl as the game happens.
 func Play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights) Record {
 	start := time.Now()
 	rec := Record{Scenario: sc.ID, Player: p.Name(), Instructions: instr, Seed: seed, Sample: sample}
 	log := slog.Default().With("scenario", sc.ID, "seed", seed, "sample", sample)
 
 	opts := session.Options{Logger: log, MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, ShuffleOptions: true, Sample: uint64(sample)}
-	files, err := attachTrace(&opts, traceDir, sc.ID, p.Name(), seed, sample)
+	traceFile, err := attachTrace(&opts, traceDir, sc.ID, seed, sample)
 	if err != nil {
 		rec.Status, rec.Error = constants.AgentError, err.Error()
 		return rec
 	}
-	defer files.Close()
+	if traceFile != nil {
+		defer traceFile.Close()
+	}
 
 	s, err := session.New(sc, seed, opts)
 	if err != nil {
@@ -110,31 +111,15 @@ func finalize(rec *Record, s *session.Session, maxRounds int, weights Weights) {
 	}
 }
 
-// traceFiles are the open per-game trace files.
-type traceFiles []*os.File
-
-func (t traceFiles) Close() {
-	for _, f := range t {
-		f.Close()
-	}
-}
-
-// attachTrace opens the per-game trace files and points the session at them.
-func attachTrace(opts *session.Options, dir, scenarioName, playerName string, seed uint64, sample int) (traceFiles, error) {
+// attachTrace opens the per-game trace file and points the session at it.
+func attachTrace(opts *session.Options, dir, scenarioName string, seed uint64, sample int) (*os.File, error) {
 	if dir == "" {
 		return nil, nil
 	}
-	base := fmt.Sprintf("%s_seed%d_s%d", scenarioName, seed, sample)
-	trace, err := os.Create(filepath.Join(dir, base+".jsonl"))
+	f, err := os.Create(filepath.Join(dir, fmt.Sprintf("%s_seed%d_s%d.jsonl", scenarioName, seed, sample)))
 	if err != nil {
 		return nil, err
 	}
-	live, err := os.Create(filepath.Join(dir, base+".txt"))
-	if err != nil {
-		trace.Close()
-		return nil, err
-	}
-	fmt.Fprintf(live, "scenario %s · seed %d · sample %d · player %s\n", scenarioName, seed, sample, playerName)
-	opts.Trace, opts.Live = trace, live
-	return traceFiles{trace, live}, nil
+	opts.Trace = f
+	return f, nil
 }

@@ -7,7 +7,7 @@ mcbench/game/
   engine/      rules only: the step machine, damage, threat, combat, payments
   cards/       card YAML and the effect interpreter
   scenario/    loads content and builds engine games
-  session/     the player<->game contract: Session, View, live view
+  session/     the player<->game contract: Session, View
 mcbench/player/
   player.go    Player interface and Usage
   heuristic/   Random, First, Heuristic (scripted players)
@@ -181,11 +181,11 @@ plus rounds to win, decisions, invalid choices and tokens.
 `cmd run` logs structured progress with `log/slog` and writes to
 `results/<time>-<player>/`:
 
-- **`live/<scenario>_seed<N>_s<K>.txt`** — a human-readable board, appended
-  after every decision: the action taken, its reasoning, the events and the
-  resulting state. Tail it to watch a game.
-- **`live/<scenario>_seed<N>_s<K>.jsonl`** — the same game as one JSON line per
-  event (messages, choices, start, end).
+- **`live/<scenario>_seed<N>_s<K>.jsonl`** — the game as one JSON line per
+  event (messages, choices, start, end), appended as it happens. `cmd view`
+  renders it; `cmd view -follow` watches a game in progress. The trace holds
+  choices, not boards, so `cmd board_gui` rebuilds each board by replaying the choices
+  on the same scenario and seed.
 - **`games.jsonl`** — one record per finished game: scenario, seed, player and
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log.
