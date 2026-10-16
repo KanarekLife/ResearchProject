@@ -50,7 +50,7 @@ Then end your turn: discard any cards you want (you must discard down to your ha
    - **Your hero** (exhaust): the damage is reduced by your DEF; you take the rest.
    - **One of your allies** (exhaust): the ally takes all the damage. If it is defeated, the excess is lost, unless the attack has overkill, in which case the excess hits you.
    - **No defender:** you take all the damage.
-   Only a ready character can defend. You declare before you see the boost card.
+   Only a ready character can defend. You declare before you see the boost card. A defender stays exhausted until you ready at the end of your next player phase, so a hero that defends cannot use a basic power on your next turn.
 3. The boost card flips: each boost icon adds +1 ATK. A star in the boost area means the card has a "Boost:" ability that also resolves. Nothing else on that card is used.
 4. The damage is dealt.
 

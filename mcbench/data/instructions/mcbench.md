@@ -6,7 +6,7 @@ The game is played by a rules engine. You never move cards yourself: at every po
 - **get_decision**: the decision you must make now (`kind`, `prompt`, numbered `options`), or the final status once the game is over.
 - **choose_option**: makes the current decision. Pass the `option_id` of a listed option and a short `reasoning`. The result lists the events that followed and the **next decision**, so you do not need to call get_decision again after it.
 - **get_state**: the visible board: round and phase; your hero (form, HP, ATK/THW/DEF/REC, hand size, exhausted, statuses, whether you already changed form this turn, the other form's name and ability); your hand with costs and resource icons; your cards in play; deck size and discard pile; face-down encounter cards dealt to you; the villain (stage, HP, ATK, SCH, keywords, statuses, attachments) and its later stages; the main scheme (threat, the threshold at which you lose, threat per round); side schemes with their icons; minions engaged with you; acceleration tokens; encounter deck size and discard pile. It never shows the order of a deck or face-down cards.
-- **get_card**: the type, cost, stats and text of a card by name. Use it whenever you are unsure what a card does.
+- **get_card**: the type, cost, stats and text of a card by name or code. Close spellings and partial names are accepted; when several cards match (such as the stages of a villain), it lists them with their codes and you call it again with the code you want. Use it whenever you are unsure what a card does.
 - **get_log**: the last lines of the game log (`last`, default 20).
 
 ## Decisions
@@ -17,11 +17,12 @@ Each decision has a kind:
 - **defend**: an enemy is attacking you. Choose your hero, a ready ally, or no defender. You choose before the villain's boost card is flipped.
 - **window**: a moment where a card in your hand can interrupt or respond (for example when threat is about to be placed, or when you are about to be attacked). "Do not respond" (`pass`) lets the event happen. You can play at most one card in each window.
 - **choice**: a card or rule asks you to pick something, such as which enemy or scheme an effect targets, or which ally to discard when you are over the ally limit.
+- **payment**: you chose a card or ability that can be paid for in more than one way. Each option is one way to pay (`pay:Card A+Card B`); `cancel` goes back to the previous decision without paying or playing anything.
 
 ## Options
-- Each option is one complete action. Its text says what it does, including the target and, for cards with a cost, exactly which cards you discard or use to pay. The same card can appear several times with different targets or different payments; choose the payment that keeps the cards you still want.
-- Each option has a stable `key`, for example `play:Card Name>Target|pay:Card A+Card B`, `attack:Hero>Enemy`, `thwart:Hero>Scheme`, `defend:none`, `change_form:Name`, `end_turn`. When two cards in play share a name, they are labelled `Name#N`.
-- Option ids are numbered 1..n for that decision only, and the order of options is shuffled. The position of an option means nothing; read its text.
+- Each option is one action. Its text says what it does, including the target. A card that can be paid for in only one way (or is free) shows that payment in its text and is played at once. A card with several ways to pay shows no payment and is followed by a **payment** decision; choose the payment that keeps the cards you still want, or cancel. The same card appears once per target.
+- Each option has a stable `key`, for example `play:Card Name>Target` (with `|pay:Card A+Card B` when the payment is fixed), `pay:Card A+Card B`, `attack:Hero>Enemy`, `thwart:Hero>Scheme`, `defend:none`, `change_form:Name`, `cancel`, `end_turn`. When two cards in play share a name, they are labelled `Name#N`.
+- Option ids are numbered 1..n for that decision only. Options are grouped by kind: on your turn, card plays first, then your hero's basic powers, ally attacks and thwarts, card actions, changing form, and ending your turn last. Read the text of an option, not its position.
 - Only listed options are legal. If an action is not listed, you cannot do it now (for example, it cannot be paid for, it has no valid target, or your hero is exhausted).
 
 ## Things the engine does automatically
@@ -37,6 +38,7 @@ The status in each result is one of:
 - `decision_limit` or `engine_error`: the game stopped for a technical reason.
 
 ## Limits on your replies
-- You get a limited number of replies for each decision (five in the default configuration). Each reply can call several tools, but once one choose_option succeeds, the rest of that reply's calls are rejected. A reply without any tool call uses up one of your replies.
-- An unknown option id returns an error and counts as an invalid choice. If you run out of replies without a valid choice, the game ends as `agent_error` with a score of 0.
+- Looking things up is free: you may call get_state, get_card, get_log and get_decision as often as you need before choosing.
+- A reply fails when it has no tool call or one of its calls returns an error (for example an unknown option id, which also counts as an invalid choice, or a card name that matches nothing). After five failed replies for one decision (in the default configuration) the game ends as `agent_error` with a score of 0. A decision that takes 100 replies ends the same way.
+- Call choose_option once per reply. Once it succeeds, the rest of that reply's calls are rejected, because the options change after every choice.
 - The whole conversation is kept, so earlier tool results stay available to you; call get_state when you need the current board.
