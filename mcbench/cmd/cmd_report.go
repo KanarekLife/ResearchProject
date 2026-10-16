@@ -56,7 +56,7 @@ func showRecords(name, usage string, args []string, show func(io.Writer, []bench
 			all = append(all, recs...)
 		}
 	}
-	show(os.Stdout, all, terminalTheme())
+	show(os.Stdout, all, terminalTheme(os.Stdout))
 	return nil
 }
 

@@ -43,10 +43,10 @@ func sanitize(s string) string {
 	return strings.NewReplacer("/", "_", ":", "_", " ", "_").Replace(s)
 }
 
-// terminalTheme colours output only when stdout is a terminal and NO_COLOR is
+// terminalTheme colours output only when f is a terminal and NO_COLOR is
 // unset, so piped output stays plain.
-func terminalTheme() ui.Theme {
-	fi, err := os.Stdout.Stat()
+func terminalTheme(f *os.File) ui.Theme {
+	fi, err := f.Stat()
 	tty := err == nil && fi.Mode()&os.ModeCharDevice != 0
 	return ui.Theme{Color: tty && os.Getenv("NO_COLOR") == ""}
 }

@@ -47,9 +47,9 @@ func cmdView(args []string) error {
 		return err
 	}
 	if *follow {
-		return followGame(g, terminalTheme())
+		return followGame(g, terminalTheme(os.Stdout))
 	}
-	return printGame(g, terminalTheme())
+	return printGame(g, terminalTheme(os.Stdout))
 }
 
 // listRuns prints every run and the games it holds.
@@ -115,7 +115,7 @@ func viewSummary(run trace.Run) error {
 	if err != nil {
 		return err
 	}
-	benchmark.Report(os.Stdout, recs, terminalTheme())
+	benchmark.Report(os.Stdout, recs, terminalTheme(os.Stdout))
 	return nil
 }
 
