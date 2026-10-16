@@ -16,6 +16,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: mcbench/go.mod
+          cache-dependency-path: mcbench/go.sum
       - name: gofmt
         run: test -z "$(gofmt -l .)"
       - run: go vet ./...
