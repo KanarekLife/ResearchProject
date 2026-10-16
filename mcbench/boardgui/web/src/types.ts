@@ -87,9 +87,9 @@ export interface Hero {
   def?: number;
   rec?: number;
   hand_size: number;
-  exhausted: boolean;
+  exhausted?: boolean;
   statuses?: string[];
-  changed_form_this_turn: boolean;
+  changed_form_this_turn?: boolean;
   ability?: string;
   other_form: string;
   other_form_ability?: string;

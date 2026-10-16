@@ -42,9 +42,9 @@ type Hero struct {
 	DEF          int      `json:"def,omitempty"`
 	REC          int      `json:"rec,omitempty"`
 	HandSize     int      `json:"hand_size"`
-	Exhausted    bool     `json:"exhausted"`
+	Exhausted    bool     `json:"exhausted,omitempty"`
 	Statuses     []string `json:"statuses,omitempty"`
-	FormChanged  bool     `json:"changed_form_this_turn"`
+	FormChanged  bool     `json:"changed_form_this_turn,omitempty"`
 	Ability      string   `json:"ability,omitempty"`
 	OtherForm    string   `json:"other_form"`
 	OtherAbility string   `json:"other_form_ability,omitempty"`

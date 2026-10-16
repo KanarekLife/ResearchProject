@@ -76,7 +76,7 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
 
 | Tool            | Arguments                         | Returns                                                                                                                                                   |
 | --------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_state`     | none                              | The public state (`session.View`): hero, hand, cards in play, pile sizes, villain and next stages, schemes, minions. Never deck order or face-down cards. |
+| `get_state`     | none                              | The public state, compacted from `session.View`: hero, hand, cards in play, pile sizes (not the discard lists), villain, schemes, minions; no later villain stages (see `get_card`); empty, zero and false fields left out. Never deck order or face-down cards. |
 | `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": ["1) text", ...]}}`. The decision is absent once the game is over.                                |
 | `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision.                                                                  |
 | `get_log`       | optional `last` (default 20)      | The last lines of the game log.                                                                                                                           |
@@ -106,7 +106,9 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
   whose key carries it (`play:Aunt May|pay:Energy`). An action with several is
   one option followed by a `payment` decision: one `pay:Genius+Energy` option
   per minimal payment and `cancel`, which returns to the previous decision with
-  nothing spent. This keeps the turn list to one entry per card and target.
+  nothing spent. A payment's text is its sources and their resources, e.g.
+  `Genius (mental,mental), Peter Parker ability (mental)`, since there can be
+  dozens of them. This keeps the turn list to one entry per card and target.
 - Errors (such as an unknown option id) return `{"error": "..."}` and count as
   invalid choices.
 
