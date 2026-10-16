@@ -22,7 +22,7 @@ type Record struct {
 	Instructions instruction.Instructions `json:"instructions"`
 	Seed         uint64                   `json:"seed"`
 	Sample       int                      `json:"sample"`
-	Status       string                   `json:"status"` // a session status, or "agent_error"
+	Status       string                   `json:"status"` // a session status, "agent_error" or "infra_error"
 	Error        string                   `json:"error,omitempty"`
 	Rounds       int                      `json:"rounds"`
 	Decisions    int                      `json:"decisions"`

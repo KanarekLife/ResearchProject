@@ -6,22 +6,25 @@ import (
 	"strings"
 	"testing"
 
+	"mcbench/data"
 	"mcbench/game/scenario"
 )
 
-// workRoot copies the real data into a temp dir and writes one scenario file,
-// so a test can break one thing at a time.
-func workRoot(t *testing.T, scenarioYAML string) (path, root string) {
+// scenarioFile is the scenario workRoot writes.
+const scenarioFile = "bad.yaml"
+
+// workRoot copies the embedded content into a temp dir and writes one
+// scenario file, so a test can break one thing at a time.
+func workRoot(t *testing.T, scenarioYAML string) (root string) {
 	t.Helper()
 	root = t.TempDir()
-	if err := os.CopyFS(root, os.DirFS("../../data")); err != nil {
+	if err := os.CopyFS(root, data.FS); err != nil {
 		t.Fatal(err)
 	}
-	path = filepath.Join(root, "bad.yaml")
-	if err := os.WriteFile(path, []byte(scenarioYAML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, scenarioFile), []byte(scenarioYAML), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	return path, root
+	return root
 }
 
 func TestLoadRejectsBrokenScenarios(t *testing.T) {
@@ -32,8 +35,8 @@ func TestLoadRejectsBrokenScenarios(t *testing.T) {
 		"missing set":   {strings.Replace(ok, "[standard]", "[no-such-set]", 1), "no-such-set"},
 		"unknown field": {ok + "bogus: 1\n", "bogus"},
 	} {
-		path, root := workRoot(t, tc.yaml)
-		_, err := scenario.Load(path, root)
+		root := workRoot(t, tc.yaml)
+		_, err := scenario.Load(os.DirFS(root), scenarioFile)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: error %v, want one mentioning %q", name, err, tc.want)
 		}
@@ -41,7 +44,7 @@ func TestLoadRejectsBrokenScenarios(t *testing.T) {
 }
 
 func TestLoadUnknownCard(t *testing.T) {
-	path, root := workRoot(t, "deck: spider-man-justice\nvillain: rhino\nseeds: [1]\n")
+	root := workRoot(t, "deck: spider-man-justice\nvillain: rhino\nseeds: [1]\n")
 	deck := filepath.Join(root, "decks", "spider-man-justice.yaml")
 	b, err := os.ReadFile(deck)
 	if err != nil {
@@ -51,14 +54,14 @@ func TestLoadUnknownCard(t *testing.T) {
 	if err := os.WriteFile(deck, []byte(edited), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := scenario.Load(path, root); err == nil || !strings.Contains(err.Error(), "No Such Card") {
+	if _, err := scenario.Load(os.DirFS(root), scenarioFile); err == nil || !strings.Contains(err.Error(), "No Such Card") {
 		t.Errorf("error %v, want one naming the unknown card", err)
 	}
 }
 
 func TestLoadDefaultsAndID(t *testing.T) {
-	path, root := workRoot(t, "deck: spider-man-justice\nvillain: rhino\nseeds: [7]\n")
-	sc, err := scenario.Load(path, root)
+	root := workRoot(t, "deck: spider-man-justice\nvillain: rhino\nseeds: [7]\n")
+	sc, err := scenario.Load(os.DirFS(root), scenarioFile)
 	if err != nil {
 		t.Fatal(err)
 	}

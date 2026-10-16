@@ -13,9 +13,16 @@ type Config struct {
 	BaseURL     string // e.g. http://localhost:1234/v1
 	APIKey      string
 	Model       string
-	Temperature float64
+	Temperature float64 // sent when >= 0; a negative value leaves the provider's default
 	MaxTokens   int
 	Retries     int // extra attempts after a transient failure
+
+	// ReasoningEffort is a named thinking level (e.g. "high") for hosted
+	// models; empty leaves the provider default.
+	ReasoningEffort string
+	// ReasoningBudget caps thinking tokens on llama.cpp-style local servers;
+	// 0 leaves the server default.
+	ReasoningBudget int
 }
 
 // errTokenParam means the provider rejected max_tokens.

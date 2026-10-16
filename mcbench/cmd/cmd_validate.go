@@ -15,11 +15,11 @@ import (
 // cmdValidate plays every seed with the scripted players. Careless play
 // reaches many engine paths, so any engine error here is a bug.
 func cmdValidate(args []string) error {
-	fs, cfg, err := newFlagSet(cmdNameValidate, args)
+	fs, _, err := newFlagSet(cmdNameValidate, args)
 	if err != nil {
 		return err
 	}
-	l := scenarioFlags(fs, cfg)
+	l := scenarioFlags(fs)
 	fs.Parse(args)
 	scs, err := l.load()
 	if err != nil {
@@ -36,7 +36,7 @@ func cmdValidate(args []string) error {
 				fmt.Printf("%s seed %d (%s): %s\n  %s\n", r.Scenario, r.Seed, r.Player, r.Status, firstLines(r.Error, 8))
 			}
 		})
-		benchmark.Report(os.Stdout, recs)
+		benchmark.Report(os.Stdout, recs, terminalTheme())
 	}
 	if failed {
 		return fmt.Errorf("engine errors found")

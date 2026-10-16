@@ -40,9 +40,8 @@ func TestNewFlagSetReadsConfigBeforeFlags(t *testing.T) {
 }
 
 func TestLoaderOnly(t *testing.T) {
-	fs, cfg, _ := newFlagSet("x", nil)
-	cfg.Data.Scenarios, cfg.Data.Root = "../data/scenarios", "../data"
-	l := scenarioFlags(fs, cfg)
+	fs, _, _ := newFlagSet("x", nil)
+	l := scenarioFlags(fs)
 	fs.Parse([]string{"-only", "spider-man-vs-rhino"})
 	if scs, err := l.load(); err != nil || len(scs) != 1 {
 		t.Errorf("only existing id: %d scenarios, err=%v", len(scs), err)

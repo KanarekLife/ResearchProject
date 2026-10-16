@@ -21,16 +21,17 @@ go run ./cmd validate               # play every seed with the scripted players
 
 # A model through any OpenAI-compatible API (LM Studio on :1234 by default).
 # The model plays by calling the game tools; see config.yaml for defaults.
-go run ./cmd run -model google/gemma-4-26b-a4b-qat -instructions rules,strategy
+go run ./cmd run -model google/gemma-4-26b-a4b-qat -instructions rules_agent,mcbench,strategy
 
 # Scripted players - report them next to model results
 go run ./cmd run -player random
 go run ./cmd run -player heuristic
 
-go run ./cmd report results/*/games.jsonl
+go run ./cmd report                 # every run under results/; or pass run dirs / games.jsonl files
+go run ./cmd analyze                # how the players behaved: loss causes, turn use, form, defence
 ```
 
-Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl`
+Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl` (`<run>` is `<time>-<player>__<instructions>`)
 (watch it with `go run ./cmd view -follow`), plus one record per finished game
 in `games.jsonl`. Progress is
 logged as structured `slog` to stderr.
@@ -63,8 +64,8 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `scoring`); flags override it. Key flags:
 
 - `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
-  `-temperature`, `-max-tokens`, `-max-steps`
-- `-instructions rules,strategy` and `-instructions-dir data/instructions`
+  `-temperature`, `-max-tokens`, `-max-failures`
+- `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key

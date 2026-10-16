@@ -13,7 +13,8 @@ data/cards/<set>.yaml      # the card definitions, not listed by hand
 ```
 
 Adding decks and scenarios needs no Go changes; only new cards need a card
-definition.
+definition. The content is embedded at build time, so `go run` picks up edits
+automatically and a built binary needs rebuilding.
 
 ## 1. Hero deck: `data/decks/<id>.yaml`
 

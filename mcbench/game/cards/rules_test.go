@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"mcbench/constants"
 	e "mcbench/game/engine"
 )
 
@@ -57,12 +58,19 @@ func keys(g *e.Game) []string {
 	return out
 }
 
+// choose picks the option with the full key "action|pay:payment". When the
+// action has several payments it is one option followed by a payment
+// decision, so choose answers both.
 func choose(t *testing.T, g *e.Game, key string) {
 	t.Helper()
+	action, pay, paid := strings.Cut(key, constants.SepPayment)
 	for _, o := range g.Pending().Options {
-		if o.FullKey() == key {
+		if o.FullKey() == key || (paid && o.Key == action && o.Pay == "") {
 			if err := g.Choose(o.ID); err != nil {
 				t.Fatal(err)
+			}
+			if d := g.Pending(); paid && o.Pay == "" && d != nil && d.Kind == constants.KindPayment {
+				choose(t, g, constants.PrefixPay+pay)
 			}
 			return
 		}
@@ -70,12 +78,18 @@ func choose(t *testing.T, g *e.Game, key string) {
 	t.Fatalf("no option %q in %v", key, keys(g))
 }
 
-func TestPaymentsAreMinimal(t *testing.T) {
+// A card with several ways to pay is one action; the payments, all minimal,
+// follow in their own decision, which can be cancelled without cost.
+func TestPaymentsAreMinimalAndCancellable(t *testing.T) {
 	g := newGame(t, []string{"Swinging Web Kick", "Genius", "Energy", "Backflip"})
+	choose(t, g, "play:Swinging Web Kick>Rhino")
+	if g.Pending().Kind != constants.KindPayment {
+		t.Fatalf("no payment decision after the play: %v", keys(g))
+	}
 	var pays []string
 	for _, k := range keys(g) {
-		if strings.HasPrefix(k, "play:Swinging Web Kick>Rhino|pay:") {
-			pays = append(pays, strings.TrimPrefix(k, "play:Swinging Web Kick>Rhino|pay:"))
+		if k != constants.KeyCancel {
+			pays = append(pays, strings.TrimPrefix(k, constants.PrefixPay))
 		}
 	}
 	want := []string{"Backflip+Genius", "Backflip+Energy", "Energy+Genius"}
@@ -83,6 +97,10 @@ func TestPaymentsAreMinimal(t *testing.T) {
 	slices.Sort(want)
 	if !slices.Equal(pays, want) {
 		t.Fatalf("payments %v, want %v", pays, want)
+	}
+	choose(t, g, constants.KeyCancel)
+	if g.Pending().Kind != constants.KindTurn || len(g.S.Hand) != 4 {
+		t.Fatalf("cancel did not return to an unchanged turn: %s, hand %d", g.Pending().Kind, len(g.S.Hand))
 	}
 }
 

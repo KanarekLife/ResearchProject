@@ -14,6 +14,7 @@ Commands:
   play       play a scenario yourself in the terminal
   run        play scenarios with a player and write game records
   report     summarize games.jsonl files
+  analyze    how players behaved in games.jsonl files: loss causes, turn use, form, defence
   view       read a run's traces: a game transcript, a live game, or final results
   board_gui  show a game trace as a board in the browser, step by step
 
@@ -28,7 +29,7 @@ func main() {
 	setupLogging(defaultLogLevel) // run overrides it with -log-level
 	cmds := map[string]func([]string) error{
 		cmdNameList: cmdList, cmdNameValidate: cmdValidate,
-		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport,
+		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport, cmdNameAnalyze: cmdAnalyze,
 		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI,
 	}
 	cmd, ok := cmds[os.Args[1]]

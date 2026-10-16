@@ -107,6 +107,8 @@ func pick(v session.View, d *session.Decision) int {
 		return pickWindow(v, d)
 	case constants.KindTurn:
 		return pickTurn(v, d)
+	case constants.KindPayment:
+		return firstOf(d, optionWithKey(d, constants.PrefixPay))
 	}
 	return d.Options[0].ID
 }

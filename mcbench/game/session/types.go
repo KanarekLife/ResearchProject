@@ -7,36 +7,36 @@ import (
 
 // Decision is what the player must decide now.
 type Decision struct {
-	Kind    string   `json:"kind"` // mulligan, turn, defend, window, choice, discard
+	Kind    string   `json:"kind"` // mulligan, turn, defend, window, choice, discard, payment
 	Prompt  string   `json:"prompt"`
 	Options []Option `json:"options"`
 }
 
 // Option is one legal choice. IDs are 1..n in the order shown. Key is a
-// stable engine label, e.g. "play:Swinging Web Kick>Rhino|pay:Genius+Energy".
+// stable engine label, e.g. "play:Swinging Web Kick>Rhino" or "pay:Genius+Energy".
 type Option struct {
 	ID   int    `json:"id"`
 	Text string `json:"text"`
 	Key  string `json:"key"`
 }
 
-// Choice records one decision made in the game.
+// Choice records one decision made in the game, with the board facts and
+// options the player had when making it (for behaviour analysis).
 type Choice struct {
-	Round     int    `json:"round"`
-	Kind      string `json:"kind"`
-	Key       string `json:"key"`
-	Reasoning string `json:"reasoning,omitempty"`
+	Round     int      `json:"round"`
+	Kind      string   `json:"kind"`
+	Key       string   `json:"key"`
+	Reasoning string   `json:"reasoning,omitempty"`
+	Form      string   `json:"form,omitempty"` // hero or alter-ego
+	HP        int      `json:"hp"`             // the hero's remaining hit points
+	Threat    int      `json:"threat"`         // on the main scheme
+	Offered   []string `json:"offered,omitempty"`
 }
 
 // Options configure a session.
 type Options struct {
 	MaxRounds    int
 	MaxDecisions int
-	// ShuffleOptions presents options in a seeded random order, so a
-	// player's position bias cannot leak into results.
-	ShuffleOptions bool
-	// Sample varies the option order between games on the same seed.
-	Sample uint64
 	// Trace, if set, receives a JSON line for every choice, plus anything
 	// players add with Session.Trace (e.g. model messages).
 	Trace io.Writer

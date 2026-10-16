@@ -1,7 +1,8 @@
 package constants
 
-// Content locations under the data root.
+// Content locations in the embedded data (package data).
 const (
+	DirScenarios     = "scenarios"
 	DirDecks         = "decks"
 	DirVillains      = "villains"
 	DirEncounterSets = "encounter-sets"

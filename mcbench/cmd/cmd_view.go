@@ -115,7 +115,7 @@ func viewSummary(run trace.Run) error {
 	if err != nil {
 		return err
 	}
-	benchmark.Report(os.Stdout, recs)
+	benchmark.Report(os.Stdout, recs, terminalTheme())
 	return nil
 }
 

@@ -82,8 +82,17 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCo
 		tokenField = fieldMaxCompletionTokens
 	}
 	body[tokenField] = c.cfg.MaxTokens
-	if c.cfg.Temperature > 0 {
+	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
+	}
+	if c.cfg.ReasoningEffort != "" {
+		body[fieldReasoningEffort] = c.cfg.ReasoningEffort
+	}
+	if c.cfg.ReasoningBudget > 0 {
+		// llama.cpp reads reasoning_budget_tokens; older builds only the
+		// thinking_budget_tokens alias.
+		body[fieldReasoningBudget] = c.cfg.ReasoningBudget
+		body[fieldThinkingBudget] = c.cfg.ReasoningBudget
 	}
 	if len(tools) > 0 {
 		fns := make([]any, len(tools))

@@ -17,6 +17,7 @@ import (
 
 	"mcbench/benchmark"
 	"mcbench/constants"
+	"mcbench/data"
 	"mcbench/game/scenario"
 	"mcbench/player"
 	"mcbench/player/heuristic"
@@ -44,7 +45,7 @@ func playTrace(t *testing.T, scs []*scenario.Scenario, p player.Player, seed uin
 
 func loadScenarios(t *testing.T) []*scenario.Scenario {
 	t.Helper()
-	scs, err := scenario.LoadDir("../data/scenarios", "../data")
+	scs, err := scenario.LoadAll(data.FS)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"mcbench/data"
 	"mcbench/game/scenario"
 )
 
-// loader holds the scenario selection flags shared by most commands.
-type loader struct{ dir, root, only *string }
+// loader holds the scenario selection flag shared by most commands.
+type loader struct{ only *string }
 
 // newFlagSet loads the config file named by -config (pre-read from args so it
 // can supply flag defaults) and returns a flag set that also accepts -config.
@@ -20,17 +21,14 @@ func newFlagSet(name string, args []string) (*flag.FlagSet, config, error) {
 	return fs, cfg, err
 }
 
-// scenarioFlags defines the shared scenario flags, with defaults from config.
-func scenarioFlags(fs *flag.FlagSet, cfg config) loader {
-	return loader{
-		dir:  fs.String("scenarios", cfg.Data.Scenarios, "scenario directory"),
-		root: fs.String("root", cfg.Data.Root, "directory holding decks/, villains/ and encounter-sets/"),
-		only: fs.String("only", "", "comma-separated scenario ids (default: all)"),
-	}
+// scenarioFlags defines the shared scenario selection flag. The scenarios
+// themselves are embedded (package data).
+func scenarioFlags(fs *flag.FlagSet) loader {
+	return loader{only: fs.String("only", "", "comma-separated scenario ids (default: all)")}
 }
 
 func (l loader) load() ([]*scenario.Scenario, error) {
-	scs, err := scenario.LoadDir(*l.dir, *l.root)
+	scs, err := scenario.LoadAll(data.FS)
 	if err != nil {
 		return nil, err
 	}

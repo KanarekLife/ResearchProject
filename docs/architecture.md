@@ -18,13 +18,13 @@ mcbench/player/
 mcbench/integrations/inference/
   inference.go            the Client interface and Message/Tool/Reply types
   openai_compatible/      the HTTP implementation
-mcbench/benchmark/  the harness: play, score, record, report
+mcbench/benchmark/  the harness: play, score, record, report, analyze
 mcbench/cmd/        the CLI and its config.yaml
 mcbench/constants/  string literals shared across packages
 mcbench/ui/         terminal panels and colour, used by `human` and the trace viewer
 mcbench/boardgui/   a trace as a board in the browser (`cmd board_gui`)
 mcbench/data/       scenarios/, decks/, villains/, encounter-sets/, cards/, instructions/
-docs/               this file, scenario authoring, glossary
+docs/               this file, scenario authoring, glossary, research notes
 ```
 
 Dependencies point one way: `cmd -> benchmark -> player -> session ->
@@ -49,8 +49,8 @@ Game.Choose   run the chosen option, then Run again
 Game.Do       push steps so steps[0] runs first
 ```
 
-- Every legal option is listed up front, including card payments: one option per
-  minimal way to pay. Illegal moves are impossible.
+- Every legal option is listed, including every minimal way to pay (in a
+  `payment` decision when there are several). Illegal moves are impossible.
 - All randomness comes from one generator seeded at setup. **The same seed and
   the same choices always give the same game.**
 - `StartGame` shuffles, starts in alter-ego form, draws, offers a mulligan, then
@@ -80,24 +80,32 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
 | `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": [{"id", "text", "key"}]}}`. The decision is absent once the game is over.                           |
 | `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision.                                                                  |
 | `get_log`       | optional `last` (default 20)      | The last lines of the game log.                                                                                                                           |
-| `get_card`      | `name`                            | A card's type, cost/stats and text.                                                                                                                       |
+| `get_card`      | `name`                            | A card's type, cost/stats and text. Matches codes and names, ignoring case, punctuation and HTML escapes, then partial names and small typos; several matches return their codes. |
 
 - **Status** (`session`, from `constants`): `awaiting_decision`, `won`, `lost`,
   `round_limit`, `decision_limit`, `engine_error`. The harness adds
-  `agent_error`.
+  `agent_error` (the model failed) and `infra_error` (the model could not be
+  reached).
 - **Decision kinds** (`constants.Kind*`): `mulligan`, `turn`, `defend`,
-  `window` (an interrupt such as Backflip), `choice`, `discard`.
+  `window` (an interrupt such as Backflip), `choice`, `discard`, `payment`.
 - **Option keys** are stable engine labels (`constants.Prefix*`), e.g.
-  `play:Swinging Web Kick>Rhino|pay:Genius+Energy`. Option ids are 1..n in the
-  order shown.
+  `play:Swinging Web Kick>Rhino`. Option ids are 1..n in the order shown.
+- **Payments:** an action with one way to pay (or none to make) is one option
+  whose key carries it (`play:Aunt May|pay:Energy`). An action with several is
+  one option followed by a `payment` decision: one `pay:Genius+Energy` option
+  per minimal payment and `cancel`, which returns to the previous decision with
+  nothing spent. This keeps the turn list to one entry per card and target.
 - Errors (such as an unknown option id) return `{"error": "..."}` and count as
   invalid choices.
 
 Go players use the same contract as typed methods: `View()`, `Decision()`,
 `Choose(id, reasoning)`, `Log(n)`. The tools are thin JSON wrappers.
 
-**Option order** is shuffled per decision (seeded by game seed and sample,
-never by player), so a player's position bias cannot leak into its score.
+**Option order** is the engine's, grouped by kind of action: on a turn, card
+plays, hero powers, ally actions, card actions, form change, then end turn; in
+a payment decision, `cancel` comes last. Models showed at most a weak
+preference for early positions, so a readable, stable order was chosen over a
+shuffled one ([research](research.md)).
 
 ## The player and the agentic loop
 
@@ -127,9 +135,17 @@ no user turn repeats it.
   system prompt, every turn, every reply including its reasoning, and every tool
   result. Nothing is trimmed or rewritten, so each request's prompt starts with
   the previous request's prompt and the provider's prompt cache can reuse it.
-- **Retries:** a decision may take up to `max_steps` model requests. Malformed
-  answers and invalid options get an error reply and the model tries again. If
-  it still fails, the game ends as `agent_error` with score 0.
+- **Retries:** lookups (`get_state`, `get_card`, `get_log`, `get_decision`)
+  that succeed are free. A reply fails when it has no tool call or a call
+  returns an error (an invalid option, an unknown card); it gets an error reply
+  and the model tries again. After `max_failures` failed replies for one
+  decision, or 100 replies of any kind (a guard against endless loops), the game
+  ends as `agent_error` with score 0.
+- **Infrastructure failures:** when a request still fails after the client's
+  retries (network, any HTTP error such as 402, 429 or 5xx, an unreadable
+  response, or a cancelled run), the game ends as `infra_error`. It says
+  nothing about the model, so reports count it but leave it out of every mean;
+  rerun that seed.
 
 ## The inference client
 
@@ -144,6 +160,11 @@ caller builds; it reads no files and no environment variables. It:
   `Retry-After`;
 - sends `max_tokens`, or falls back to `max_completion_tokens` when a provider
   asks for it;
+- sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted
+  models) and `reasoning_budget_tokens` (`-reasoning-budget`, a thinking-token
+  cap for llama.cpp-style servers) only when set. The setting is appended to the
+  player name (`model:<id>@effort-high`, `@budget-4096`), so runs at different
+  settings are reported separately;
 - reads reasoning from either `reasoning_content` or `reasoning`, and reports
   cached and reasoning tokens when the provider includes them.
 
@@ -152,7 +173,10 @@ run size and scoring weights.
 
 ## Cards are data
 
-Cards are YAML documents under `data/cards/` (embedded at build time), compiled
+All game content (cards, scenarios, decks, villains, encounter sets) is YAML
+under `data/`, embedded at build time (`data.FS`), so a build carries exactly
+the game it scores; only the instruction documents are read from disk. Cards are
+YAML documents under `data/cards/`, compiled
 into engine `Script` hooks at load. A card lists its printed stats and a list of
 abilities; each ability is a trigger plus a list of declarative **effects**
 interpreted by `game/cards/effects.go`, with predicates and targeting in
@@ -190,12 +214,24 @@ plus rounds to win, decisions, invalid choices and tokens.
   event (messages, choices, start, end), appended as it happens. `cmd view`
   renders it; `cmd view -follow` watches a game in progress. The trace holds
   choices, not boards, so `cmd board_gui` rebuilds each board by replaying the choices
-  on the same scenario and seed.
+  on the same scenario and seed. A replay needs an engine that offers the same
+  option keys: traces recorded before the `payment` decision do not replay.
 - **`games.jsonl`** — one record per finished game: scenario, seed, player and
   instruction hash, status, stats, criteria, score, usage, every choice and the
-  full log.
+  full log. Each choice also records the hero's form and HP, the main-scheme
+  threat and the option keys offered at that moment.
 
-`cmd report` summarizes `games.jsonl` files.
+`cmd report` summarizes `games.jsonl` files, or every one under the directories
+it is given (all of `results/` by default): an overview per scenario, then a
+panel per player and instruction set with a row per game. Records of the same
+player, instructions and scenario are pooled, even across runs.
+
+`cmd analyze` reads the same files and reports behaviour instead of scores:
+what the lost games were lost to, hero basic powers per round and how many
+attacked, how often the hero defended, and how turns ended (in alter-ego, in
+alter-ego near the target, with a basic power, an ally or a playable card left
+unused). The turn-end measures need the per-choice board facts, so older
+records show `-`. [Research](research.md) explains what the measures are for.
 
 ## Logging
 

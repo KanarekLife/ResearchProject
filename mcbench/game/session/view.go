@@ -1,6 +1,8 @@
 package session
 
 import (
+	"fmt"
+
 	"mcbench/constants"
 	"mcbench/game/cards"
 	"mcbench/game/engine"
@@ -155,17 +157,46 @@ type EncounterCard struct {
 	Text  string `json:"text"`
 }
 
-// Reference returns the reference view of a card by name: a Card for player
-// cards, an EncounterCard otherwise.
+// CardMatches answers a card lookup that fits several cards (such as the
+// stages of a villain): their codes, so the player can ask for one.
+type CardMatches struct {
+	Matches []CardMatch `json:"matches"`
+	Note    string      `json:"note"`
+}
+
+// CardMatch identifies one candidate of an ambiguous lookup.
+type CardMatch struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	HP   int    `json:"hp,omitempty"`
+}
+
+const matchesNote = "Several cards match this name. Call get_card again with the code of the one you want."
+
+// Reference looks a card up by code or name, tolerating small differences in
+// spelling (cards.Search). One match returns its reference view: a Card for
+// player cards, an EncounterCard otherwise. Several return CardMatches.
 func Reference(name string) (any, error) {
-	d, err := cards.Get(name)
-	if err != nil {
-		return nil, err
+	ds := cards.Search(name)
+	switch len(ds) {
+	case 0:
+		return nil, fmt.Errorf("no card matches %q", name)
+	case 1:
+		return reference(ds[0]), nil
 	}
+	m := CardMatches{Note: matchesNote}
+	for _, d := range ds {
+		m.Matches = append(m.Matches, CardMatch{Code: d.Code, Name: d.Name, Type: string(d.Type), HP: d.HP})
+	}
+	return m, nil
+}
+
+func reference(d *engine.CardDef) any {
 	if d.IsPlayerCard() {
-		return handCard(d), nil
+		return handCard(d)
 	}
-	return EncounterCard{Name: d.Name, Type: string(d.Type), HP: d.HP, ATK: d.ATK, SCH: d.SCH, Boost: d.Boost, Text: d.Text}, nil
+	return EncounterCard{Name: d.Name, Type: string(d.Type), HP: d.HP, ATK: d.ATK, SCH: d.SCH, Boost: d.Boost, Text: d.Text}
 }
 
 // handCard renders a card's reference view: name, type, cost, stats and text.

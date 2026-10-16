@@ -13,11 +13,11 @@ import (
 )
 
 func cmdPlay(args []string) error {
-	fs, cfg, err := newFlagSet(cmdNamePlay, args)
+	fs, _, err := newFlagSet(cmdNamePlay, args)
 	if err != nil {
 		return err
 	}
-	l := scenarioFlags(fs, cfg)
+	l := scenarioFlags(fs)
 	seed := fs.Uint64("seed", 0, "seed (default: the scenario's first)")
 	fs.Parse(args)
 	scs, err := l.load()

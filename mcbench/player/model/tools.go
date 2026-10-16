@@ -32,7 +32,7 @@ var tools = []inference.Tool{
 	},
 	{
 		Name:        constants.ToolChooseOption,
-		Description: "Make the current decision. Returns the events that followed and the next decision (or the final status).",
+		Description: "Make the current decision. Call it once per reply: a second call in the same reply is rejected, because the options change after each choice. Returns the events that followed and the next decision (or the final status).",
 		Parameters: object(map[string]any{
 			constants.ArgOptionID:  map[string]any{schemaType: schemaInteger, schemaDescription: "id of a listed option"},
 			constants.ArgReasoning: map[string]any{schemaType: schemaString, schemaDescription: "brief justification (recorded, not used by the game)"},
@@ -47,7 +47,7 @@ var tools = []inference.Tool{
 	},
 	{
 		Name:        constants.ToolGetCard,
-		Description: "Get the reference text and stats of a card by name.",
+		Description: "Get the reference text and stats of a card by name or code. Close spellings and partial names are accepted; when several cards match, it lists them with their codes so you can ask for one.",
 		Parameters:  object(map[string]any{constants.ArgName: map[string]any{schemaType: schemaString}}, constants.ArgName),
 	},
 }

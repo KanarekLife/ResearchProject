@@ -1,10 +1,6 @@
 package engine
 
-import (
-	"fmt"
-
-	"mcbench/constants"
-)
+import "mcbench/constants"
 
 // Trigger names a timing point that abilities can react to.
 type Trigger string
@@ -75,23 +71,22 @@ func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
 			continue
 		}
 		card := c
-		for _, pay := range g.paymentsFor(card, card.Def, max(0, card.Def.Cost-g.S.CostReduction), nil) {
-			p := pay
-			opts = append(opts, Option{
-				Key:  constants.PrefixPlay + card.Name(),
-				Pay:  p.Label(),
-				Text: fmt.Sprintf("Play %s%s", card.Name(), p.Describe()),
-				do: func() {
-					p.Spend(g)
-					g.S.CostReduction = 0
-					g.moveFromHand(card)
-					g.Logf("Played %s.", card.Name())
-					card.Def.Script.OnPlayEvent(g, card, ev)
-					g.S.Discard = append(g.S.Discard, card)
-					g.Do(next)
-				},
-			})
+		pays := g.paymentsFor(card, card.Def, max(0, card.Def.Cost-g.S.CostReduction), nil)
+		if len(pays) == 0 {
+			continue
 		}
+		play := func(p Payment) {
+			p.Spend(g)
+			g.S.CostReduction = 0
+			g.moveFromHand(card)
+			g.Logf("Played %s.", card.Name())
+			card.Def.Script.OnPlayEvent(g, card, ev)
+			g.S.Discard = append(g.S.Discard, card)
+			g.Do(next)
+		}
+		// Cancelling a payment offers the same window again.
+		back := func() { g.playerWindow(ev, prompt, next) }
+		opts = append(opts, g.payOption(constants.PrefixPlay+card.Name(), "Play "+card.Name(), pays, play, back))
 	}
 	if len(opts) == 0 {
 		g.Do(next)
