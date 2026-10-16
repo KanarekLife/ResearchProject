@@ -128,7 +128,7 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 			"score", r.Score, "ms", r.Millis, "error", firstLines(r.Error, 1))
 	})
 	log.Info("run finished", "games_file", f.Name())
-	benchmark.Report(os.Stdout, recs, terminalTheme())
+	benchmark.Report(os.Stdout, recs, terminalTheme(os.Stdout))
 	return nil
 }
 

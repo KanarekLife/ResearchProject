@@ -24,6 +24,7 @@ func (t Theme) paint(code, s string) string {
 
 func (t Theme) Bold(s string) string   { return t.paint("1", s) }
 func (t Theme) Dim(s string) string    { return t.paint("2", s) }
+func (t Theme) Gray(s string) string   { return t.paint("90", s) }
 func (t Theme) Red(s string) string    { return t.paint("31", s) }
 func (t Theme) Green(s string) string  { return t.paint("32", s) }
 func (t Theme) Yellow(s string) string { return t.paint("33", s) }
