@@ -2,6 +2,7 @@ package benchmark
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,10 +23,10 @@ func Play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr ins
 	rec := Record{Scenario: sc.ID, Player: p.Name(), Instructions: instr, Seed: seed, Sample: sample}
 	log := slog.Default().With("scenario", sc.ID, "seed", seed, "sample", sample)
 
-	opts := session.Options{Logger: log, MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, ShuffleOptions: true, Sample: uint64(sample)}
+	opts := session.Options{Logger: log, MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions}
 	traceFile, err := attachTrace(&opts, traceDir, sc.ID, seed, sample)
 	if err != nil {
-		rec.Status, rec.Error = constants.AgentError, err.Error()
+		rec.Status, rec.Error = constants.InfraError, err.Error()
 		return rec
 	}
 	if traceFile != nil {
@@ -73,12 +74,15 @@ type endTrace struct {
 }
 
 // outcome is the record status and error of a finished game: the session's
-// status, unless the player itself failed.
+// status, unless the player failed: infra_error when the model could not be
+// reached, agent_error when the model itself failed.
 func outcome(s *session.Session, playErr error) (status, errMsg string) {
 	status = s.Status()
 	switch {
 	case status == constants.EngineError:
 		return status, s.Error()
+	case errors.Is(playErr, player.ErrInference):
+		return constants.InfraError, playErr.Error()
 	case playErr != nil:
 		return constants.AgentError, playErr.Error()
 	}
@@ -106,8 +110,8 @@ func finalize(rec *Record, s *session.Session, maxRounds int, weights Weights) {
 	rec.Log = s.Log(0)
 	rec.Criteria = Criteria(rec.Stats, maxRounds)
 	rec.Score = Score(rec.Criteria, weights)
-	if rec.Status == constants.AgentError || rec.Status == constants.EngineError {
-		rec.Score = 0 // a broken game never earns credit
+	if rec.Status == constants.AgentError || rec.Status == constants.EngineError || rec.Status == constants.InfraError {
+		rec.Score = 0 // a broken game never earns credit; reports leave infra errors out
 	}
 }
 

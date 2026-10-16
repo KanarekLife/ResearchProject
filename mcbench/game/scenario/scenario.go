@@ -6,8 +6,8 @@ package scenario
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
+	"path"
 	"sort"
 	"strings"
 
@@ -22,8 +22,8 @@ import (
 // resolve; building continues so every missing card is reported together.
 const unknownCardCode = "?"
 
-func readYAML(path string, v any) error {
-	data, err := os.ReadFile(path)
+func readYAML(fsys fs.FS, path string, v any) error {
+	data, err := fs.ReadFile(fsys, path)
 	if err != nil {
 		return err
 	}
@@ -33,16 +33,16 @@ func readYAML(path string, v any) error {
 	return nil
 }
 
-// Load reads a scenario and the deck, villain and encounter sets it names.
-// root is the directory holding decks/, villains/ and encounter-sets/.
-func Load(path, root string) (*Scenario, error) {
+// Load reads the scenario at path in fsys and the deck, villain and encounter
+// sets it names, from decks/, villains/ and encounter-sets/ in fsys.
+func Load(fsys fs.FS, file string) (*Scenario, error) {
 	var s Scenario
-	if err := readYAML(path, &s); err != nil {
+	if err := readYAML(fsys, file, &s); err != nil {
 		return nil, err
 	}
-	s.Path = path
+	s.Path = file
 	if s.ID == "" {
-		s.ID = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		s.ID = strings.TrimSuffix(path.Base(file), path.Ext(file))
 	}
 	if len(s.Seeds) == 0 {
 		return nil, fmt.Errorf("%s: no seeds", s.ID)
@@ -53,15 +53,15 @@ func Load(path, root string) (*Scenario, error) {
 	if s.MaxDecisions == 0 {
 		s.MaxDecisions = 1000
 	}
-	if err := readYAML(filepath.Join(root, constants.DirDecks, s.Deck+constants.ExtYAML), &s.deck); err != nil {
+	if err := readYAML(fsys, path.Join(constants.DirDecks, s.Deck+constants.ExtYAML), &s.deck); err != nil {
 		return nil, err
 	}
-	if err := readYAML(filepath.Join(root, constants.DirVillains, s.Villain+constants.ExtYAML), &s.villain); err != nil {
+	if err := readYAML(fsys, path.Join(constants.DirVillains, s.Villain+constants.ExtYAML), &s.villain); err != nil {
 		return nil, err
 	}
 	for _, id := range s.EncounterSets {
 		var es EncounterSet
-		if err := readYAML(filepath.Join(root, constants.DirEncounterSets, id+constants.ExtYAML), &es); err != nil {
+		if err := readYAML(fsys, path.Join(constants.DirEncounterSets, id+constants.ExtYAML), &es); err != nil {
 			return nil, err
 		}
 		s.sets = append(s.sets, es)
@@ -73,15 +73,16 @@ func Load(path, root string) (*Scenario, error) {
 	return &s, nil
 }
 
-// LoadDir loads every scenario in dir; decks etc. are found under root.
-func LoadDir(dir, root string) ([]*Scenario, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "*"+constants.ExtYAML))
+// LoadAll loads every scenario in the scenarios/ directory of fsys (use
+// data.FS for the benchmark's own content).
+func LoadAll(fsys fs.FS) ([]*Scenario, error) {
+	paths, err := fs.Glob(fsys, path.Join(constants.DirScenarios, "*"+constants.ExtYAML))
 	if err != nil {
 		return nil, err
 	}
 	var out []*Scenario
 	for _, p := range paths {
-		s, err := Load(p, root)
+		s, err := Load(fsys, p)
 		if err != nil {
 			return nil, err
 		}

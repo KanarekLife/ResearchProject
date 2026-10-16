@@ -25,9 +25,13 @@ import (
 type Model struct {
 	Client       inference.Client
 	Label        string // identifies the model in results
-	MaxSteps     int    // model requests allowed per decision
+	MaxFailures  int    // failed replies allowed per decision
 	Instructions instruction.Instructions
 }
+
+// maxRequests bounds the replies to one decision, failed or not. Lookups are
+// free, so this only guards against a model that never stops looking.
+const maxRequests = 100
 
 func (m *Model) Name() string { return "model:" + m.Label }
 
@@ -74,15 +78,16 @@ func firstPrompt(s *session.Session) string {
 }
 
 // decide runs one decision: model requests until choose_option succeeds.
-// It returns the extended conversation.
+// A reply fails when it calls no tool or one of its calls returns an error;
+// lookups that succeed cost nothing. It returns the extended conversation.
 func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference.Message, u *player.Usage) ([]inference.Message, error) {
-	truncated := 0
-	for step := 0; step < m.MaxSteps; step++ {
+	failures, truncated := 0, 0
+	for range maxRequests {
 		reply, err := m.Client.Complete(ctx, msgs, tools)
 		if err != nil {
-			return msgs, err
+			return msgs, fmt.Errorf("%w: %w", player.ErrInference, err)
 		}
-		s.Logger().Debug("model reply", "decision", len(s.Choices)+1, "step", step+1,
+		s.Logger().Debug("model reply", "decision", len(s.Choices)+1, "failures", failures,
 			"input_tokens", reply.InputTokens, "output_tokens", reply.OutputTokens, "truncated", reply.Truncated)
 		u.Requests++
 		u.InputTokens += reply.InputTokens
@@ -94,25 +99,33 @@ func (m *Model) decide(ctx context.Context, s *session.Session, msgs []inference
 		msgs = m.add(s, msgs, reply.Message, &reply)
 
 		if len(reply.Message.ToolCalls) == 0 {
+			failures++
 			content := "Make the decision by calling " + constants.ToolChooseOption + "."
 			msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: content}, nil)
-			continue
+		} else {
+			result := runTools(s, reply.Message.ToolCalls)
+			for _, msg := range result.messages {
+				msgs = m.add(s, msgs, msg, nil)
+			}
+			if result.chosen {
+				return msgs, nil
+			}
+			if result.failed {
+				failures++
+			}
 		}
-		result := runTools(s, reply.Message.ToolCalls)
-		for _, msg := range result.messages {
-			msgs = m.add(s, msgs, msg, nil)
-		}
-		if result.chosen {
-			return msgs, nil
+		if failures >= max(1, m.MaxFailures) {
+			return msgs, fmt.Errorf("no valid decision after %d failed replies (%d cut off at max tokens)", failures, truncated)
 		}
 	}
-	return msgs, fmt.Errorf("no valid decision after %d model requests (%d cut off at max tokens)", m.MaxSteps, truncated)
+	return msgs, fmt.Errorf("no decision after %d model requests", maxRequests)
 }
 
 // toolResult is the outcome of one assistant reply's tool calls.
 type toolResult struct {
 	messages []inference.Message // tool result messages to append
 	chosen   bool                // a choose_option succeeded
+	failed   bool                // a call returned an error
 }
 
 // runTools executes the tool calls in order. Only the first choose_option is
@@ -122,7 +135,9 @@ func runTools(s *session.Session, calls []inference.ToolCall) toolResult {
 	for _, tc := range calls {
 		out := `{"error":"the decision was already made in this reply"}`
 		if !res.chosen {
-			out, res.chosen = exec(s, tc.Function.Name, json.RawMessage(tc.Function.Arguments))
+			var failed bool
+			out, res.chosen, failed = exec(s, tc.Function.Name, json.RawMessage(tc.Function.Arguments))
+			res.failed = res.failed || failed
 		}
 		res.messages = append(res.messages, inference.Message{Role: inference.RoleTool, ToolCallID: tc.ID, Content: out})
 	}

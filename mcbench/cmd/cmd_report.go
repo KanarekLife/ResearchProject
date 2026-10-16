@@ -1,25 +1,40 @@
 package main
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	"mcbench/benchmark"
+	"mcbench/ui"
 )
 
-const reportUsage = "usage: mcbench report [GAMES.jsonl | DIR]...\n"
+const (
+	reportUsage  = "usage: mcbench report [GAMES.jsonl | DIR]...\n"
+	analyzeUsage = "usage: mcbench analyze [GAMES.jsonl | DIR]...\n"
+)
 
-// cmdReport summarizes games.jsonl files. Each argument is a games file or a
-// directory searched recursively for them; with none, every run under the
-// results directory is reported.
+// cmdReport summarizes the scores of games.jsonl files.
 func cmdReport(args []string) error {
-	flags, cfg, err := newFlagSet(cmdNameReport, args)
+	return showRecords(cmdNameReport, reportUsage, args, benchmark.Report)
+}
+
+// cmdAnalyze summarizes how the players of games.jsonl files behaved.
+func cmdAnalyze(args []string) error {
+	return showRecords(cmdNameAnalyze, analyzeUsage, args, benchmark.Analyze)
+}
+
+// showRecords reads games.jsonl files and writes them with show. Each
+// argument is a games file or a directory searched recursively for them; with
+// none, every run under the results directory is read.
+func showRecords(name, usage string, args []string, show func(io.Writer, []benchmark.Record, ui.Theme)) error {
+	flags, cfg, err := newFlagSet(name, args)
 	if err != nil {
 		return err
 	}
 	flags.Usage = func() {
-		flags.Output().Write([]byte(reportUsage))
+		flags.Output().Write([]byte(usage))
 		flags.PrintDefaults()
 	}
 	flags.Parse(args)
@@ -41,7 +56,7 @@ func cmdReport(args []string) error {
 			all = append(all, recs...)
 		}
 	}
-	benchmark.Report(os.Stdout, all, terminalTheme())
+	show(os.Stdout, all, terminalTheme())
 	return nil
 }
 

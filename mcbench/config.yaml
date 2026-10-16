@@ -1,12 +1,8 @@
-data:
-  scenarios: data/scenarios
-  root: data
-
 inference:
   server: http://localhost:1234/v1
   api_key_env: OPENAI_API_KEY
   model: ""
-  temperature: 0
+  temperature: -1 # -1: not sent, the provider default applies; 0 or more is sent
   max_tokens: 32768
   retries: 3
   reasoning_effort: ""
@@ -14,9 +10,9 @@ inference:
 
 player:
   name: model
-  max_steps: 5
+  max_failures: 5
   instructions_dir: data/instructions
-  instructions: [rules]
+  instructions: [rules_agent, mcbench]
 
 run:
   seeds: 10

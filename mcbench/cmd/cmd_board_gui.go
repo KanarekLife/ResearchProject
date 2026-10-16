@@ -22,7 +22,7 @@ func cmdBoardGUI(args []string) error {
 		dir     = fs.String("results", cfg.Run.Out, "results directory, used when no path is given")
 		runSel  = fs.String("run", "", "run id or prefix (default: newest)")
 		gameSel = fs.String("game", "", "game name or substring (default: last)")
-		ld      = scenarioFlags(fs, cfg)
+		ld      = scenarioFlags(fs)
 	)
 	fs.Parse(args)
 	path := fs.Arg(0)

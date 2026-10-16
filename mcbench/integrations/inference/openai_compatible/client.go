@@ -82,7 +82,7 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCo
 		tokenField = fieldMaxCompletionTokens
 	}
 	body[tokenField] = c.cfg.MaxTokens
-	if c.cfg.Temperature > 0 {
+	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
 	}
 	if c.cfg.ReasoningEffort != "" {

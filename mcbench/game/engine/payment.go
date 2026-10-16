@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -53,6 +54,12 @@ func (p Payment) Describe() string {
 	if len(p.sources) == 0 {
 		return ""
 	}
+	return ", paying: " + p.sourcesText()
+}
+
+// sourcesText lists what the payment spends, e.g. "discard Genius
+// [mental,mental]; use Peter Parker [mental]".
+func (p Payment) sourcesText() string {
 	parts := make([]string, len(p.sources))
 	for i, s := range p.sources {
 		res := make([]string, len(s.gives))
@@ -65,7 +72,40 @@ func (p Payment) Describe() string {
 		}
 		parts[i] = where + " " + s.card.Name() + " [" + strings.Join(res, ",") + "]"
 	}
-	return ", paying: " + strings.Join(parts, "; ")
+	return strings.Join(parts, "; ")
+}
+
+// Option texts of the payment step.
+const (
+	payPrompt  = "Choose how to pay for: %s."
+	payText    = "Pay: %s"
+	cancelText = "Cancel: go back without paying"
+)
+
+// payOption offers one action whose cost can be paid in the given ways (at
+// least one). With a single way, or a free cost, the option pays and applies
+// at once. With several, it opens a payment decision listing each way plus a
+// cancel option, so the list of actions stays short and the player can still
+// change its mind; cancel (may be nil) runs when it does.
+func (g *Game) payOption(key, text string, pays []Payment, apply func(Payment), cancel func()) Option {
+	if len(pays) == 1 {
+		p := pays[0]
+		return Option{Key: key, Pay: p.Label(), Text: text + p.Describe(), do: func() { apply(p) }}
+	}
+	return Option{Key: key, Text: text, do: func() { g.askPayment(text, pays, apply, cancel) }}
+}
+
+func (g *Game) askPayment(text string, pays []Payment, apply func(Payment), cancel func()) {
+	opts := make([]Option, 0, len(pays)+1)
+	for _, p := range pays {
+		opts = append(opts, Option{
+			Key:  constants.PrefixPay + p.Label(),
+			Text: fmt.Sprintf(payText, p.sourcesText()),
+			do:   func() { g.Do(func() { apply(p) }) },
+		})
+	}
+	opts = append(opts, Option{Key: constants.KeyCancel, Text: cancelText, do: cancel})
+	g.Ask(&Decision{Kind: constants.KindPayment, Prompt: fmt.Sprintf(payPrompt, text), Options: opts})
 }
 
 // Spend discards the hand cards and uses the abilities.

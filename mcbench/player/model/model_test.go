@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"mcbench/constants"
+	"mcbench/data"
 	"mcbench/game/scenario"
 	"mcbench/game/session"
 	"mcbench/integrations/inference"
@@ -37,7 +38,7 @@ func assistant(calls ...inference.ToolCall) inference.Message {
 
 func newSession(t *testing.T) *session.Session {
 	t.Helper()
-	scs, err := scenario.LoadDir("../../data/scenarios", "../../data")
+	scs, err := scenario.LoadAll(data.FS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func choose(id int) inference.ToolCall {
 func TestPlayRunsTheGameToTheEnd(t *testing.T) {
 	c := &scripted{reply: func(int, []inference.Message) inference.Message { return assistant(choose(1)) }}
 	s := newSession(t)
-	u, err := (&Model{Client: c, Label: "x", MaxSteps: 3}).Play(context.Background(), s)
+	u, err := (&Model{Client: c, Label: "x", MaxFailures: 3}).Play(context.Background(), s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func TestPlayRunsTheGameToTheEnd(t *testing.T) {
 // choose_option results and are not repeated.
 func TestDecisionIsSentOnce(t *testing.T) {
 	c := &scripted{reply: func(int, []inference.Message) inference.Message { return assistant(choose(1)) }}
-	(&Model{Client: c, MaxSteps: 3}).Play(context.Background(), newSession(t))
+	(&Model{Client: c, MaxFailures: 3}).Play(context.Background(), newSession(t))
 	users := 0
 	for _, msg := range c.seen[len(c.seen)-1] {
 		if msg.Role == inference.RoleUser {
@@ -87,7 +88,7 @@ func TestDecisionIsSentOnce(t *testing.T) {
 // previous request's, which keeps the provider's prompt cache valid.
 func TestConversationIsAppendOnly(t *testing.T) {
 	c := &scripted{reply: func(int, []inference.Message) inference.Message { return assistant(choose(1)) }}
-	(&Model{Client: c, MaxSteps: 3}).Play(context.Background(), newSession(t))
+	(&Model{Client: c, MaxFailures: 3}).Play(context.Background(), newSession(t))
 	for i := 1; i < len(c.seen) && i < 30; i++ {
 		prev, cur := c.seen[i-1], c.seen[i]
 		if len(cur) <= len(prev) {
@@ -109,7 +110,7 @@ func TestInvalidChoiceIsReportedAndRetried(t *testing.T) {
 		return assistant(choose(1))
 	}}
 	s := newSession(t)
-	if _, err := (&Model{Client: c, MaxSteps: 3}).Play(context.Background(), s); err != nil {
+	if _, err := (&Model{Client: c, MaxFailures: 3}).Play(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 	if s.Invalid != 1 {
@@ -125,13 +126,43 @@ func TestReplyWithoutToolCallIsPrompted(t *testing.T) {
 	c := &scripted{reply: func(int, []inference.Message) inference.Message {
 		return inference.Message{Role: inference.RoleAssistant, Content: "thinking"}
 	}}
-	_, err := (&Model{Client: c, MaxSteps: 2}).Play(context.Background(), newSession(t))
-	if err == nil || !strings.Contains(err.Error(), "no valid decision after 2") {
-		t.Fatalf("err = %v, want the step-limit error", err)
+	_, err := (&Model{Client: c, MaxFailures: 2}).Play(context.Background(), newSession(t))
+	if err == nil || !strings.Contains(err.Error(), "no valid decision after 2 failed replies") {
+		t.Fatalf("err = %v, want the failure-limit error", err)
 	}
 	nudge := c.seen[1][len(c.seen[1])-1]
 	if nudge.Role != inference.RoleUser || !strings.Contains(nudge.Content, constants.ToolChooseOption) {
 		t.Errorf("no reminder to call %s: %+v", constants.ToolChooseOption, nudge)
+	}
+}
+
+// Successful lookups are free; only replies with an error count toward the
+// failure limit, and the request cap stops a model that never chooses.
+func TestOnlyFailedRepliesCount(t *testing.T) {
+	lookups := &scripted{reply: func(call int, _ []inference.Message) inference.Message {
+		if call <= 10 {
+			return assistant(toolCall(constants.ToolGetCard, `{"name": "Backflip"}`))
+		}
+		return assistant(choose(1))
+	}}
+	if _, err := (&Model{Client: lookups, MaxFailures: 2}).Play(context.Background(), newSession(t)); err != nil {
+		t.Errorf("ten lookups ended the game: %v", err)
+	}
+
+	unknown := &scripted{reply: func(int, []inference.Message) inference.Message {
+		return assistant(toolCall(constants.ToolGetCard, `{"name": "No Such Card"}`))
+	}}
+	_, err := (&Model{Client: unknown, MaxFailures: 3}).Play(context.Background(), newSession(t))
+	if err == nil || len(unknown.seen) != 3 {
+		t.Errorf("unknown cards: %d requests, err %v; want 3 and the failure limit", len(unknown.seen), err)
+	}
+
+	looping := &scripted{reply: func(int, []inference.Message) inference.Message {
+		return assistant(toolCall(constants.ToolGetState, `{}`))
+	}}
+	_, err = (&Model{Client: looping, MaxFailures: 3}).Play(context.Background(), newSession(t))
+	if err == nil || len(looping.seen) != maxRequests {
+		t.Errorf("endless lookups: %d requests, err %v; want %d", len(looping.seen), err, maxRequests)
 	}
 }
 

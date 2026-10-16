@@ -21,22 +21,22 @@ import (
 
 // runSettings are the parsed flags of `mcbench run`.
 type runSettings struct {
-	player    string
-	modelID   string
-	server    string
-	temp      float64
-	maxTokens int
-	retries   int
-	effort    string
-	budget    int
-	maxSteps  int
-	instrDir  string
-	instr     []string
-	seeds     int
-	samples   int
-	parallel  int
-	logLevel  string
-	out       string
+	player      string
+	modelID     string
+	server      string
+	temp        float64
+	maxTokens   int
+	retries     int
+	effort      string
+	budget      int
+	maxFailures int
+	instrDir    string
+	instr       []string
+	seeds       int
+	samples     int
+	parallel    int
+	logLevel    string
+	out         string
 }
 
 func cmdRun(args []string) error {
@@ -72,20 +72,20 @@ func cmdRun(args []string) error {
 }
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
-	l := scenarioFlags(fs, cfg)
+	l := scenarioFlags(fs)
 	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
 	server := fs.String("server", envOr("OPENAI_BASE_URL", cfg.Inference.Server), "OpenAI-compatible API base URL (local LM Studio by default)")
-	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature")
+	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
 	effort := fs.String("reasoning-effort", cfg.Inference.ReasoningEffort, "reasoning level for hosted models, e.g. low, medium, high (empty: provider default)")
 	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
-	maxSteps := fs.Int("max-steps", cfg.Player.MaxSteps, "model requests allowed per decision")
+	maxFailures := fs.Int("max-failures", cfg.Player.MaxFailures, "failed model replies (no tool call or a tool error) allowed per decision")
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
 	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none)")
 	seeds := fs.Int("seeds", cfg.Run.Seeds, "play only the first N seeds of each scenario (0 = all)")
-	samples := fs.Int("samples", cfg.Run.Samples, "games per seed (use with temperature > 0)")
+	samples := fs.Int("samples", cfg.Run.Samples, "games per seed (more than 1 whenever sampling is not deterministic)")
 	parallel := fs.Int("parallel", cfg.Run.Parallel, "concurrent games")
 	out := fs.String("out", cfg.Run.Out, "results directory")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
@@ -97,7 +97,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 	return l, runSettings{
 		player: *playerName, modelID: *modelID, server: *server,
-		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxSteps: *maxSteps,
+		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
 	}

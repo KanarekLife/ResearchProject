@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"mcbench/constants"
+	"mcbench/data"
 	"mcbench/game/scenario"
 	"mcbench/game/session"
 )
 
 func newSession(t *testing.T, opts session.Options) *session.Session {
 	t.Helper()
-	scs, err := scenario.LoadDir("../../data/scenarios", "../../data")
+	scs, err := scenario.LoadAll(data.FS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestDecisionLimitEndsTheGame(t *testing.T) {
 
 func limited(t *testing.T, n int) *session.Session {
 	t.Helper()
-	scs, err := scenario.LoadDir("../../data/scenarios", "../../data")
+	scs, err := scenario.LoadAll(data.FS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,22 +77,21 @@ func limited(t *testing.T, n int) *session.Session {
 	return s
 }
 
-// The option order is a function of seed and sample only, and the sample
-// actually changes it.
+// Options keep the engine's grouped order: on a turn, card plays come first
+// and ending the turn last, numbered 1..n.
 func TestOptionOrder(t *testing.T) {
-	order := func(sample uint64) string {
-		s := newSession(t, session.Options{ShuffleOptions: true, Sample: sample})
-		s.Choose(1, "") // mulligan; the turn decision has many options
-		return strings.Join(keys(s.Decision()), "|")
+	s := newSession(t, session.Options{})
+	for s.Decision().Kind != constants.KindTurn {
+		s.Choose(len(s.Decision().Options), "") // the mulligan's last option keeps the hand
 	}
-	if order(0) != order(0) {
-		t.Fatal("same sample gave two different option orders")
+	d := s.Decision()
+	ks := keys(d)
+	if !strings.HasPrefix(ks[0], constants.PrefixPlay) || ks[len(ks)-1] != constants.KeyEndTurn {
+		t.Errorf("turn options out of engine order: %s", strings.Join(ks, " | "))
 	}
-	distinct := map[string]bool{}
-	for sample := uint64(0); sample < 6; sample++ {
-		distinct[order(sample)] = true
-	}
-	if len(distinct) < 2 {
-		t.Error("six samples all gave the same option order")
+	for i, o := range d.Options {
+		if o.ID != i+1 {
+			t.Fatalf("option %d has id %d", i+1, o.ID)
+		}
 	}
 }

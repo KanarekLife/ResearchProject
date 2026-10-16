@@ -6,9 +6,15 @@ package player
 
 import (
 	"context"
+	"errors"
 
 	"mcbench/game/session"
 )
+
+// ErrInference marks a game a player could not finish because the model could
+// not be reached (network, HTTP status, a bad response or a cancelled run).
+// It says nothing about how the model plays, so such a game is not graded.
+var ErrInference = errors.New("inference failed")
 
 // Player plays one game to its end.
 type Player interface {

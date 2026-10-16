@@ -13,7 +13,7 @@ type Config struct {
 	BaseURL     string // e.g. http://localhost:1234/v1
 	APIKey      string
 	Model       string
-	Temperature float64
+	Temperature float64 // sent when >= 0; a negative value leaves the provider's default
 	MaxTokens   int
 	Retries     int // extra attempts after a transient failure
 

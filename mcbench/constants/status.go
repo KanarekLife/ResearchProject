@@ -1,7 +1,7 @@
 package constants
 
-// Session statuses. The harness adds AgentError; the game only reports the
-// others.
+// Session statuses. The harness adds AgentError and InfraError; the game only
+// reports the others.
 const (
 	AwaitingDecision = "awaiting_decision"
 	Won              = "won"
@@ -10,6 +10,7 @@ const (
 	DecisionLimit    = "decision_limit"
 	EngineError      = "engine_error"
 	AgentError       = "agent_error"
+	InfraError       = "infra_error"
 )
 
 // Card statuses, as shown in a view.

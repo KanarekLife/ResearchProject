@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
 	"runtime/debug"
 	"time"
 
@@ -26,18 +25,11 @@ type Session struct {
 	stages int // villain stages at setup
 	err    string
 
-	rng      *rand.Rand
-	order    []int // shown id - 1 -> engine option id, for the current decision
-	orderFor int   // g.Decisions when order was made
-	mark     int   // log length at the last choice
+	mark int // log length at the last choice
 
 	Choices []Choice
 	Invalid int // rejected choose_option calls
 }
-
-// sampleSalt mixes the sample number into the option-order RNG seed so
-// different samples order options differently.
-const sampleSalt = 0x5eed
 
 // New sets up a scenario game with a seed and runs it to the first decision.
 func New(sc *scenario.Scenario, seed uint64, opts Options) (*Session, error) {
@@ -49,8 +41,7 @@ func New(sc *scenario.Scenario, seed uint64, opts Options) (*Session, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	s := &Session{g: g, opts: opts, log: logger, orderFor: -1, stages: 1 + len(g.S.VillainStages),
-		rng: rand.New(rand.NewPCG(seed, opts.Sample+sampleSalt))}
+	s := &Session{g: g, opts: opts, log: logger, stages: 1 + len(g.S.VillainStages)}
 	g.Logger = logger
 	g.OnPhase = func(p engine.Phase, round int) {
 		if opts.MaxRounds > 0 && p == engine.PhasePlayer && round > opts.MaxRounds {
@@ -101,34 +92,19 @@ func (s *Session) Error() string { return s.err }
 // View is the public game state.
 func (s *Session) View() View { return buildView(s.g, s.stages) }
 
-// Decision is the current decision, or nil when the game is over.
+// Decision is the current decision, or nil when the game is over. Options
+// keep the engine's order, which groups them by kind of action (on a turn:
+// card plays, hero powers, ally actions, card actions, form change, end turn).
 func (s *Session) Decision() *Decision {
 	if s.Status() != constants.AwaitingDecision {
 		return nil
 	}
 	d := s.g.Pending()
-	s.fixOrder(d)
 	out := &Decision{Kind: d.Kind, Prompt: d.Prompt}
-	for i, id := range s.order {
-		o := d.Options[id-1]
-		out.Options = append(out.Options, Option{ID: i + 1, Text: o.Text, Key: o.FullKey()})
+	for _, o := range d.Options {
+		out.Options = append(out.Options, Option{ID: o.ID, Text: o.Text, Key: o.FullKey()})
 	}
 	return out
-}
-
-// fixOrder shuffles and numbers the options once per engine decision.
-func (s *Session) fixOrder(d *engine.Decision) {
-	if s.orderFor == s.g.Decisions {
-		return
-	}
-	s.orderFor = s.g.Decisions
-	s.order = make([]int, len(d.Options))
-	for i := range s.order {
-		s.order[i] = i + 1
-	}
-	if s.opts.ShuffleOptions {
-		s.rng.Shuffle(len(s.order), func(i, j int) { s.order[i], s.order[j] = s.order[j], s.order[i] })
-	}
 }
 
 // Choose answers the current decision with a shown option id and runs the
@@ -143,16 +119,33 @@ func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 		s.log.Warn("invalid choice", "option", id, "options", len(d.Options), "round", s.g.S.Round)
 		return nil, fmt.Errorf("option %d does not exist; choose 1-%d", id, len(d.Options))
 	}
-	choice := Choice{Round: s.g.S.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning}
+	choice := s.choice(d, id, reasoning)
 	s.Choices = append(s.Choices, choice)
 	s.log.Info("choice", "n", len(s.Choices), "round", choice.Round, "kind", choice.Kind, "key", choice.Key)
-	s.guard(func() { s.g.Choose(s.order[id-1]) })
+	s.guard(func() { s.g.Choose(id) })
 	events := append([]string(nil), s.g.Log[s.mark:]...)
 	s.mark = len(s.g.Log)
 	s.Trace(constants.TraceChoice, &choiceTrace{
 		Decision: len(s.Choices), Choice: choice, Text: d.Options[id-1].Text, Events: events, Status: s.Status(),
 	})
 	return events, nil
+}
+
+// choice records option id of d with the board as it is before it applies.
+func (s *Session) choice(d *Decision, id int, reasoning string) Choice {
+	st := s.g.S
+	form := constants.TypeAlterEgo
+	if s.g.IsHero() {
+		form = constants.TypeHero
+	}
+	offered := make([]string, len(d.Options))
+	for i, o := range d.Options {
+		offered[i] = o.Key
+	}
+	return Choice{
+		Round: st.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning,
+		Form: form, HP: st.Hero.RemainingHP(), Threat: st.MainScheme.Threat, Offered: offered,
+	}
 }
 
 // TraceHeader is embedded in every trace entry; Trace fills it in.

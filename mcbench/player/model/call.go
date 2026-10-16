@@ -23,12 +23,13 @@ const (
 // result. Errors are returned as {"error": "..."} so a model can read and
 // correct them.
 func call(s *session.Session, name string, args json.RawMessage) string {
-	out, _ := exec(s, name, args)
+	out, _, _ := exec(s, name, args)
 	return out
 }
 
-// exec is call that also reports whether a choose_option succeeded.
-func exec(s *session.Session, name string, args json.RawMessage) (out string, chosen bool) {
+// exec is call that also reports whether a choose_option succeeded and
+// whether the call failed (its result is an error).
+func exec(s *session.Session, name string, args json.RawMessage) (out string, chosen, failed bool) {
 	var a struct {
 		OptionID  int    `json:"option_id"`
 		Reasoning string `json:"reasoning"`
@@ -37,35 +38,35 @@ func exec(s *session.Session, name string, args json.RawMessage) (out string, ch
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &a); err != nil {
-			return errJSON(fmt.Errorf("invalid arguments: %v", err)), false
+			return errJSON(fmt.Errorf("invalid arguments: %v", err)), false, true
 		}
 	}
 	switch name {
 	case constants.ToolGetState:
-		return toJSON(s.View()), false
+		return toJSON(s.View()), false, false
 	case constants.ToolGetDecision:
-		return toJSON(decisionResult(s)), false
+		return toJSON(decisionResult(s)), false, false
 	case constants.ToolChooseOption:
 		events, err := s.Choose(a.OptionID, a.Reasoning)
 		if err != nil {
-			return errJSON(err), false
+			return errJSON(err), false, true
 		}
 		r := decisionResult(s)
 		r[resultEvents] = events
-		return toJSON(r), true
+		return toJSON(r), true, false
 	case constants.ToolGetLog:
 		if a.Last <= 0 {
 			a.Last = defaultLogLines
 		}
-		return toJSON(map[string]any{resultLog: s.Log(a.Last)}), false
+		return toJSON(map[string]any{resultLog: s.Log(a.Last)}), false, false
 	case constants.ToolGetCard:
 		ref, err := session.Reference(a.Name)
 		if err != nil {
-			return errJSON(err), false
+			return errJSON(err), false, true
 		}
-		return toJSON(ref), false
+		return toJSON(ref), false, false
 	}
-	return errJSON(fmt.Errorf("unknown tool %q", name)), false
+	return errJSON(fmt.Errorf("unknown tool %q", name)), false, true
 }
 
 func decisionResult(s *session.Session) map[string]any {

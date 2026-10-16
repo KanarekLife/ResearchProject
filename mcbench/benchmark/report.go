@@ -90,14 +90,14 @@ const overviewWidth = 132
 // overviewPanel compares the configurations of one scenario: mean score and
 // mean criteria (win = win rate).
 func overviewPanel(keys []groupKey, groups map[groupKey][]Record, t ui.Theme) []string {
-	cols := ui.Cols("player", "instructions", "games", "score ± s.e.")
+	cols := ui.Cols("player", "instructions", "graded", "score ± s.e.")
 	for _, c := range CriteriaOrder {
 		cols = append(cols, ui.Column{Title: criterionLabels[c]})
 	}
 	var rows [][]string
 	for _, k := range keys {
 		s := summarize(groups[k])
-		row := []string{k.player, instrName(k.instr), fmt.Sprint(len(groups[k])),
+		row := []string{k.player, instrName(k.instr), fmt.Sprint(len(s.score.xs)),
 			fmt.Sprintf("%.3f ± %.3f", s.score.mean(), s.score.stderr())}
 		for _, c := range CriteriaOrder {
 			row = append(row, fmt.Sprintf("%.2f", s.criteria[c].mean()))
@@ -230,9 +230,15 @@ type summary struct {
 	status    map[string]int
 }
 
+// summarize aggregates the graded games and counts every status. A game cut
+// short by an infrastructure failure is counted but not graded.
 func summarize(rs []Record) summary {
 	s := summary{criteria: map[string]*stat{}, status: map[string]int{}}
 	for _, r := range rs {
+		s.status[r.Status]++
+		if r.Status == constants.InfraError {
+			continue
+		}
 		s.score.add(r.Score)
 		for _, c := range CriteriaOrder {
 			if s.criteria[c] == nil {
@@ -244,7 +250,6 @@ func summarize(rs []Record) summary {
 			s.roundsWon.add(float64(r.Rounds))
 		}
 		s.decisions.add(float64(r.Decisions))
-		s.status[r.Status]++
 	}
 	return s
 }

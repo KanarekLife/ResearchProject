@@ -11,16 +11,10 @@ import (
 // config mirrors config.yaml. It is loaded only by cmd; every other package
 // receives its settings as plain arguments.
 type config struct {
-	Data      dataConfig         `yaml:"data"`
 	Inference inferenceConfig    `yaml:"inference"`
 	Player    playerConfig       `yaml:"player"`
 	Run       runConfig          `yaml:"run"`
 	Scoring   map[string]float64 `yaml:"scoring"`
-}
-
-type dataConfig struct {
-	Scenarios string `yaml:"scenarios"`
-	Root      string `yaml:"root"`
 }
 
 type inferenceConfig struct {
@@ -37,7 +31,7 @@ type inferenceConfig struct {
 
 type playerConfig struct {
 	Name            string   `yaml:"name"`
-	MaxSteps        int      `yaml:"max_steps"`
+	MaxFailures     int      `yaml:"max_failures"`
 	InstructionsDir string   `yaml:"instructions_dir"`
 	Instructions    []string `yaml:"instructions"`
 }
@@ -51,14 +45,13 @@ type runConfig struct {
 
 func defaultConfig() config {
 	return config{
-		Data: dataConfig{Scenarios: defaultScenarioDir, Root: defaultDataRoot},
 		Inference: inferenceConfig{
-			Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv,
+			Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, Temperature: defaultTemperature,
 			MaxTokens: defaultMaxTokens, Retries: defaultRetries,
 		},
 		Player: playerConfig{
-			Name: playerModel, MaxSteps: defaultModelMaxSteps,
-			InstructionsDir: defaultInstructionsDir, Instructions: []string{defaultInstruction},
+			Name: playerModel, MaxFailures: defaultModelMaxFailures,
+			InstructionsDir: defaultInstructionsDir, Instructions: []string{defaultRulesDoc, defaultContractDoc},
 		},
 		Run:     runConfig{Seeds: defaultSeeds, Samples: defaultSamples, Parallel: defaultParallel, Out: defaultResultsDir},
 		Scoring: map[string]float64{},

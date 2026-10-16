@@ -5,11 +5,11 @@ import (
 )
 
 func cmdList(args []string) error {
-	fs, cfg, err := newFlagSet(cmdNameList, args)
+	fs, _, err := newFlagSet(cmdNameList, args)
 	if err != nil {
 		return err
 	}
-	l := scenarioFlags(fs, cfg)
+	l := scenarioFlags(fs)
 	fs.Parse(args)
 	scs, err := l.load()
 	if err != nil {

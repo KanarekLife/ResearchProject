@@ -8,6 +8,7 @@ const (
 	KindWindow   = "window"
 	KindChoice   = "choice"
 	KindDiscard  = "discard"
+	KindPayment  = "payment"
 )
 
 // Option keys and key prefixes. Option ids are 1..n in the order shown; keys
@@ -18,6 +19,7 @@ const (
 	KeyMulliganKeep    = "mulligan:keep"
 	KeyMulliganDiscard = "mulligan:discard"
 	KeyDiscardDone     = "discard:done"
+	KeyCancel          = "cancel"
 
 	PrefixMulligan   = "mulligan:"
 	PrefixPlay       = "play:"
@@ -30,6 +32,7 @@ const (
 	PrefixUse        = "use:"
 	PrefixEffect     = "effect:"
 	PrefixResource   = "res:"
+	PrefixPay        = "pay:"
 )
 
 // Separators inside an option key.

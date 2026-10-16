@@ -176,16 +176,18 @@ func NewAction(key, text string, do func()) Option {
 	return Option{Key: key, Text: text, do: do}
 }
 
+// NewActionPaid builds the Option for a card's Actions hook with a cost, or
+// none when it cannot be paid. The turn continues automatically after it
+// resolves or is cancelled.
 func (g *Game) NewActionPaid(src *Card, key, text string, cost int, need []Resource, do func()) []Option {
-	var out []Option
-	for _, p := range g.paymentsFor(src, nil, cost, need) {
-		pay := p
-		out = append(out, Option{Key: key, Pay: pay.Label(), Text: text + pay.Describe(), do: func() {
-			pay.Spend(g)
-			do()
-		}})
+	pays := g.paymentsFor(src, nil, cost, need)
+	if len(pays) == 0 {
+		return nil
 	}
-	return out
+	return []Option{g.payOption(key, text, pays, func(p Payment) {
+		p.Spend(g)
+		do()
+	}, nil)}
 }
 
 func (g *Game) playOptions(c *Card) []Option {
@@ -229,18 +231,16 @@ func (g *Game) payToPlay(c *Card, d *CardDef, target *Card) []Option {
 		key += constants.SepTarget + g.Label(target)
 		text += " targeting " + g.Label(target)
 	}
-	var opts []Option
-	for _, p := range g.paymentsFor(c, d, max(0, d.Cost-g.S.CostReduction), nil) {
-		pay := p
-		opts = append(opts, Option{
-			Key:  key,
-			Pay:  pay.Label(),
-			Text: text + pay.Describe(),
-			do: g.then(func() {
-				pay.Spend(g)
-				g.playCard(c, target)
-			}),
-		})
+	pays := g.paymentsFor(c, d, max(0, d.Cost-g.S.CostReduction), nil)
+	if len(pays) == 0 {
+		return nil
 	}
-	return opts
+	// The turn decision is asked again after the card resolves, or after a
+	// cancelled payment, so cancel needs no step of its own.
+	o := g.payOption(key, text, pays, func(p Payment) {
+		p.Spend(g)
+		g.playCard(c, target)
+	}, nil)
+	o.do = g.then(o.do)
+	return []Option{o}
 }
