@@ -191,7 +191,7 @@ func (r *replay) start(e trace.Entry) error {
 		return fmt.Errorf("scenario %q is not in the scenario directory", e.Scenario)
 	}
 	sc := r.scenarios[i]
-	s, err := session.New(sc, e.Seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, Logger: quiet})
+	s, err := session.New(sc, e.Seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, KeepForced: true, Logger: quiet})
 	if err != nil {
 		return err
 	}

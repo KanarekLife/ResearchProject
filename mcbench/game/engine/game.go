@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+
+	"mcbench/constants"
 )
 
 // Game drives the rules. It runs scheduled steps until it needs a decision
@@ -98,7 +100,7 @@ func (g *Game) Choose(id int) error {
 	opt := d.Options[id-1]
 	g.pending = nil
 	g.Decisions++
-	g.Logf("Player chose: %s", opt.Text)
+	g.Logf("%s%s", constants.EventChose, opt.Text)
 	if opt.do != nil {
 		opt.do()
 	}

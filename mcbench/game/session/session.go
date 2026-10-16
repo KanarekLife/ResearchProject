@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"mcbench/constants"
@@ -108,7 +109,10 @@ func (s *Session) Decision() *Decision {
 }
 
 // Choose answers the current decision with a shown option id and runs the
-// game to the next decision. It returns the events that happened.
+// game to the next decision that has more than one option: a decision with a
+// single legal option is applied at once (unless Options.KeepForced), recorded
+// as an Auto choice, and shown in the returned events as EventAutoResolved.
+// It returns the events that happened.
 func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 	d := s.Decision()
 	if d == nil {
@@ -119,20 +123,36 @@ func (s *Session) Choose(id int, reasoning string) ([]string, error) {
 		s.log.Warn("invalid choice", "option", id, "options", len(d.Options), "round", s.g.S.Round)
 		return nil, fmt.Errorf("option %d does not exist; choose 1-%d", id, len(d.Options))
 	}
-	choice := s.choice(d, id, reasoning)
+	events := s.apply(d, id, reasoning, false)
+	for !s.opts.KeepForced {
+		d := s.Decision()
+		if d == nil || len(d.Options) != 1 {
+			break
+		}
+		forced := s.apply(d, 1, "", true)
+		forced[0] = constants.EventAutoResolved + strings.TrimPrefix(forced[0], constants.EventChose)
+		events = append(events, forced...)
+	}
+	return events, nil
+}
+
+// apply records and runs option id of d. The trace gets the engine's own log
+// lines, so a replay that applies every recorded choice matches it.
+func (s *Session) apply(d *Decision, id int, reasoning string, auto bool) []string {
+	choice := s.choice(d, id, reasoning, auto)
 	s.Choices = append(s.Choices, choice)
-	s.log.Info("choice", "n", len(s.Choices), "round", choice.Round, "kind", choice.Kind, "key", choice.Key)
+	s.log.Info("choice", "n", len(s.Choices), "round", choice.Round, "kind", choice.Kind, "key", choice.Key, "auto", auto)
 	s.guard(func() { s.g.Choose(id) })
 	events := append([]string(nil), s.g.Log[s.mark:]...)
 	s.mark = len(s.g.Log)
 	s.Trace(constants.TraceChoice, &choiceTrace{
 		Decision: len(s.Choices), Choice: choice, Text: d.Options[id-1].Text, Events: events, Status: s.Status(),
 	})
-	return events, nil
+	return events
 }
 
 // choice records option id of d with the board as it is before it applies.
-func (s *Session) choice(d *Decision, id int, reasoning string) Choice {
+func (s *Session) choice(d *Decision, id int, reasoning string, auto bool) Choice {
 	st := s.g.S
 	form := constants.TypeAlterEgo
 	if s.g.IsHero() {
@@ -143,7 +163,7 @@ func (s *Session) choice(d *Decision, id int, reasoning string) Choice {
 		offered[i] = o.Key
 	}
 	return Choice{
-		Round: st.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning,
+		Round: st.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning, Auto: auto,
 		Form: form, HP: st.Hero.RemainingHP(), Threat: st.MainScheme.Threat, Offered: offered,
 	}
 }

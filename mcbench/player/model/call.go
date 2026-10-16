@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"mcbench/constants"
 	"mcbench/game/session"
@@ -52,7 +53,7 @@ func exec(s *session.Session, name string, args json.RawMessage) (out string, ch
 			return errJSON(err), false, true
 		}
 		r := decisionResult(s)
-		r[resultEvents] = events
+		r[resultEvents] = withoutChoiceEcho(events)
 		return toJSON(r), true, false
 	case constants.ToolGetLog:
 		if a.Last <= 0 {
@@ -72,9 +73,27 @@ func exec(s *session.Session, name string, args json.RawMessage) (out string, ch
 func decisionResult(s *session.Session) map[string]any {
 	r := map[string]any{resultStatus: s.Status()}
 	if d := s.Decision(); d != nil {
-		r[resultDecision] = d
+		r[resultDecision] = compactDecision(d)
 	}
 	return r
+}
+
+// decisionView is a decision as the model reads it. Options are one string
+// each ("2) Defend with Spider-Man"), without the engine key: the result stays
+// in the conversation for the rest of the game, so every byte is resent on
+// every later request.
+type decisionView struct {
+	Kind    string   `json:"kind"`
+	Prompt  string   `json:"prompt"`
+	Options []string `json:"options"`
+}
+
+func compactDecision(d *session.Decision) decisionView {
+	v := decisionView{Kind: d.Kind, Prompt: d.Prompt, Options: make([]string, len(d.Options))}
+	for i, o := range d.Options {
+		v.Options[i] = fmt.Sprintf("%d) %s", o.ID, o.Text)
+	}
+	return v
 }
 
 func toJSON(v any) string {
@@ -83,3 +102,15 @@ func toJSON(v any) string {
 }
 
 func errJSON(err error) string { return toJSON(map[string]string{resultError: err.Error()}) }
+
+// withoutChoiceEcho drops the "Player chose" line: the model just made that
+// choice, so it only repeats it. An auto-resolved choice keeps its line.
+func withoutChoiceEcho(events []string) []string {
+	out := make([]string, 0, len(events))
+	for _, e := range events {
+		if !strings.HasPrefix(e, constants.EventChose) {
+			out = append(out, e)
+		}
+	}
+	return out
+}

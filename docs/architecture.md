@@ -77,7 +77,7 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
 | Tool            | Arguments                         | Returns                                                                                                                                                   |
 | --------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `get_state`     | none                              | The public state (`session.View`): hero, hand, cards in play, pile sizes, villain and next stages, schemes, minions. Never deck order or face-down cards. |
-| `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": [{"id", "text", "key"}]}}`. The decision is absent once the game is over.                           |
+| `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": ["1) text", ...]}}`. The decision is absent once the game is over.                                |
 | `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision.                                                                  |
 | `get_log`       | optional `last` (default 20)      | The last lines of the game log.                                                                                                                           |
 | `get_card`      | `name`                            | A card's type, cost/stats and text. Matches codes and names, ignoring case, punctuation and HTML escapes, then partial names and small typos; several matches return their codes. |
@@ -89,7 +89,19 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
 - **Decision kinds** (`constants.Kind*`): `mulligan`, `turn`, `defend`,
   `window` (an interrupt such as Backflip), `choice`, `discard`, `payment`.
 - **Option keys** are stable engine labels (`constants.Prefix*`), e.g.
-  `play:Swinging Web Kick>Rhino`. Option ids are 1..n in the order shown.
+  `play:Swinging Web Kick>Rhino`. They are for traces and scripted players and
+  are not sent to the model: it sees each option as `N) text` (ids are 1..n in
+  the order shown), because the decision text stays in the conversation and is
+  resent on every later request.
+- **Forced decisions:** a decision with a single legal option (the only target
+  of an effect, or "End your turn" when nothing else is possible, about 8% of
+  decisions) is applied by `session.Choose` itself, so the player is never asked
+  it. Each is still recorded in `Choices` (`auto: true`), traced, logged at info
+  level (`auto=true`) and shown in the events as `Auto-resolved (only legal
+  option): ...`. `Options.KeepForced` turns this off; the board GUI replay sets
+  it so that it applies every recorded choice. The model's `choose_option`
+  result also leaves out the `Player chose: ...` line, which only repeats its
+  own choice.
 - **Payments:** an action with one way to pay (or none to make) is one option
   whose key carries it (`play:Aunt May|pay:Energy`). An action with several is
   one option followed by a `payment` decision: one `pay:Genius+Energy` option
