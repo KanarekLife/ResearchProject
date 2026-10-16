@@ -144,6 +144,11 @@ caller builds; it reads no files and no environment variables. It:
   `Retry-After`;
 - sends `max_tokens`, or falls back to `max_completion_tokens` when a provider
   asks for it;
+- sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted
+  models) and `reasoning_budget_tokens` (`-reasoning-budget`, a thinking-token
+  cap for llama.cpp-style servers) only when set. The setting is appended to the
+  player name (`model:<id>@effort-high`, `@budget-4096`), so runs at different
+  settings are reported separately;
 - reads reasoning from either `reasoning_content` or `reasoning`, and reports
   cached and reasoning tokens when the provider includes them.
 
@@ -195,7 +200,10 @@ plus rounds to win, decisions, invalid choices and tokens.
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log.
 
-`cmd report` summarizes `games.jsonl` files.
+`cmd report` summarizes `games.jsonl` files, or every one under the directories
+it is given (all of `results/` by default): an overview per scenario, then a
+panel per player and instruction set with a row per game. Records of the same
+player, instructions and scenario are pooled, even across runs.
 
 ## Logging
 

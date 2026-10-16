@@ -36,7 +36,7 @@ func cmdValidate(args []string) error {
 				fmt.Printf("%s seed %d (%s): %s\n  %s\n", r.Scenario, r.Seed, r.Player, r.Status, firstLines(r.Error, 8))
 			}
 		})
-		benchmark.Report(os.Stdout, recs)
+		benchmark.Report(os.Stdout, recs, terminalTheme())
 	}
 	if failed {
 		return fmt.Errorf("engine errors found")

@@ -9,6 +9,8 @@ inference:
   temperature: 0
   max_tokens: 32768
   retries: 3
+  reasoning_effort: ""
+  reasoning_budget: 0
 
 player:
   name: model

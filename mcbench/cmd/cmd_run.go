@@ -27,6 +27,8 @@ type runSettings struct {
 	temp      float64
 	maxTokens int
 	retries   int
+	effort    string
+	budget    int
 	maxSteps  int
 	instrDir  string
 	instr     []string
@@ -60,6 +62,7 @@ func cmdRun(args []string) error {
 	client := openaicompatible.New(openaicompatible.Config{
 		BaseURL: o.server, APIKey: os.Getenv(cfg.Inference.APIKeyEnv), Model: o.modelID,
 		Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
+		ReasoningEffort: o.effort, ReasoningBudget: o.budget,
 	})
 	p, err := buildPlayer(o, client, instr)
 	if err != nil {
@@ -76,6 +79,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
+	effort := fs.String("reasoning-effort", cfg.Inference.ReasoningEffort, "reasoning level for hosted models, e.g. low, medium, high (empty: provider default)")
+	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
 	maxSteps := fs.Int("max-steps", cfg.Player.MaxSteps, "model requests allowed per decision")
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
 	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none)")
@@ -92,7 +97,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 	return l, runSettings{
 		player: *playerName, modelID: *modelID, server: *server,
-		temp: *temp, maxTokens: *maxTokens, retries: *retries, maxSteps: *maxSteps,
+		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxSteps: *maxSteps,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
 	}
@@ -123,7 +128,7 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 			"score", r.Score, "ms", r.Millis, "error", firstLines(r.Error, 1))
 	})
 	log.Info("run finished", "games_file", f.Name())
-	benchmark.Report(os.Stdout, recs)
+	benchmark.Report(os.Stdout, recs, terminalTheme())
 	return nil
 }
 

@@ -18,7 +18,7 @@ func buildPlayer(o runSettings, client inference.Client, instr instruction.Instr
 		if client == nil {
 			return nil, fmt.Errorf("-player model needs a model id")
 		}
-		return &model.Model{Client: client, Label: o.modelID, MaxSteps: o.maxSteps, Instructions: instr}, nil
+		return &model.Model{Client: client, Label: modelLabel(o), MaxSteps: o.maxSteps, Instructions: instr}, nil
 	case playerHeuristic:
 		return heuristic.Heuristic{}, nil
 	case playerRandom:
@@ -28,3 +28,22 @@ func buildPlayer(o runSettings, client inference.Client, instr instruction.Instr
 	}
 	return nil, fmt.Errorf("unknown player %q", o.player)
 }
+
+// modelLabel names the model in results. The reasoning setting is part of the
+// name so runs at different settings are reported as separate players.
+func modelLabel(o runSettings) string {
+	label := o.modelID
+	if o.effort != "" {
+		label += labelEffort + o.effort
+	}
+	if o.budget > 0 {
+		label += fmt.Sprintf(labelBudget+"%d", o.budget)
+	}
+	return label
+}
+
+// Suffixes modelLabel adds for the reasoning setting.
+const (
+	labelEffort = "@effort-"
+	labelBudget = "@budget-"
+)

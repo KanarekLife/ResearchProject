@@ -112,3 +112,27 @@ func TestCompleteRejectsEmptyChoices(t *testing.T) {
 		t.Fatal("a reply without choices was accepted")
 	}
 }
+
+// Reasoning settings reach the request only when set, so a run without them
+// keeps the provider's default behaviour.
+func TestCompleteSendsReasoningOnlyWhenSet(t *testing.T) {
+	var bodies []map[string]any
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		bodies = append(bodies, body)
+		fmt.Fprintf(w, okBody, "stop")
+	}
+	c := serve(t, 0, handler)
+	complete(c)
+	c.cfg.ReasoningEffort, c.cfg.ReasoningBudget = "high", 4096
+	complete(c)
+	for _, f := range []string{fieldReasoningEffort, fieldReasoningBudget, fieldThinkingBudget} {
+		if _, ok := bodies[0][f]; ok {
+			t.Errorf("unset %s was sent", f)
+		}
+	}
+	if bodies[1][fieldReasoningEffort] != "high" || bodies[1][fieldReasoningBudget] != 4096.0 || bodies[1][fieldThinkingBudget] != 4096.0 {
+		t.Errorf("request = %v", bodies[1])
+	}
+}

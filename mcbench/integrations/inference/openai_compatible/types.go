@@ -16,6 +16,13 @@ type Config struct {
 	Temperature float64
 	MaxTokens   int
 	Retries     int // extra attempts after a transient failure
+
+	// ReasoningEffort is a named thinking level (e.g. "high") for hosted
+	// models; empty leaves the provider default.
+	ReasoningEffort string
+	// ReasoningBudget caps thinking tokens on llama.cpp-style local servers;
+	// 0 leaves the server default.
+	ReasoningBudget int
 }
 
 // errTokenParam means the provider rejected max_tokens.

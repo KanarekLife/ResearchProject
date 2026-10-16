@@ -27,7 +27,7 @@ go run ./cmd run -model google/gemma-4-26b-a4b-qat -instructions rules,strategy
 go run ./cmd run -player random
 go run ./cmd run -player heuristic
 
-go run ./cmd report results/*/games.jsonl
+go run ./cmd report                 # every run under results/; or pass run dirs / games.jsonl files
 ```
 
 Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl`

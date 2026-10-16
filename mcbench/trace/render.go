@@ -41,9 +41,9 @@ func messagePanel(e Entry, t ui.Theme) []string {
 	if e.PromptTokens == 0 && e.CompletionTokens == 0 {
 		return nil
 	}
-	cost := fmt.Sprintf("prompt=%d completion=%d", e.PromptTokens, e.CompletionTokens)
+	cost := fmt.Sprintf("prompt=%s completion=%s", ui.Thousands(e.PromptTokens), ui.Thousands(e.CompletionTokens))
 	if e.CachedTokens > 0 {
-		cost += fmt.Sprintf(" cached=%d", e.CachedTokens)
+		cost += fmt.Sprintf(" cached=%s", ui.Thousands(e.CachedTokens))
 	}
 	lines := []string{t.Dim(cost)}
 	if e.Truncated {
@@ -83,8 +83,8 @@ func endPanel(e Entry, t ui.Theme) []string {
 	if e.Error != "" {
 		status += " (" + e.Error + ")"
 	}
-	lines := []string{t.Bold(status), fmt.Sprintf("%d rounds · %d requests · prompt=%d completion=%d",
-		e.Rounds, e.Usage.Requests, e.Usage.InputTokens, e.Usage.OutputTokens)}
+	lines := []string{t.Bold(status), fmt.Sprintf("%d rounds · %d requests · prompt=%s completion=%s",
+		e.Rounds, e.Usage.Requests, ui.Thousands(e.Usage.InputTokens), ui.Thousands(e.Usage.OutputTokens))}
 	if e.Score > 0 {
 		lines = append(lines, fmt.Sprintf("score %.3f", e.Score))
 	}

@@ -30,6 +30,9 @@ type inferenceConfig struct {
 	Temperature float64 `yaml:"temperature"`
 	MaxTokens   int     `yaml:"max_tokens"`
 	Retries     int     `yaml:"retries"`
+	// ReasoningEffort and ReasoningBudget are sent only when set.
+	ReasoningEffort string `yaml:"reasoning_effort"`
+	ReasoningBudget int    `yaml:"reasoning_budget"`
 }
 
 type playerConfig struct {
