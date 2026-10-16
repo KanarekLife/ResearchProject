@@ -44,7 +44,7 @@ func exec(s *session.Session, name string, args json.RawMessage) (out string, ch
 	}
 	switch name {
 	case constants.ToolGetState:
-		return toJSON(s.View()), false, false
+		return toJSON(compactState(s.View())), false, false
 	case constants.ToolGetDecision:
 		return toJSON(decisionResult(s)), false, false
 	case constants.ToolChooseOption:
