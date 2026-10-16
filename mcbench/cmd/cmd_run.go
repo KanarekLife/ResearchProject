@@ -132,10 +132,15 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 	return nil
 }
 
-// prepareRunDir creates results/<run>-<player>/, the live/ trace directory
-// and the games.jsonl file.
+// prepareRunDir creates results/<run>-<player>[__<instructions>]/, the live/
+// trace directory and the games.jsonl file. The instruction documents are in
+// the name so runs of one model that differ only in them stay apart.
 func prepareRunDir(o runSettings, p player.Player) (*os.File, benchmark.Config, error) {
-	dir := filepath.Join(o.out, time.Now().UTC().Format(runIDLayout)+"-"+sanitize(p.Name()))
+	name := time.Now().UTC().Format(runIDLayout) + "-" + sanitize(p.Name())
+	if len(o.instr) > 0 {
+		name += runNameSep + sanitize(strings.Join(o.instr, "+"))
+	}
+	dir := filepath.Join(o.out, name)
 	runCfg := benchmark.Config{Seeds: o.seeds, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir)}
 	if err := os.MkdirAll(runCfg.TraceDir, 0o755); err != nil {
 		return nil, runCfg, err

@@ -30,7 +30,7 @@ go run ./cmd run -player heuristic
 go run ./cmd report                 # every run under results/; or pass run dirs / games.jsonl files
 ```
 
-Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl`
+Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl` (`<run>` is `<time>-<player>__<instructions>`)
 (watch it with `go run ./cmd view -follow`), plus one record per finished game
 in `games.jsonl`. Progress is
 logged as structured `slog` to stderr.

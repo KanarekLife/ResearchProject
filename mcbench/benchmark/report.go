@@ -84,6 +84,9 @@ func sortedKeys(groups map[groupKey][]Record) []groupKey {
 	return keys
 }
 
+// overviewWidth fits the longest player and instruction names on one line per row.
+const overviewWidth = 132
+
 // overviewPanel compares the configurations of one scenario: mean score and
 // mean criteria (win = win rate).
 func overviewPanel(keys []groupKey, groups map[groupKey][]Record, t ui.Theme) []string {
@@ -101,7 +104,7 @@ func overviewPanel(keys []groupKey, groups map[groupKey][]Record, t ui.Theme) []
 		}
 		rows = append(rows, row)
 	}
-	return t.Box(keys[0].scenario, t.Table(cols, rows), ui.Width)
+	return t.Box(keys[0].scenario, t.Table(cols, rows), overviewWidth)
 }
 
 // configPanel shows one configuration: how its games ended, what they cost and
