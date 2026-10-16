@@ -84,10 +84,12 @@ Marvel Champions terms, as used in this project's code, data and reports.
 
 - **Seed**: fixes all shuffles of a game; scenarios list their seeds, and every
   player plays the same ones.
-- **Sample**: one of several games on the same seed (useful at temperature > 0).
+- **Sample**: one of several games on the same seed (needed whenever the model's
+  sampling is not deterministic, which is the case at the provider's default
+  temperature).
 - **Decision**: one point where the player must choose. **Option**: one legal
   choice, numbered in the order shown. **Option key**: a stable engine label for
-  an option (e.g. `play:Swinging Web Kick>Rhino|pay:Genius+Energy`), used by
+  an option (e.g. `play:Swinging Web Kick>Rhino`, `pay:Genius+Energy`), used by
   scripted players and in records.
 - **Session**: one game in progress, played through the contract (see
   [architecture](architecture.md)).

@@ -57,8 +57,11 @@ decision, stop and ask before making it.
 - Keep documentation human-readable and research-focused: no filler, no
   restating code, no generic best-practices text.
 - Keep each fact in its owning document and link instead of copying it.
-  `docs/architecture.md` owns how the engine, contract, agentic loop and scoring
-  work.
+  [`docs/architecture.md`](docs/architecture.md) owns how the engine, contract,
+  agentic loop and scoring work; [`docs/research.md`](docs/research.md) owns
+  what we have learned about how models play and what leads to wins (add to it
+  when a run teaches something new); [`docs/glossary.md`](docs/glossary.md)
+  owns the game and benchmark terms.
 
 ## Verify before done
 
