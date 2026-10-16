@@ -95,3 +95,46 @@ func TestOptionOrder(t *testing.T) {
 		}
 	}
 }
+
+// A decision with a single legal option is applied by the session: the player
+// is never shown one, the choice is recorded as Auto, and the returned events
+// say so. KeepForced turns that off.
+func TestForcedDecisionsAreAutoResolved(t *testing.T) {
+	s := newSession(t, session.Options{})
+	autos, announced := 0, 0
+	for s.Status() == constants.AwaitingDecision {
+		if n := len(s.Decision().Options); n < 2 {
+			t.Fatalf("the player was shown a decision with %d option(s)", n)
+		}
+		events, err := s.Choose(1, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range events {
+			if strings.HasPrefix(e, constants.EventAutoResolved) {
+				announced++
+			}
+		}
+	}
+	for _, c := range s.Choices {
+		if c.Auto {
+			autos++
+			if len(c.Offered) != 1 {
+				t.Errorf("auto choice %s offered %d options", c.Key, len(c.Offered))
+			}
+		}
+	}
+	if autos == 0 || autos != announced {
+		t.Errorf("%d auto choices, %d announced in events; want equal and non-zero", autos, announced)
+	}
+
+	manual := newSession(t, session.Options{KeepForced: true})
+	for manual.Status() == constants.AwaitingDecision {
+		manual.Choose(1, "")
+	}
+	for _, c := range manual.Choices {
+		if c.Auto {
+			t.Fatal("KeepForced still auto-resolved a decision")
+		}
+	}
+}

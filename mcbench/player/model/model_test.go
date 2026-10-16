@@ -63,8 +63,14 @@ func TestPlayRunsTheGameToTheEnd(t *testing.T) {
 	if s.Status() == constants.AwaitingDecision {
 		t.Fatalf("game still awaiting a decision")
 	}
-	if u.Requests != len(s.Choices) || u.InputTokens != int64(10*u.Requests) {
-		t.Errorf("usage %+v for %d choices", u, len(s.Choices))
+	answered := 0 // forced decisions are applied by the session, not answered
+	for _, c := range s.Choices {
+		if !c.Auto {
+			answered++
+		}
+	}
+	if u.Requests != answered || u.InputTokens != int64(10*u.Requests) {
+		t.Errorf("usage %+v for %d answered decisions", u, answered)
 	}
 }
 

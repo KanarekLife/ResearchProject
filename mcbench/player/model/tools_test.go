@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -54,6 +55,22 @@ func TestEveryToolExecutes(t *testing.T) {
 	for _, tool := range tools {
 		if out := call(s, tool.Name, nil); strings.Contains(out, "unknown tool") {
 			t.Errorf("%s is advertised but call does not handle it", tool.Name)
+		}
+	}
+}
+
+// Options reach the model as "N) text" strings, without the engine key.
+func TestDecisionOptionsAreCompact(t *testing.T) {
+	s := newSession(t)
+	d := callJSON(t, s, constants.ToolGetDecision, ``)["decision"].(map[string]any)
+	want := s.Decision().Options
+	got := d["options"].([]any)
+	if len(got) != len(want) || len(got) == 0 {
+		t.Fatalf("%d options, want %d", len(got), len(want))
+	}
+	for i, o := range want {
+		if exp := fmt.Sprintf("%d) %s", o.ID, o.Text); got[i] != exp {
+			t.Errorf("option %d = %v, want %q", i, got[i], exp)
 		}
 	}
 }

@@ -27,6 +27,7 @@ type Choice struct {
 	Kind      string   `json:"kind"`
 	Key       string   `json:"key"`
 	Reasoning string   `json:"reasoning,omitempty"`
+	Auto      bool     `json:"auto,omitempty"` // forced: the only legal option, applied by the session
 	Form      string   `json:"form,omitempty"` // hero or alter-ego
 	HP        int      `json:"hp"`             // the hero's remaining hit points
 	Threat    int      `json:"threat"`         // on the main scheme
@@ -37,6 +38,9 @@ type Choice struct {
 type Options struct {
 	MaxRounds    int
 	MaxDecisions int
+	// KeepForced stops the session from applying a decision's only legal option
+	// itself. A replay sets it so that it applies every recorded choice.
+	KeepForced bool
 	// Trace, if set, receives a JSON line for every choice, plus anything
 	// players add with Session.Trace (e.g. model messages).
 	Trace io.Writer

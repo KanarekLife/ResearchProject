@@ -11,6 +11,13 @@ const (
 	KindPayment  = "payment"
 )
 
+// Game log lines for a choice. The engine writes EventChose for every applied
+// option; the session rewrites it to EventAutoResolved for a forced decision.
+const (
+	EventChose        = "Player chose: "
+	EventAutoResolved = "Auto-resolved (only legal option): "
+)
+
 // Option keys and key prefixes. Option ids are 1..n in the order shown; keys
 // are stable engine labels used in records and by scripted players.
 const (

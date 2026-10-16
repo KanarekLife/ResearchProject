@@ -3,8 +3,8 @@
 The game is played by a rules engine. You never move cards yourself: at every point where the rules give you a choice, the engine stops and lists every legal option. You pick one by its id. Everything else (shuffling, threat, enemy activations, encounter cards, forced and mandatory abilities) is resolved for you.
 
 ## Tools
-- **get_decision**: the decision you must make now (`kind`, `prompt`, numbered `options`), or the final status once the game is over.
-- **choose_option**: makes the current decision. Pass the `option_id` of a listed option and a short `reasoning`. The result lists the events that followed and the **next decision**, so you do not need to call get_decision again after it.
+- **get_decision**: the decision you must make now (`kind`, `prompt`, `options`, each written `N) text` where N is the option id), or the final status once the game is over.
+- **choose_option**: makes the current decision. Pass the `option_id` of a listed option and a short `reasoning`. The result lists the events that followed and the **next decision**, so you do not need to call get_decision again after it. The result does not repeat your own choice. A decision that has only one legal option is resolved for you: you are never asked it, and the events show it as `Auto-resolved (only legal option): <option text>`.
 - **get_state**: the visible board: round and phase; your hero (form, HP, ATK/THW/DEF/REC, hand size, exhausted, statuses, whether you already changed form this turn, the other form's name and ability); your hand with costs and resource icons; your cards in play; deck size and discard pile; face-down encounter cards dealt to you; the villain (stage, HP, ATK, SCH, keywords, statuses, attachments) and its later stages; the main scheme (threat, the threshold at which you lose, threat per round); side schemes with their icons; minions engaged with you; acceleration tokens; encounter deck size and discard pile. It never shows the order of a deck or face-down cards.
 - **get_card**: the type, cost, stats and text of a card by name or code. Close spellings and partial names are accepted; when several cards match (such as the stages of a villain), it lists them with their codes and you call it again with the code you want. Use it whenever you are unsure what a card does.
 - **get_log**: the last lines of the game log (`last`, default 20).
@@ -21,7 +21,7 @@ Each decision has a kind:
 
 ## Options
 - Each option is one action. Its text says what it does, including the target. A card that can be paid for in only one way (or is free) shows that payment in its text and is played at once. A card with several ways to pay shows no payment and is followed by a **payment** decision; choose the payment that keeps the cards you still want, or cancel. The same card appears once per target.
-- Each option has a stable `key`, for example `play:Card Name>Target` (with `|pay:Card A+Card B` when the payment is fixed), `pay:Card A+Card B`, `attack:Hero>Enemy`, `thwart:Hero>Scheme`, `defend:none`, `change_form:Name`, `cancel`, `end_turn`. When two cards in play share a name, they are labelled `Name#N`.
+- When two cards in play share a name, they are labelled `Name#N`.
 - Option ids are numbered 1..n for that decision only. Options are grouped by kind: on your turn, card plays first, then your hero's basic powers, ally attacks and thwarts, card actions, changing form, and ending your turn last. Read the text of an option, not its position.
 - Only listed options are legal. If an action is not listed, you cannot do it now (for example, it cannot be paid for, it has no valid target, or your hero is exhausted).
 

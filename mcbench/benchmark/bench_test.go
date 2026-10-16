@@ -111,7 +111,7 @@ func TestReplayReachesSameResult(t *testing.T) {
 	for _, sc := range scenarios(t) {
 		seed := sc.Seeds[0]
 		rec := Play(context.Background(), sc, heuristic.Random{Seed: 7}, instruction.Instructions{}, seed, 0, "", DefaultWeights)
-		s, err := session.New(sc, seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions})
+		s, err := session.New(sc, seed, session.Options{MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions, KeepForced: true})
 		if err != nil {
 			t.Fatal(err)
 		}
