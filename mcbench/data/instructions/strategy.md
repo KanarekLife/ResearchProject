@@ -88,7 +88,6 @@ Keep cards you can play in the first rounds, especially allies, upgrades and sup
 ## The encounter deck
 - Each villain phase deals you at least one encounter card. Expect new minions, side schemes and treacheries, and leave room in your plan for them.
 - When the encounter deck runs out, it is reshuffled and an acceleration token is added for the rest of the game.
-- The encounter discard pile is open information. Checking what has already appeared tells you what is still in the deck.
 
 ## Common mistakes
 - Ending the turn without checking the threat and damage that the villain phase will bring.
