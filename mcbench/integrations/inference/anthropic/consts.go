@@ -33,6 +33,9 @@ const (
 	fieldType        = "type"
 	toolChoiceAuto   = "auto"
 
+	fieldCacheControl = "cache_control"
+	cacheEphemeral    = "ephemeral"
+
 	fieldThinking     = "thinking"
 	fieldOutputConfig = "output_config"
 	fieldEffort       = "effort"
