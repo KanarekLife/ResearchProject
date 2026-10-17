@@ -56,6 +56,9 @@ decision, stop and ask before making it.
 - Update a document only when an approved decision changes what it describes.
 - Keep documentation human-readable and research-focused: no filler, no
   restating code, no generic best-practices text.
+- Do not state how many runs, games or wins a finding rests on ("four of five
+  games"). Describe the effect and its direction, and point to the run
+  directories so `mcbench report` and `mcbench analyze` give the numbers.
 - Keep each fact in its owning document and link instead of copying it.
   [`docs/architecture.md`](docs/architecture.md) owns how the engine, contract,
   agentic loop and scoring work; [`docs/research.md`](docs/research.md) owns
