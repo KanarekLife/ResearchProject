@@ -14,12 +14,13 @@ fewer, one game per seed. Read it as well-founded hypotheses, not settled result
 
 - Games are won by **tempo**: build the board early, attack every turn, use every
   card and ally, and keep the hero in hero form. Games are lost by **passivity**.
-- The strongest models (Gemini 3.8 Flash, gpt-6.1-sol, and Gemini 4 Argon in its
-  one game) play exactly that way. The Claude models (Haiku, Sonnet) play the
+- The strongest models (Gemini 3.8 Flash, gpt-6.1-sol, and as a first impression
+  Gemini 4 Argon) play exactly that way. The Claude models (Haiku, Sonnet) play the
   opposite: they hold cards, defend with the hero and sit in alter-ego.
 - That passivity did not go away with longer rules documents or more reasoning
-  effort. Wording the strategy as a mandatory order changed what Haiku does only
-  partway, and it did not make Haiku win.
+  effort. A strategy worded as a mandatory order, or a step-by-step play algorithm
+  built from won games, moves what Haiku does partway and wins it a few games, but
+  it still plays far from the winners.
 - Simple scripted players (random, first option, a heuristic) lose every game, so
   winning needs real play, not luck.
 
@@ -71,8 +72,8 @@ stunned the villain just before changing form, which wasted the stun.
 
 **gpt-6.1-sol and Gemini 4 Argon** play the same way: a lot of actions per turn and
 almost nothing left unused. gpt-6.1-sol is the most convincing of the newer models,
-and its one loss was a long game. Argon was tried on a
-single game, so it is a first impression only.
+and its loss was a long game. Argon has barely been tried, so it is a first
+impression only.
 
 **DeepSeek Flash** is as aggressive as Gemini and understands that defending costs
 the next turn. It overdoes it: it almost never retreats to alter-ego, even at low
@@ -110,8 +111,8 @@ What we tried on the Claude models:
   standing order that overrides the model's own judgement, with a turn checklist
   and three hard rules. It shifted Haiku's play partway: more actions per turn, more
   basic powers, fewer blocks with the hero, fewer turns ended in alter-ego. An early
-  small test looked promising (a couple of games were won), but a ten-game repeat
-  won none, and most losses were still to the scheme. The habits changed only part
+  small test looked promising (Haiku won some games), but a larger repeat won
+  none, and most losses were still to the scheme. The habits changed only part
   of the way: about three actions per turn against the winners' six, half of the
   attacks still blocked with the hero, and more than half of turns ending with a
   playable card in hand. The early wins were most likely luck. Taking the text
@@ -123,6 +124,25 @@ What we tried on the Claude models:
   turn, tried on Gemini 3.8 Flash) made play worse. The model cannot see the result
   of one action before committing the next. When offered only as an option, it was
   almost never used.
+- **A play algorithm** (`algorithm`): an if-then procedure for every decision kind,
+  taken from what won games did (set up in alter-ego and attack as a hero in round
+  one, attack while the scheme is safe, take small hits instead of defending with the
+  hero, end in alter-ego only at very low threat). On Haiku at high effort it won
+  about as often as `strategy` in the same run, where Haiku with neither won
+  nothing. Haiku follows the rules of the procedure that are easy to check:
+  it attacks in round one in every game and ends far fewer turns in alter-ego than
+  with `strategy`. It does not follow the ones that need judgement: about a third of
+  its turns still end with a card it could play, and its wins take ten rounds or
+  more. Variants did not do better: a short version and a version with fixed
+  thresholds instead of formulas won less, and a version that made Haiku write out
+  the threat and damage numbers before ending a turn or defending did not win at all
+  (`results/experiments-20261017c`).
+- **The full official rule books** (a near-verbatim text of Learn to Play and the
+  Rules Reference, more than ten times the length of `rules_reference`; tried once
+  and not kept) made Haiku more passive than any other set: it blocked with the hero
+  in two of three attacks, used fewer basic powers, did not win and cost about five
+  times the tokens of `rules_agent` with `algorithm`. More rules text is not what
+  Haiku lacks.
 
 So Claude's passivity looks like a disposition more than a knowledge gap or a lack
 of thinking time. Wording that tells the model not to hold back moves its behaviour;
@@ -132,7 +152,7 @@ a thwart or a card is worth more than keeping the hero safe.
 
 ## Instruction documents
 
-- Differences between instruction sets were within the noise of ten games, and the
+- Differences between instruction sets were within the noise, and the
   sets we compared changed several documents at once, so no effect could be
   attributed to one document.
 - The `mcbench` document, which explains the tools, removed nearly all of the
@@ -141,8 +161,19 @@ a thwart or a card is worth more than keeping the hero safe.
   hero as "keeping it ready", the reverse of the rules, and the most defensive model
   followed it closely. Strategy advice must be checked against the rules as
   carefully as the rules documents themselves.
-- A strategy text can also be too stiff for a model that already plays well. The
-  mandatory text has not been tried on Gemini or gpt-6.1-sol.
+- A model that already plays well is not hurt by the mandatory text: Gemini 3.8
+  Flash keeps winning most games with `strategy`, `algorithm` or both, and the
+  differences between the three are within the noise.
+- Short texts do worse than long ones: a short `algorithm` and a short `strategy`
+  won less than the full versions on Gemini, and the short `algorithm` never won on
+  Haiku. The detail seems to matter more than the framing.
+- Retrieval over the instructions (giving the model only the relevant rules) is
+  unlikely to help as things stand. The prompts are short and cached, models
+  rarely state a wrong rule (about one hero defence in a hundred cites a wrong
+  readying rule), and the rules Haiku breaks are rules it was given. The one clear
+  case of a missing rule (DeepSeek believing a defending hero readies anyway, in a
+  quarter of its hero defences with `rules_reference`) mostly went away where
+  `rules_agent` states the rule plainly.
 
 Planned grid: every set includes `mcbench`; the rules base is none,
 `rules_reference` or `rules_agent`; `strategy` is on or off. Six conditions, each
@@ -167,7 +198,6 @@ answering one question, with several games per seed.
 - Models showed at most a weak preference for the first option, so options are no
   longer shuffled: they come grouped by kind of action, which is easier to read and
   stays the same between similar decisions.
-
 ## Changes made in response
 
 - `strategy` now leads with fast, aggressive play (build and attack early, attack
@@ -180,12 +210,17 @@ answering one question, with several games per seed.
   mixed rules with tips and blurred the effect of `strategy`.
 - Each recorded choice now stores the hero's form and hit points, the threat and
   the options offered, which is what `mcbench analyze` reads.
+- `algorithm` was added as an add-on next to `strategy`: the same lessons written
+  as an ordered procedure, so the two framings can be compared.
 
 ## Open questions
 
-- A mandatory strategy only partly fixed Haiku's habits and not its results. Is it
-  still missing the judgement of when to attack, thwart or hold? Does the text do
-  better on Sonnet, or hurt a model that already plays well?
+- A mandatory strategy or a play algorithm only partly fixes Haiku's habits and
+  results. Is it still missing the judgement of when to attack, thwart or hold? Do
+  the texts do better on Sonnet?
+- Would a reminder of the matching rule inside each decision (the defend rules on a
+  defend decision) move Haiku further than the same rule in the system prompt?
+  This changes the player <-> game contract and needs a decision first.
 - Is the Claude models' defending a knowledge gap that documents can close, or a
   disposition they keep regardless? (The evidence so far points to disposition.)
 - Do gpt-6.1-sol and Gemini 4 Argon keep winning across all ten seeds?
