@@ -10,6 +10,12 @@ type Config struct {
 	Temperature float64 // sent when >= 0
 	MaxTokens   int
 	Retries     int
+	// ReasoningEffort is a named effort level (e.g. "high") sent with
+	// adaptive thinking; empty leaves the model's default.
+	ReasoningEffort string
+	// ReasoningBudget is a thinking-token budget for models that take one
+	// (at least 1024); used only when ReasoningEffort is empty.
+	ReasoningBudget int
 }
 
 type turn struct {

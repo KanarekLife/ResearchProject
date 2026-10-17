@@ -33,6 +33,15 @@ const (
 	fieldType        = "type"
 	toolChoiceAuto   = "auto"
 
+	fieldThinking     = "thinking"
+	fieldOutputConfig = "output_config"
+	fieldEffort       = "effort"
+	fieldDisplay      = "display"
+	fieldBudgetTokens = "budget_tokens"
+	thinkingAdaptive  = "adaptive"
+	thinkingEnabled   = "enabled"
+	displaySummarized = "summarized"
+
 	toolTypeFunction = "function"
 
 	stopReasonMaxTokens = "max_tokens"
