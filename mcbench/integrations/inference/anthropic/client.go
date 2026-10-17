@@ -46,7 +46,11 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 		case inference.RoleUser:
 			turns = appendTurn(turns, roleUser, block{Type: blockText, Text: m.Content})
 		case inference.RoleAssistant:
-			var blocks []block
+			if len(m.Native) > 0 {
+				turns = appendTurn(turns, roleAssistant, nativeBlocks(m.Native)...)
+				continue
+			}
+			var blocks []any
 			if m.Content != "" {
 				blocks = append(blocks, block{Type: blockText, Text: m.Content})
 			}
@@ -80,7 +84,7 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 // appendTurn adds blocks to the last turn when it has the same role: the
 // tool results of one assistant turn, and any user text after them, share one
 // user turn.
-func appendTurn(ts []turn, role string, blocks ...block) []turn {
+func appendTurn(ts []turn, role string, blocks ...any) []turn {
 	if n := len(ts); n > 0 && ts[n-1].Role == role {
 		ts[n-1].Content = append(ts[n-1].Content, blocks...)
 		return ts
@@ -88,14 +92,39 @@ func appendTurn(ts []turn, role string, blocks ...block) []turn {
 	return append(ts, turn{Role: role, Content: blocks})
 }
 
+// nativeBlocks splits a reply's raw content array (set by decodeReply, so
+// always valid) into its blocks, unchanged.
+func nativeBlocks(native json.RawMessage) []any {
+	var raw []json.RawMessage
+	json.Unmarshal(native, &raw)
+	out := make([]any, len(raw))
+	for i, b := range raw {
+		out[i] = b
+	}
+	return out
+}
+
 func decodeReply(raw []byte) (inference.Reply, error) {
 	var r response
 	if err := json.Unmarshal(raw, &r); err != nil {
 		return inference.Reply{}, fmt.Errorf("decoding messages response: %w", err)
 	}
+	var blocks []block
+	if len(r.Content) > 0 {
+		if err := json.Unmarshal(r.Content, &blocks); err != nil {
+			return inference.Reply{}, fmt.Errorf("decoding messages content: %w", err)
+		}
+	}
 	msg := inference.Message{Role: inference.RoleAssistant}
-	for _, b := range r.Content {
+	if len(blocks) > 0 {
+		// The content goes back verbatim: thinking blocks must keep their
+		// signatures, and the text and tool calls their order around them.
+		msg.Native = r.Content
+	}
+	for _, b := range blocks {
 		switch b.Type {
+		case blockThinking:
+			msg.Reasoning += b.Thinking
 		case "text":
 			msg.Content += b.Text
 		case "tool_use":
