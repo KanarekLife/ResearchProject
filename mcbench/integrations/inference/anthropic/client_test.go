@@ -92,3 +92,24 @@ func TestThinkingIsSentBackVerbatim(t *testing.T) {
 		t.Errorf("assistant content sent back = %s, want %s", sent, wb)
 	}
 }
+
+// An effort level is sent with adaptive thinking and wins over a budget; a
+// budget alone is sent as fixed-budget thinking.
+func TestReasoningSettings(t *testing.T) {
+	for _, tc := range []struct {
+		effort         string
+		budget         int
+		thinking, conf string
+	}{
+		{"", 0, `null`, `null`},
+		{"high", 2048, `{"display":"summarized","type":"adaptive"}`, `{"effort":"high"}`},
+		{"", 4096, `{"budget_tokens":4096,"type":"enabled"}`, `null`},
+	} {
+		b := New(Config{Model: "claude", MaxTokens: 50, Temperature: -1, ReasoningEffort: tc.effort, ReasoningBudget: tc.budget}).body(nil, nil)
+		think, _ := json.Marshal(b["thinking"])
+		conf, _ := json.Marshal(b["output_config"])
+		if string(think) != tc.thinking || string(conf) != tc.conf {
+			t.Errorf("effort %q budget %d: thinking %s output_config %s", tc.effort, tc.budget, think, conf)
+		}
+	}
+}

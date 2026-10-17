@@ -1,6 +1,6 @@
 // Package anthropic implements the inference client against the Anthropic
 // Messages API (api.anthropic.com, or any server that proxies it). It sends
-// no thinking or cache settings.
+// no cache settings.
 package anthropic
 
 import (
@@ -37,6 +37,12 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 	body := map[string]any{fieldModel: c.cfg.Model, fieldMaxTokens: c.cfg.MaxTokens}
 	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
+	}
+	if think := c.thinking(); think != nil {
+		body[fieldThinking] = think
+	}
+	if c.cfg.ReasoningEffort != "" {
+		body[fieldOutputConfig] = map[string]any{fieldEffort: c.cfg.ReasoningEffort}
 	}
 	var turns []turn
 	for _, m := range msgs {
@@ -79,6 +85,21 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 		body[fieldToolChoice] = map[string]any{fieldType: toolChoiceAuto}
 	}
 	return body
+}
+
+// thinking is the thinking setting: adaptive with the effort level (current
+// models), else a fixed token budget (older models, which reject both an
+// effort and adaptive thinking), else none and the model's default applies.
+// The summary is requested only so that traces show the reasoning; it does
+// not change how the model thinks.
+func (c *Client) thinking() map[string]any {
+	switch {
+	case c.cfg.ReasoningEffort != "":
+		return map[string]any{fieldType: thinkingAdaptive, fieldDisplay: displaySummarized}
+	case c.cfg.ReasoningBudget > 0:
+		return map[string]any{fieldType: thinkingEnabled, fieldBudgetTokens: c.cfg.ReasoningBudget}
+	}
+	return nil
 }
 
 // appendTurn adds blocks to the last turn when it has the same role: the
