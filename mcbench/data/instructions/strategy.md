@@ -1,3 +1,20 @@
+# Mandatory strategy (solo)
+
+This strategy is not advice. It is a standing order for every decision in this game. Follow it exactly, every time. Do not replace it with your own judgment about whether an action is worth its cost: where your instinct says to save cards or protect your hit points, the strategy wins. Holding back is the most common way to lose.
+
+## Checklist before every `turn` decision, in this order
+1. Can your damage this turn defeat the villain's final stage? If yes, spend everything on that.
+2. Would the coming villain phase complete the main scheme, or defeat you? If yes, deal with that first (thwart, defend, heal or change form).
+3. Otherwise, in hero form: play every permanent card (ally, support, upgrade) you can pay for, use every ready ally and every card action, then attack with the hero's basic power.
+4. End the turn only when no ally, action, basic power or playable card is left unused. A card kept in hand needs a reason you can state: an event waiting for its moment, or a card you cannot pay for.
+
+## Hard rules
+- Never defend with the hero unless the attack could defeat you or leave you too low to stay in hero form. Defend with an ally, or take the hit.
+- Never end a turn in alter-ego when the villain's SCH, every minion's SCH and a high boost could complete the main scheme. Stay a hero.
+- Paying with cards from your hand is the normal cost of playing cards; it is not a reason to skip a play.
+
+The full strategy follows. It applies in full; the rules above are its summary.
+
 # Strategy guide (solo)
 
 ## The core tension
