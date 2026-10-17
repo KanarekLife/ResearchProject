@@ -74,3 +74,23 @@ func TestResolveSelection(t *testing.T) {
 		t.Fatal("a trace outside a run was accepted")
 	}
 }
+
+// The label names only the reasoning setting each API is sent.
+func TestSentReasoning(t *testing.T) {
+	for _, tc := range []struct {
+		api, effort string
+		budget      int
+		want        string
+	}{
+		{apiOpenAI, "medium", 2048, "m@effort-medium@budget-2048"},
+		{apiGoogle, "medium", 2048, "m@effort-medium"},
+		{apiGoogle, "", 2048, "m@budget-2048"},
+		{apiAnthropic, "medium", 2048, "m@effort-medium"},
+		{apiResponses, "", 2048, "m"},
+	} {
+		effort, budget := sentReasoning(tc.api, tc.effort, tc.budget)
+		if got := modelLabel(runSettings{modelID: "m", effort: effort, budget: budget}); got != tc.want {
+			t.Errorf("%s effort %q budget %d: label %q, want %q", tc.api, tc.effort, tc.budget, got, tc.want)
+		}
+	}
+}

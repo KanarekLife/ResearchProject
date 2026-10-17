@@ -176,9 +176,11 @@ caller builds; it reads no files and no environment variables. It:
   asks for it;
 - sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted
   models) and `reasoning_budget_tokens` (`-reasoning-budget`, a thinking-token
-  cap for llama.cpp-style servers) only when set. The setting is appended to the
-  player name (`model:<id>@effort-high`, `@budget-4096`), so runs at different
-  settings are reported separately;
+  cap for llama.cpp-style servers) only when set. The setting the chosen API
+  is actually sent is appended to the player name (`model:<id>@effort-high`,
+  `@budget-4096`), so runs at different settings are reported separately;
+  Gemini and Messages drop the budget when a level is set, and Responses
+  takes no budget;
 - reads reasoning from either `reasoning_content` or `reasoning`, and reports
   cached and reasoning tokens when the provider includes them.
 
