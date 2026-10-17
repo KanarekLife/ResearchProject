@@ -135,8 +135,7 @@ What we tried on the Claude models:
   its turns still end with a card it could play, and its wins take ten rounds or
   more. Variants did not do better: a short version and a version with fixed
   thresholds instead of formulas won less, and a version that made Haiku write out
-  the threat and damage numbers before ending a turn or defending did not win at all
-  (`results/experiments-20261017c`).
+  the threat and damage numbers before ending a turn or defending did not win at all.
 - **The full official rule books** (a near-verbatim text of Learn to Play and the
   Rules Reference, more than ten times the length of `rules_reference`; tried once
   and not kept) made Haiku more passive than any other set: it blocked with the hero
