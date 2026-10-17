@@ -36,11 +36,12 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 	if c.cfg.Temperature >= 0 {
 		gen[fieldTemperature] = c.cfg.Temperature
 	}
+	// The API rejects a thinking level together with a thinking budget, so the
+	// level wins when both are set.
 	think := map[string]any{}
 	if c.cfg.ReasoningEffort != "" {
 		think[fieldThinkingLevel] = c.cfg.ReasoningEffort
-	}
-	if c.cfg.ReasoningBudget > 0 {
+	} else if c.cfg.ReasoningBudget > 0 {
 		think[fieldThinkingBudget] = c.cfg.ReasoningBudget
 	}
 	if len(think) > 0 {

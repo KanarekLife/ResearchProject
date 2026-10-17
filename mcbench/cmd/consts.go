@@ -45,9 +45,12 @@ const (
 	defaultModelMaxFailures = 5
 	defaultMaxTokens        = 32768
 	defaultRetries          = 3
-	defaultSeeds            = 10
-	defaultSamples          = 1
-	defaultParallel         = 1
+	// Reasoning defaults: the level and the thinking token cap.
+	defaultReasoningEffort = "medium"
+	defaultReasoningBudget = 2048
+	defaultSeeds           = 10
+	defaultSamples         = 1
+	defaultParallel        = 1
 )
 
 // Subdirectories written under the results directory.

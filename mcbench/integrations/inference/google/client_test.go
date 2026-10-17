@@ -91,3 +91,15 @@ func TestCompleteRetriesRateLimit(t *testing.T) {
 		t.Fatalf("err=%v calls=%d", err, calls)
 	}
 }
+
+func TestThinkingLevelWinsOverBudget(t *testing.T) {
+	body := New(Config{Model: "m", MaxTokens: 1, Temperature: -1, ReasoningEffort: "medium", ReasoningBudget: 2048}).body(nil, nil)
+	think := body["generationConfig"].(map[string]any)["thinkingConfig"].(map[string]any)
+	if think["thinkingLevel"] != "medium" || think["thinkingBudget"] != nil {
+		t.Errorf("thinkingConfig = %v, want only the level", think)
+	}
+	body = New(Config{Model: "m", MaxTokens: 1, Temperature: -1, ReasoningBudget: 2048}).body(nil, nil)
+	if think = body["generationConfig"].(map[string]any)["thinkingConfig"].(map[string]any); think["thinkingBudget"] != 2048 {
+		t.Errorf("thinkingConfig = %v, want the budget", think)
+	}
+}
