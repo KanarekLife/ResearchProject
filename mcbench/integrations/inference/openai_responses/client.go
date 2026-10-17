@@ -37,14 +37,19 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 }
 
 func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[string]any {
-	body := map[string]any{fieldModel: c.cfg.Model, fieldMaxOutputTokens: c.cfg.MaxTokens, fieldStore: false}
+	// Nothing is stored server side, so the reasoning comes back encrypted
+	// and is returned with the reply it belongs to on every later request.
+	body := map[string]any{
+		fieldModel: c.cfg.Model, fieldMaxOutputTokens: c.cfg.MaxTokens, fieldStore: false,
+		fieldInclude: []string{includeEncryptedReasoning},
+	}
 	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
 	}
 	if c.cfg.ReasoningEffort != "" {
 		body[fieldReasoning] = map[string]any{fieldEffort: c.cfg.ReasoningEffort}
 	}
-	var items []inputItem
+	var items []any // inputItem, or an output item sent back verbatim
 	for _, m := range msgs {
 		switch m.Role {
 		case inference.RoleSystem:
@@ -52,6 +57,14 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 		case inference.RoleUser:
 			items = append(items, inputItem{Role: roleUser, Content: m.Content})
 		case inference.RoleAssistant:
+			if len(m.Native) > 0 {
+				var out []json.RawMessage
+				json.Unmarshal(m.Native, &out) // set by decodeReply, so always valid
+				for _, it := range out {
+					items = append(items, it)
+				}
+				continue
+			}
 			if m.Content != "" {
 				items = append(items, inputItem{Role: roleAssistant, Content: m.Content})
 			}
@@ -82,8 +95,20 @@ func decodeReply(raw []byte) (inference.Reply, error) {
 	if err := json.Unmarshal(raw, &r); err != nil {
 		return inference.Reply{}, fmt.Errorf("decoding responses reply: %w", err)
 	}
+	var output []outputItem
+	if len(r.Output) > 0 {
+		if err := json.Unmarshal(r.Output, &output); err != nil {
+			return inference.Reply{}, fmt.Errorf("decoding responses output: %w", err)
+		}
+	}
 	msg := inference.Message{Role: inference.RoleAssistant}
-	for _, it := range r.Output {
+	if len(output) > 0 {
+		// The output goes back verbatim: its reasoning items carry the
+		// encrypted reasoning, and its function calls the ids that tie them
+		// to it.
+		msg.Native = r.Output
+	}
+	for _, it := range output {
 		switch it.Type {
 		case itemMessage:
 			for _, c := range it.Content {
