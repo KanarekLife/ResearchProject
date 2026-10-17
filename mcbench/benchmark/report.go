@@ -29,23 +29,26 @@ const (
 	noValue    = "-"
 )
 
-// Report writes, per scenario, an overview of every configuration and then
-// one panel per configuration with its aggregate and per-game results.
+// Report writes, per scenario, one panel per configuration with its aggregate
+// and per-game results, then the overview of every configuration last so it
+// stays visible at the bottom of the terminal.
 func Report(w io.Writer, recs []Record, t ui.Theme) {
 	groups := groupRecords(recs)
 	keys := sortedKeys(groups)
+	var overviews [][]string
 	for i := 0; i < len(keys); {
 		j := i
 		for j < len(keys) && keys[j].scenario == keys[i].scenario {
 			j++
 		}
-		ui.Print(w, overviewPanel(keys[i:j], groups, t))
 		for _, k := range keys[i:j] {
 			ui.Print(w, configPanel(k, groups[k], t))
 		}
+		overviews = append(overviews, overviewPanel(keys[i:j], groups, t))
 		i = j
 	}
 	writeTotals(w, recs)
+	ui.Print(w, overviews...)
 }
 
 func groupRecords(recs []Record) map[groupKey][]Record {
@@ -84,9 +87,6 @@ func sortedKeys(groups map[groupKey][]Record) []groupKey {
 	return keys
 }
 
-// overviewWidth fits the longest player and instruction names on one line per row.
-const overviewWidth = 132
-
 // overviewPanel compares the configurations of one scenario: mean score and
 // mean criteria (win = win rate).
 func overviewPanel(keys []groupKey, groups map[groupKey][]Record, t ui.Theme) []string {
@@ -104,7 +104,7 @@ func overviewPanel(keys []groupKey, groups map[groupKey][]Record, t ui.Theme) []
 		}
 		rows = append(rows, row)
 	}
-	return t.Box(keys[0].scenario, t.Table(cols, rows), overviewWidth)
+	return t.Box(keys[0].scenario, t.Table(cols, rows), 0)
 }
 
 // configPanel shows one configuration: how its games ended, what they cost and

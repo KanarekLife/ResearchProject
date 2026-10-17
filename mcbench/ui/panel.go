@@ -7,8 +7,15 @@ import (
 )
 
 // Box frames lines under a title. Lines wider than the box are wrapped on word
-// boundaries; ANSI styling is carried onto the continuation rows.
+// boundaries; ANSI styling is carried onto the continuation rows. A width of 0
+// fits the box to its widest line.
 func (t Theme) Box(title string, lines []string, width int) []string {
+	if width == 0 {
+		for _, l := range lines {
+			width = max(width, visibleLen(l)+4)
+		}
+		width = max(width, visibleLen(title)+5)
+	}
 	inner := width - 4
 	head := " " + title + " "
 	top := "┌─" + t.Bold(head) + strings.Repeat("─", max(width-3-visibleLen(head), 0)) + "┐"
