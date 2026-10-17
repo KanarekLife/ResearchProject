@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -134,5 +135,38 @@ func TestCompleteSendsReasoningOnlyWhenSet(t *testing.T) {
 	}
 	if bodies[1][fieldReasoningEffort] != "high" || bodies[1][fieldReasoningBudget] != 4096.0 || bodies[1][fieldThinkingBudget] != 4096.0 {
 		t.Errorf("request = %v", bodies[1])
+	}
+}
+
+func TestCompleteReadsBlockContent(t *testing.T) {
+	c := serve(t, 0, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":[
+{"type":"thinking","thinking":[{"type":"text","text":"hm"}],"closed":true},{"type":"text","text":"hi"}]},"finish_reason":"stop"}],"usage":{}}`)
+	})
+	r, err := complete(c)
+	if err != nil || r.Message.Content != "hi" || r.Message.Reasoning != "hm" {
+		t.Fatalf("reply = %+v, err = %v", r.Message, err)
+	}
+}
+
+func TestCompleteDropsReasoningWhenRejected(t *testing.T) {
+	var bodies []string
+	c := serve(t, 0, func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, string(b))
+		if strings.Contains(string(b), "reasoning_content") {
+			http.Error(w, `{"model":"m"}`, http.StatusUnprocessableEntity)
+			return
+		}
+		fmt.Fprintf(w, okBody, "stop")
+	})
+	msgs := []inference.Message{{Role: inference.RoleUser, Content: "x"}, {Role: inference.RoleAssistant, Content: "y", Reasoning: "thoughts"}}
+	for range 2 {
+		if _, err := c.Complete(context.Background(), msgs, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(bodies) != 3 { // rejected once, then the retry and the next request without reasoning
+		t.Errorf("%d requests, want 3", len(bodies))
 	}
 }
