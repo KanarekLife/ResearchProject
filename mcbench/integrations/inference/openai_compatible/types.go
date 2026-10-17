@@ -1,6 +1,7 @@
 package openaicompatible
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -27,6 +28,9 @@ type Config struct {
 
 // errTokenParam means the provider rejected max_tokens.
 var errTokenParam = errors.New("provider wants max_completion_tokens")
+
+// errReasoningField means the provider rejected reasoning_content on messages.
+var errReasoningField = errors.New("provider rejects reasoning_content on messages")
 
 // httpError is a non-200 response.
 type httpError struct {
@@ -62,7 +66,7 @@ type replyResponse struct {
 // for reasoning, so both are read.
 type apiMessage struct {
 	Role             string               `json:"role"`
-	Content          string               `json:"content"`
+	Content          messageContent       `json:"content"`
 	ReasoningContent string               `json:"reasoning_content"`
 	Reasoning        string               `json:"reasoning"`
 	ToolCalls        []inference.ToolCall `json:"tool_calls"`
@@ -73,10 +77,59 @@ func (m apiMessage) message() inference.Message {
 	if reasoning == "" {
 		reasoning = m.Reasoning
 	}
+	if reasoning == "" {
+		reasoning = m.Content.thinking
+	}
 	return inference.Message{
 		Role:      inference.Role(m.Role),
-		Content:   m.Content,
+		Content:   m.Content.text,
 		Reasoning: reasoning,
 		ToolCalls: m.ToolCalls,
 	}
+}
+
+// messageContent is a message's content: a string, or (Mistral) a list of
+// "text" and "thinking" blocks. thinking holds the text of the thinking blocks.
+type messageContent struct{ text, thinking string }
+
+func (c *messageContent) UnmarshalJSON(b []byte) error {
+	var s string
+	if json.Unmarshal(b, &s) == nil {
+		c.text = s
+		return nil
+	}
+	var blocks []struct {
+		Type     string          `json:"type"`
+		Text     string          `json:"text"`
+		Thinking json.RawMessage `json:"thinking"`
+	}
+	if err := json.Unmarshal(b, &blocks); err != nil {
+		return err
+	}
+	for _, blk := range blocks {
+		switch blk.Type {
+		case "text":
+			c.text += blk.Text
+		case "thinking":
+			c.thinking += thinkingText(blk.Thinking)
+		}
+	}
+	return nil
+}
+
+// thinkingText reads a thinking block's body: a string or a list of text parts.
+func thinkingText(raw json.RawMessage) string {
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	var parts []struct {
+		Text string `json:"text"`
+	}
+	json.Unmarshal(raw, &parts)
+	var out string
+	for _, p := range parts {
+		out += p.Text
+	}
+	return out
 }

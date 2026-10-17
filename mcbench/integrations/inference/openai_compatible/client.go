@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"mcbench/integrations/inference"
@@ -21,7 +22,12 @@ import (
 const requestTimeout = 10 * time.Minute
 
 // Client is an inference.Client backed by an OpenAI-compatible endpoint.
-type Client struct{ cfg Config }
+type Client struct {
+	cfg Config
+	// dropReasoning is set once the provider rejects reasoning_content on
+	// messages; later requests then leave the model's reasoning out.
+	dropReasoning atomic.Bool
+}
 
 func New(cfg Config) *Client { return &Client{cfg: cfg} }
 
@@ -48,6 +54,11 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 			attempts++ // the parameter switch is not a retry
 			continue
 		}
+		if errors.Is(err, errReasoningField) {
+			c.dropReasoning.Store(true)
+			attempts++
+			continue
+		}
 		if !retryable(err) {
 			return inference.Reply{}, err
 		}
@@ -56,6 +67,9 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 }
 
 func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []inference.Tool, useMaxCompletion bool) (inference.Reply, error) {
+	if c.dropReasoning.Load() {
+		msgs = withoutReasoning(msgs)
+	}
 	data, err := json.Marshal(c.body(msgs, tools, useMaxCompletion))
 	if err != nil {
 		return inference.Reply{}, err
@@ -68,6 +82,9 @@ func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return inference.Reply{}, err
+	}
+	if resp.StatusCode == http.StatusUnprocessableEntity && hasReasoning(msgs) {
+		return inference.Reply{}, errReasoningField
 	}
 	if resp.StatusCode != http.StatusOK {
 		return inference.Reply{}, statusError(resp, raw, useMaxCompletion)
@@ -133,4 +150,23 @@ func decodeReply(raw []byte) (inference.Reply, error) {
 		CachedTokens:    max(r.Usage.PromptTokensDetails.CachedTokens, r.Usage.PromptCacheHitTokens),
 		ReasoningTokens: r.Usage.CompletionTokensDetails.ReasoningTokens,
 	}, nil
+}
+
+func hasReasoning(msgs []inference.Message) bool {
+	for _, m := range msgs {
+		if m.Reasoning != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// withoutReasoning copies msgs without the model's reasoning.
+func withoutReasoning(msgs []inference.Message) []inference.Message {
+	out := make([]inference.Message, len(msgs))
+	for i, m := range msgs {
+		m.Reasoning = ""
+		out[i] = m
+	}
+	return out
 }
