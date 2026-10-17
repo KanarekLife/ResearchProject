@@ -18,6 +18,7 @@ type config struct {
 }
 
 type inferenceConfig struct {
+	API         string  `yaml:"api"` // openai, google or anthropic
 	Server      string  `yaml:"server"`
 	APIKeyEnv   string  `yaml:"api_key_env"`
 	Model       string  `yaml:"model"`
@@ -46,7 +47,7 @@ type runConfig struct {
 func defaultConfig() config {
 	return config{
 		Inference: inferenceConfig{
-			Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, Temperature: defaultTemperature,
+			API: apiOpenAI, Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, Temperature: defaultTemperature,
 			MaxTokens: defaultMaxTokens, Retries: defaultRetries,
 		},
 		Player: playerConfig{

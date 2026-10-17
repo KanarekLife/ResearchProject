@@ -14,7 +14,6 @@ import (
 
 	"mcbench/benchmark"
 	"mcbench/game/scenario"
-	"mcbench/integrations/inference/openai_compatible"
 	"mcbench/player"
 	"mcbench/player/instruction"
 )
@@ -23,6 +22,7 @@ import (
 type runSettings struct {
 	player      string
 	modelID     string
+	api         string
 	server      string
 	temp        float64
 	maxTokens   int
@@ -59,11 +59,10 @@ func cmdRun(args []string) error {
 	if o.player == playerModel && o.modelID == "" {
 		return fmt.Errorf("-model is required for -player model")
 	}
-	client := openaicompatible.New(openaicompatible.Config{
-		BaseURL: o.server, APIKey: os.Getenv(cfg.Inference.APIKeyEnv), Model: o.modelID,
-		Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
-		ReasoningEffort: o.effort, ReasoningBudget: o.budget,
-	})
+	client, err := newClient(o, os.Getenv(cfg.Inference.APIKeyEnv))
+	if err != nil {
+		return err
+	}
 	p, err := buildPlayer(o, client, instr)
 	if err != nil {
 		return err
@@ -75,7 +74,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	l := scenarioFlags(fs)
 	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
-	server := fs.String("server", envOr("OPENAI_BASE_URL", cfg.Inference.Server), "OpenAI-compatible API base URL (local LM Studio by default)")
+	api := fs.String("api", cfg.Inference.API, "API protocol: openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent), anthropic (Messages)")
+	server := fs.String("server", envOr("OPENAI_BASE_URL", cfg.Inference.Server), "API base URL (OpenAI-compatible: local LM Studio by default; google and anthropic: the provider's own URL unless set here)")
 	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
@@ -90,13 +90,24 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	out := fs.String("out", cfg.Run.Out, "results directory")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
 	fs.Parse(args)
+	if *api != apiOpenAI {
+		// Only an explicit -server or a configured server applies; otherwise the
+		// provider's own URL does, never the OpenAI-compatible default.
+		serverSet := false
+		fs.Visit(func(f *flag.Flag) { serverSet = serverSet || f.Name == "server" })
+		if !serverSet && cfg.Inference.Server == defaultServer {
+			*server = ""
+		} else if !serverSet {
+			*server = cfg.Inference.Server
+		}
+	}
 
 	var instr []string
 	if *instrNames != "" {
 		instr = strings.Split(*instrNames, ",")
 	}
 	return l, runSettings{
-		player: *playerName, modelID: *modelID, server: *server,
+		player: *playerName, modelID: *modelID, api: *api, server: *server,
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
