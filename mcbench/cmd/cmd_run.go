@@ -102,6 +102,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 		}
 	}
 
+	*effort, *budget = sentReasoning(*api, *effort, *budget)
+
 	var instr []string
 	if *instrNames != "" {
 		instr = strings.Split(*instrNames, ",")

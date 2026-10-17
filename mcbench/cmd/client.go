@@ -41,6 +41,17 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 	return nil, fmt.Errorf("unknown -api %q: use %s, %s, %s or %s", o.api, apiOpenAI, apiResponses, apiGoogle, apiAnthropic)
 }
 
+// sentReasoning is the reasoning setting the -api client actually sends, so
+// that the player label (modelLabel) names only what the model was given:
+// chat completions sends both, Gemini and Messages send only the level when
+// both are set, and Responses takes no budget.
+func sentReasoning(api, effort string, budget int) (string, int) {
+	if api == apiResponses || (api != apiOpenAI && effort != "") {
+		return effort, 0
+	}
+	return effort, budget
+}
+
 func orDefault(s, def string) string {
 	if s == "" {
 		return def
