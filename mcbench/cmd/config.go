@@ -49,6 +49,7 @@ func defaultConfig() config {
 		Inference: inferenceConfig{
 			API: apiOpenAI, Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, Temperature: defaultTemperature,
 			MaxTokens: defaultMaxTokens, Retries: defaultRetries,
+			ReasoningEffort: defaultReasoningEffort, ReasoningBudget: defaultReasoningBudget,
 		},
 		Player: playerConfig{
 			Name: playerModel, MaxFailures: defaultModelMaxFailures,

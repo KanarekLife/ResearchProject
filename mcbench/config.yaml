@@ -6,8 +6,8 @@ inference:
   temperature: -1 # -1: not sent, the provider default applies; 0 or more is sent
   max_tokens: 32768
   retries: 3
-  reasoning_effort: ""
-  reasoning_budget: 0
+  reasoning_effort: medium
+  reasoning_budget: 2048
 
 player:
   name: model

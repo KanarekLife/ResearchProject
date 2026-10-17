@@ -10,8 +10,9 @@ type Config struct {
 	Temperature float64 // sent when >= 0
 	MaxTokens   int
 	Retries     int
-	// ReasoningEffort is a thinking level ("low", "high"); ReasoningBudget a
-	// thinking token cap. Empty or 0 leaves the model's default.
+	// ReasoningEffort is a thinking level ("low", "medium", "high"); ReasoningBudget
+	// a thinking token cap, used only when no level is set. Empty or 0 leaves the
+	// model's default.
 	ReasoningEffort string
 	ReasoningBudget int
 }

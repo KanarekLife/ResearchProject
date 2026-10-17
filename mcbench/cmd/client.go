@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 
 	"mcbench/integrations/inference"
 	"mcbench/integrations/inference/anthropic"
@@ -33,7 +34,7 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 		}), nil
 	case apiAnthropic:
 		if o.effort != "" || o.budget > 0 {
-			return nil, fmt.Errorf("-api anthropic does not support -reasoning-effort or -reasoning-budget")
+			slog.Warn("-api anthropic sends no thinking settings: -reasoning-effort and -reasoning-budget are ignored")
 		}
 		return anthropic.New(anthropic.Config{
 			BaseURL: orDefault(o.server, anthropic.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
