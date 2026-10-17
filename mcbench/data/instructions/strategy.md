@@ -31,7 +31,7 @@ Games are won by pressure. Every round the villain survives brings another villa
 Before ending your turn, estimate what the coming villain phase will do:
 - **Threat:** per-round threat + acceleration icons + acceleration tokens. In alter-ego form, add the villain's SCH, each engaged minion's SCH and the villain's boost card. Leave a margin for encounter cards that add threat.
 - **Damage (hero form):** the villain's ATK plus attachment bonuses and its boost card, plus each engaged minion's ATK. Subtract what your defense will stop.
-- Treat the boost card as unknown and plan for a high one: boost cards often carry 2 or 3 icons. Also allow for an encounter card that adds threat or makes an extra attack. Do not end a turn where that would make you lose.
+- Treat the boost card as unknown and plan for a high one: most boost cards carry 0, 1 or 2 icons, so a high boost is 2 (rarely 3). Also allow for an encounter card that adds threat or makes an extra attack. Do not end a turn where that would make you lose.
 
 If the estimated threat would complete the main scheme, removing threat comes before anything else. If the estimated damage would defeat you, defending, healing or changing to alter-ego comes first.
 
