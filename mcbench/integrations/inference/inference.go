@@ -2,7 +2,10 @@
 // It knows nothing about the game; implementations live in subpackages.
 package inference
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 // Client sends a conversation and returns the model's reply. tools are
 // advertised for function calling when non-empty.
@@ -28,6 +31,11 @@ type Message struct {
 	Reasoning  string     `json:"reasoning_content,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
+	// Native is an assistant reply as its provider returned it, for clients
+	// whose API needs the reasoning sent back unchanged (signed thinking
+	// blocks, encrypted reasoning items). Only the client that set it reads
+	// it; it is never serialised into traces or other providers' requests.
+	Native json.RawMessage `json:"-"`
 }
 
 // ToolCall is one function call requested by the model.

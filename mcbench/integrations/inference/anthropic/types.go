@@ -13,13 +13,14 @@ type Config struct {
 }
 
 type turn struct {
-	Role    string  `json:"role"`
-	Content []block `json:"content"`
+	Role    string `json:"role"`
+	Content []any  `json:"content"` // block or json.RawMessage
 }
 
 type block struct {
 	Type      string          `json:"type"`
 	Text      string          `json:"text,omitempty"`
+	Thinking  string          `json:"thinking,omitempty"` // read only: thinking goes back raw
 	ID        string          `json:"id,omitempty"`
 	Name      string          `json:"name,omitempty"`
 	Input     json.RawMessage `json:"input,omitempty"`
@@ -28,8 +29,8 @@ type block struct {
 }
 
 type response struct {
-	Content    []block `json:"content"`
-	StopReason string  `json:"stop_reason"`
+	Content    json.RawMessage `json:"content"`
+	StopReason string          `json:"stop_reason"`
 	Usage      struct {
 		InputTokens         int64 `json:"input_tokens"`
 		OutputTokens        int64 `json:"output_tokens"`

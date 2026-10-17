@@ -18,6 +18,7 @@ const (
 	blockText       = "text"
 	blockToolUse    = "tool_use"
 	blockToolResult = "tool_result"
+	blockThinking   = "thinking"
 
 	fieldModel       = "model"
 	fieldMaxTokens   = "max_tokens"

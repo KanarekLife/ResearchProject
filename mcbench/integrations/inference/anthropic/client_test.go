@@ -57,3 +57,38 @@ func TestCompleteMapsRequestAndReply(t *testing.T) {
 		t.Errorf("reply = %+v", r)
 	}
 }
+
+// A reply with thinking goes back exactly as it came, signature and block
+// order included, and its thinking is kept as the message's reasoning.
+func TestThinkingIsSentBackVerbatim(t *testing.T) {
+	const content = `[{"type":"thinking","thinking":"attack","signature":"sig=="},{"type":"tool_use","id":"tu_1","name":"choose_option","input":{"option_id":2}}]`
+	var reqs []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		b, _ := io.ReadAll(r.Body)
+		json.Unmarshal(b, &req)
+		reqs = append(reqs, req)
+		w.Write([]byte(`{"content":` + content + `,"stop_reason":"tool_use","usage":{}}`))
+	}))
+	defer srv.Close()
+
+	c := New(Config{BaseURL: srv.URL, Model: "claude", MaxTokens: 50, Temperature: -1})
+	msgs := []inference.Message{{Role: inference.RoleUser, Content: "go"}}
+	r, err := c.Complete(context.Background(), msgs, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Message.Reasoning != "attack" || len(r.Message.ToolCalls) != 1 {
+		t.Fatalf("reply = %+v", r.Message)
+	}
+	msgs = append(msgs, r.Message, inference.Message{Role: inference.RoleTool, ToolCallID: "tu_1", Content: "{}"})
+	if _, err := c.Complete(context.Background(), msgs, nil); err != nil {
+		t.Fatal(err)
+	}
+	sent, _ := json.Marshal(reqs[1]["messages"].([]any)[1].(map[string]any)["content"])
+	var want any // both sides re-encoded, so key order matches
+	json.Unmarshal([]byte(content), &want)
+	if wb, _ := json.Marshal(want); string(wb) != string(sent) {
+		t.Errorf("assistant content sent back = %s, want %s", sent, wb)
+	}
+}
