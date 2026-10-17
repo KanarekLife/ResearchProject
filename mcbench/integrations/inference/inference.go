@@ -31,6 +31,9 @@ type Message struct {
 	Reasoning  string     `json:"reasoning_content,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
+	// Images are data URIs sent with the message (POC vision variant). They
+	// are not traced.
+	Images []string `json:"-"`
 	// Native is an assistant reply as its provider returned it, for clients
 	// whose API needs the reasoning sent back unchanged (signed thinking
 	// blocks, encrypted reasoning items). Only the client that set it reads

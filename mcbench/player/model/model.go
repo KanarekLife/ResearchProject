@@ -7,12 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"mcbench/constants"
 	"mcbench/game/session"
 	"mcbench/integrations/inference"
 	"mcbench/player"
 	"mcbench/player/instruction"
+	"mcbench/player/retrieval"
 )
 
 // Model is the LLM player.
@@ -27,7 +29,21 @@ type Model struct {
 	Label        string // identifies the model in results
 	MaxFailures  int    // failed replies allowed per decision
 	Instructions instruction.Instructions
+	Retriever    *retrieval.Index // POC: passages for each decision, instead of the documents in the system prompt
+	Board        BoardRenderer    // POC: a picture of the board before each decision
 }
+
+// BoardRenderer draws the board for a model that sees pictures, as a data URI.
+type BoardRenderer interface {
+	Render(v session.View) (string, error)
+}
+
+// Text sent with the per-decision context (POC variants).
+const (
+	passagesHeader = "Rules passages retrieved for this decision (keyword match to the decision text):\n\n"
+	passageSep     = "\n\n"
+	boardHeader    = "The board as it is now (picture attached)."
+)
 
 // maxRequests bounds the replies to one decision, failed or not. Lookups are
 // free, so this only guards against a model that never stops looking.
@@ -42,11 +58,33 @@ func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, err
 	msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: firstPrompt(s)}, nil)
 	for s.Status() == constants.AwaitingDecision {
 		var err error
+		if msgs, err = m.context(s, msgs); err != nil {
+			return u, err
+		}
 		if msgs, err = m.decide(ctx, s, msgs, &u); err != nil {
 			return u, err
 		}
 	}
 	return u, nil
+}
+
+// context appends what a decision comes with beyond its text (POC variants):
+// passages retrieved for it and a picture of the board. Like every message, it
+// stays in the conversation.
+func (m *Model) context(s *session.Session, msgs []inference.Message) ([]inference.Message, error) {
+	if m.Retriever != nil {
+		passages := m.Retriever.Top(call(s, constants.ToolGetDecision, nil), retrieval.TopK)
+		content := passagesHeader + strings.Join(passages, passageSep)
+		msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: content}, nil)
+	}
+	if m.Board != nil {
+		img, err := m.Board.Render(s.View())
+		if err != nil {
+			return msgs, fmt.Errorf("board picture: %w", err)
+		}
+		msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: boardHeader, Images: []string{img}}, nil)
+	}
+	return msgs, nil
 }
 
 // messageTrace is the trace line of one conversation message. The token

@@ -21,6 +21,9 @@ const (
 	fieldTools               = "tools"
 	fieldToolChoice          = "tool_choice"
 	fieldType                = "type"
+	fieldText                = "text"
+	fieldImageURL            = "image_url"
+	fieldURL                 = "url"
 	fieldFunction            = "function"
 	toolChoiceAuto           = "auto"
 

@@ -30,6 +30,8 @@ type runSettings struct {
 	effort      string
 	budget      int
 	maxFailures int
+	rag         bool
+	vision      bool
 	instrDir    string
 	instr       []string
 	seeds       int
@@ -82,6 +84,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	effort := fs.String("reasoning-effort", cfg.Inference.ReasoningEffort, "reasoning level for hosted models, e.g. low, medium, high (empty: provider default)")
 	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
 	maxFailures := fs.Int("max-failures", cfg.Player.MaxFailures, "failed model replies (no tool call or a tool error) allowed per decision")
+	rag := fs.Bool("rag", false, "POC: BM25 passages from the instructions per decision, not the documents in the system prompt")
+	vision := fs.Bool("vision", false, "POC: a picture of the board with each decision (openai API only)")
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
 	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none)")
 	seeds := fs.Int("seeds", cfg.Run.Seeds, "play only the first N seeds of each scenario (0 = all)")
@@ -111,6 +115,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	return l, runSettings{
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxFailures: *maxFailures,
+		rag: *rag, vision: *vision,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
 	}

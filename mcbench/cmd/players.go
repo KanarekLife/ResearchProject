@@ -8,6 +8,7 @@ import (
 	"mcbench/player/heuristic"
 	"mcbench/player/instruction"
 	"mcbench/player/model"
+	"mcbench/player/retrieval"
 )
 
 // buildPlayer builds the named player. Model settings are configured here,
@@ -18,7 +19,18 @@ func buildPlayer(o runSettings, client inference.Client, instr instruction.Instr
 		if client == nil {
 			return nil, fmt.Errorf("-player model needs a model id")
 		}
-		return &model.Model{Client: client, Label: modelLabel(o), MaxFailures: o.maxFailures, Instructions: instr}, nil
+		if o.vision && o.api != apiOpenAI {
+			return nil, fmt.Errorf("-vision needs -api %s", apiOpenAI)
+		}
+		m := &model.Model{Client: client, Label: modelLabel(o), MaxFailures: o.maxFailures, Instructions: instr}
+		if o.rag {
+			m.Retriever = retrieval.New(instr.Text, ragChunkWords)
+			m.Instructions = instruction.Instructions{Names: instr.Names, SHA256: instr.SHA256}
+		}
+		if o.vision {
+			m.Board = newBoardPictures()
+		}
+		return m, nil
 	case playerHeuristic:
 		return heuristic.Heuristic{}, nil
 	case playerRandom:
@@ -39,11 +51,22 @@ func modelLabel(o runSettings) string {
 	if o.budget > 0 {
 		label += fmt.Sprintf(labelBudget+"%d", o.budget)
 	}
+	if o.rag {
+		label += labelRAG
+	}
+	if o.vision {
+		label += labelVision
+	}
 	return label
 }
+
+// ragChunkWords is the size of the rule chunks the RAG variant retrieves from.
+const ragChunkWords = 120
 
 // Suffixes modelLabel adds for the reasoning setting.
 const (
 	labelEffort = "@effort-"
 	labelBudget = "@budget-"
+	labelRAG    = "@rag"
+	labelVision = "@vision"
 )

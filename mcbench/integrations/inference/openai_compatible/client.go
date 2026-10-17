@@ -93,7 +93,7 @@ func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []
 }
 
 func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCompletion bool) map[string]any {
-	body := map[string]any{fieldModel: c.cfg.Model, fieldMessages: msgs}
+	body := map[string]any{fieldModel: c.cfg.Model, fieldMessages: wireMessages(msgs)}
 	tokenField := fieldMaxTokens
 	if useMaxCompletion {
 		tokenField = fieldMaxCompletionTokens
@@ -150,6 +150,24 @@ func decodeReply(raw []byte) (inference.Reply, error) {
 		CachedTokens:    max(r.Usage.PromptTokensDetails.CachedTokens, r.Usage.PromptCacheHitTokens),
 		ReasoningTokens: r.Usage.CompletionTokensDetails.ReasoningTokens,
 	}, nil
+}
+
+// wireMessages returns msgs as chat completions takes them. A message with
+// images sends its content as a list of text and image_url parts.
+func wireMessages(msgs []inference.Message) []any {
+	out := make([]any, len(msgs))
+	for i, m := range msgs {
+		if len(m.Images) == 0 {
+			out[i] = m
+			continue
+		}
+		parts := []any{map[string]string{fieldType: fieldText, fieldText: m.Content}}
+		for _, img := range m.Images {
+			parts = append(parts, map[string]any{fieldType: fieldImageURL, fieldImageURL: map[string]string{fieldURL: img}})
+		}
+		out[i] = map[string]any{"role": m.Role, "content": parts}
+	}
+	return out
 }
 
 func hasReasoning(msgs []inference.Message) bool {
