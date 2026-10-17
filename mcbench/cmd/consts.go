@@ -20,6 +20,14 @@ const (
 	playerFirst     = "first"
 )
 
+// API protocols accepted by -api.
+const (
+	apiOpenAI    = "openai"
+	apiGoogle    = "google"
+	apiAnthropic = "anthropic"
+	apiResponses = "responses"
+)
+
 // randomPlayerSeed makes the random baseline reproducible.
 const randomPlayerSeed = 1
 
