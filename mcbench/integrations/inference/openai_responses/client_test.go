@@ -58,3 +58,38 @@ func TestCompleteMapsRequestAndReply(t *testing.T) {
 		t.Errorf("usage = %+v", r)
 	}
 }
+
+// A decoded reply is sent back as its own output items, so the encrypted
+// reasoning stays with the function call it led to.
+func TestReplyIsSentBackVerbatim(t *testing.T) {
+	var req map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		req = nil
+		json.Unmarshal(b, &req)
+		w.Write([]byte(reply))
+	}))
+	defer srv.Close()
+
+	c := New(Config{BaseURL: srv.URL, Model: "m", MaxTokens: 50, Temperature: -1})
+	msgs := []inference.Message{{Role: inference.RoleUser, Content: "go"}}
+	r, err := c.Complete(context.Background(), msgs, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inc, _ := json.Marshal(req["include"]); string(inc) != `["reasoning.encrypted_content"]` {
+		t.Errorf("include = %s", inc)
+	}
+	msgs = append(msgs, r.Message, inference.Message{Role: inference.RoleTool, ToolCallID: "call_9", Content: "{}"})
+	if _, err := c.Complete(context.Background(), msgs, nil); err != nil {
+		t.Fatal(err)
+	}
+	var orig struct {
+		Output []any `json:"output"`
+	}
+	json.Unmarshal([]byte(reply), &orig)
+	got, _ := json.Marshal(req["input"].([]any)[1:4])
+	if want, _ := json.Marshal(orig.Output); string(got) != string(want) {
+		t.Errorf("reply sent back as %s, want %s", got, want)
+	}
+}

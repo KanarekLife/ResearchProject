@@ -20,6 +20,7 @@ const (
 	fieldTools           = "tools"
 	fieldToolChoice      = "tool_choice"
 	fieldStore           = "store"
+	fieldInclude         = "include"
 	fieldType            = "type"
 	fieldName            = "name"
 	fieldDescription     = "description"
@@ -35,6 +36,8 @@ const (
 	itemFunctionCallOutput = "function_call_output"
 	itemReasoning          = "reasoning"
 	contentOutputText      = "output_text"
+
+	includeEncryptedReasoning = "reasoning.encrypted_content"
 
 	statusIncomplete      = "incomplete"
 	reasonMaxOutputTokens = "max_output_tokens"
