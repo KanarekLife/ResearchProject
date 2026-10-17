@@ -1,6 +1,5 @@
 // Package anthropic implements the inference client against the Anthropic
-// Messages API (api.anthropic.com, or any server that proxies it). It sends
-// no cache settings.
+// Messages API (api.anthropic.com, or any server that proxies it).
 package anthropic
 
 import (
@@ -34,7 +33,13 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 }
 
 func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[string]any {
-	body := map[string]any{fieldModel: c.cfg.Model, fieldMaxTokens: c.cfg.MaxTokens}
+	// The conversation is append-only, so caching up to its last block lets
+	// each request reuse the previous one's prefix instead of paying for the
+	// whole game again.
+	body := map[string]any{
+		fieldModel: c.cfg.Model, fieldMaxTokens: c.cfg.MaxTokens,
+		fieldCacheControl: map[string]any{fieldType: cacheEphemeral},
+	}
 	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
 	}

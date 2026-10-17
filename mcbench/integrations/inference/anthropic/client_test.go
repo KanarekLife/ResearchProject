@@ -42,6 +42,9 @@ func TestCompleteMapsRequestAndReply(t *testing.T) {
 	if path != "/messages" || key != "k" || ver == "" || req["system"] != "sys" {
 		t.Errorf("path %q key %q version %q system %v", path, key, ver, req["system"])
 	}
+	if cc, _ := req["cache_control"].(map[string]any); cc["type"] != "ephemeral" {
+		t.Errorf("cache_control = %v, want the prefix cached", req["cache_control"])
+	}
 	turns := req["messages"].([]any)
 	if len(turns) != 3 {
 		t.Fatalf("turns = %d, want 3", len(turns))
