@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 
 	"mcbench/integrations/inference"
 	"mcbench/player"
@@ -24,7 +25,11 @@ func buildPlayer(o runSettings, client inference.Client, instr instruction.Instr
 		}
 		m := &model.Model{Client: client, Label: modelLabel(o), MaxFailures: o.maxFailures, Instructions: instr}
 		if o.rag {
-			m.Retriever = retrieval.New(instr.Text, ragChunkWords)
+			text, err := ragSourceText()
+			if err != nil {
+				return nil, err
+			}
+			m.Retriever = retrieval.New(text, ragChunkWords)
 			m.Instructions = instruction.Instructions{Names: instr.Names, SHA256: instr.SHA256}
 		}
 		if o.vision {
@@ -62,6 +67,20 @@ func modelLabel(o runSettings) string {
 
 // ragChunkWords is the size of the rule chunks the RAG variant retrieves from.
 const ragChunkWords = 120
+
+// ragSourcePDF is the rules reference the RAG variant retrieves from. Relative
+// to mcbench/, where the commands run.
+const ragSourcePDF = "../docs/references/rules_reference_v18.pdf"
+
+// ragSourceText is the official rules reference as plain text, the source the
+// RAG variant retrieves from. pdftotext (poppler-utils) reads the PDF.
+func ragSourceText() (string, error) {
+	out, err := exec.Command("pdftotext", "-enc", "UTF-8", ragSourcePDF, "-").Output()
+	if err != nil {
+		return "", fmt.Errorf("rules reference %s (needs pdftotext): %w", ragSourcePDF, err)
+	}
+	return string(out), nil
+}
 
 // Suffixes modelLabel adds for the reasoning setting.
 const (
