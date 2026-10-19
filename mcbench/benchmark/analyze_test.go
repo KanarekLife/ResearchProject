@@ -22,12 +22,12 @@ func TestBehaviourClassifiesTurns(t *testing.T) {
 			{Kind: constants.KindDefend, Key: "defend:Spider-Man"},
 			turn(constants.KeyEndTurn, constants.TypeAlterEgo, 4, "thwart:Black Cat>The Break-In!", "change_form:Spider-Man"),
 		}}
-	var b behaviour
+	var b Behaviour
 	b.add(r)
-	if b.scheme != 1 || b.basic != 1 || b.attacks != 1 || b.heroDefends != 1 || b.actions != 2 {
+	if b.Scheme != 1 || b.Basic != 1 || b.Attacks != 1 || b.HeroDefends != 1 || b.Actions != 2 {
 		t.Errorf("play measures %+v", b)
 	}
-	if b.ends != 1 || b.aeRisky != 1 || b.idleAlly != 1 || b.idleHero != 0 || !b.recorded {
+	if b.Ends != 1 || b.AERisky != 1 || b.IdleAlly != 1 || b.IdleHero != 0 || !b.Recorded {
 		t.Errorf("turn-end measures %+v", b)
 	}
 }

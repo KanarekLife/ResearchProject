@@ -48,7 +48,7 @@ func cmdBoardGUI(args []string) error {
 		shown = "its current game"
 	}
 	fmt.Printf("viewing run %s, %s, at http://%s/ · ctrl-c to stop\n", run, shown, *addr)
-	return boardgui.Serve(*addr, results, run, game, scs)
+	return boardgui.Serve(*addr, boardData(results, cfg.Online.Dir, scs), run, game)
 }
 
 // resolveSelection turns the command line into the results directories and the

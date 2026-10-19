@@ -10,6 +10,7 @@ const (
 	cmdNameAnalyze  = "analyze"
 	cmdNameView     = "view"
 	cmdNameBoardGUI = "board_gui"
+	cmdNameSite     = "site"
 )
 
 // Player names accepted by -player.

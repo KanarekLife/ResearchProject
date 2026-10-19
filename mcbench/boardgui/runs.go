@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"mcbench/constants"
@@ -23,12 +24,14 @@ const tailBytes = 16 << 10
 type RunInfo struct {
 	ID    string     `json:"id"`
 	Games []GameItem `json:"games"`
+	Local bool       `json:"local,omitempty"` // not published: it may still be played
 }
 
 // GameItem is one game of a run: its name and "live" or its end status.
 type GameItem struct {
 	Name  string `json:"name"`
 	State string `json:"state"`
+	Steps string `json:"steps,omitempty"` // an exported site's replay file
 }
 
 // Runs is the page's picker: every run and the selection to open by default.
@@ -36,6 +39,8 @@ type Runs struct {
 	Runs []RunInfo `json:"runs"`
 	Run  string    `json:"run"`
 	Game string    `json:"game"` // empty: follow the run's current game
+	// Static is an exported site.
+	Static bool `json:"static,omitempty"`
 }
 
 // peek reads when a game started (zero before its start entry is written) and
@@ -95,7 +100,7 @@ func current(run trace.Run) trace.Game {
 }
 
 // listRuns lists the runs under dirs with each game's state.
-func listRuns(dirs []string) ([]RunInfo, error) {
+func listRuns(dirs []string, online string) ([]RunInfo, error) {
 	runs, err := trace.Discover(dirs...)
 	if err != nil {
 		return nil, err
@@ -103,6 +108,7 @@ func listRuns(dirs []string) ([]RunInfo, error) {
 	out := make([]RunInfo, len(runs))
 	for i, r := range runs {
 		out[i].ID = r.ID
+		out[i].Local = online == "" || filepath.Dir(r.Dir) != filepath.Clean(online)
 		for _, g := range r.Games {
 			_, state := peek(g.Trace)
 			out[i].Games = append(out[i].Games, GameItem{Name: g.Name, State: state})

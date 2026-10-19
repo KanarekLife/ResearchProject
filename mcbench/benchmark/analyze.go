@@ -53,21 +53,31 @@ hero def: share of defences made by the hero (it then skips its next basic power
 of the target (AE risky), with a basic power (idle hero) or an ally attack or thwart (idle ally) unused, with a card that could still be played (card left).
 acts/turn: actions before ending the turn.`, riskyThreatMargin)
 
-// behaviour accumulates the measures of one configuration.
-type behaviour struct {
-	graded, won, scheme, defeated int
-	rounds                        int
-	basic, attacks                int
-	defends, heroDefends          int
-	ends, aeEnds, aeRisky         int
-	idleHero, idleAlly, cardLeft  int
-	actions                       int
-	recorded                      bool // the choices carry the board and offered options
+// Behaviour counts what Analyze measures; counts add up across games.
+type Behaviour struct {
+	Graded      int `json:"graded"`
+	Won         int `json:"won"`
+	Scheme      int `json:"scheme"`   // lost to the main scheme
+	Defeated    int `json:"defeated"` // lost with the hero at 0 HP
+	Rounds      int `json:"rounds"`
+	Basic       int `json:"basic"` // hero basic attacks and thwarts
+	Attacks     int `json:"attacks"`
+	Defends     int `json:"defends"`
+	HeroDefends int `json:"hero_defends"`
+	Ends        int `json:"ends"` // turns ended
+	AEEnds      int `json:"ae_ends"`
+	AERisky     int `json:"ae_risky"`
+	IdleHero    int `json:"idle_hero"`
+	IdleAlly    int `json:"idle_ally"`
+	CardLeft    int `json:"card_left"`
+	Actions     int `json:"actions"`
+	// Recorded: the choices carry the board and offered options.
+	Recorded bool `json:"recorded"`
 }
 
 // behaviourRows are one configuration's rows of the two tables.
 func behaviourRows(k groupKey, rs []Record) (play, ends []string) {
-	var b behaviour
+	var b Behaviour
 	for _, r := range rs {
 		if r.Status == constants.InfraError {
 			continue
@@ -75,45 +85,45 @@ func behaviourRows(k groupKey, rs []Record) (play, ends []string) {
 		b.add(r)
 	}
 	name := []string{k.player, instrName(k.instr)}
-	play = append(name, fmt.Sprint(b.graded), fmt.Sprint(b.won), fmt.Sprint(b.scheme), fmt.Sprint(b.defeated),
-		ratio2(b.basic, b.rounds), percent(b.attacks, b.basic), percent(b.heroDefends, b.defends))
-	ends = append(name[:2:2], fmt.Sprint(b.ends))
-	if !b.recorded {
+	play = append(name, fmt.Sprint(b.Graded), fmt.Sprint(b.Won), fmt.Sprint(b.Scheme), fmt.Sprint(b.Defeated),
+		ratio2(b.Basic, b.Rounds), percent(b.Attacks, b.Basic), percent(b.HeroDefends, b.Defends))
+	ends = append(name[:2:2], fmt.Sprint(b.Ends))
+	if !b.Recorded {
 		return play, append(ends, noValue, noValue, noValue, noValue, noValue, noValue)
 	}
-	return play, append(ends, percent(b.aeEnds, b.ends), percent(b.aeRisky, b.ends), percent(b.idleHero, b.ends),
-		percent(b.idleAlly, b.ends), percent(b.cardLeft, b.ends), ratio2(b.actions, b.ends))
+	return play, append(ends, percent(b.AEEnds, b.Ends), percent(b.AERisky, b.Ends), percent(b.IdleHero, b.Ends),
+		percent(b.IdleAlly, b.Ends), percent(b.CardLeft, b.Ends), ratio2(b.Actions, b.Ends))
 }
 
-func (b *behaviour) add(r Record) {
-	b.graded++
-	b.rounds += r.Rounds
+func (b *Behaviour) add(r Record) {
+	b.Graded++
+	b.Rounds += r.Rounds
 	switch {
 	case r.Status == constants.Won:
-		b.won++
+		b.Won++
 	case r.Status == constants.Lost && r.Stats[constants.MetricHeroHP] <= 0:
-		b.defeated++
+		b.Defeated++
 	case r.Status == constants.Lost:
-		b.scheme++
+		b.Scheme++
 	}
 	identity := identityNames(r)
 	target := int(r.Stats[constants.MetricMainTarget])
 	for _, c := range r.Choices {
-		b.recorded = b.recorded || len(c.Offered) > 0
+		b.Recorded = b.Recorded || len(c.Offered) > 0
 		switch {
 		case c.Kind == constants.KindDefend:
-			b.defends++
+			b.Defends++
 			if identity[strings.TrimPrefix(c.Key, constants.PrefixDefend)] {
-				b.heroDefends++
+				b.HeroDefends++
 			}
 		case c.Key == constants.KeyEndTurn:
 			b.endTurn(c.Form, c.Threat, target, c.Offered, identity)
 		case c.Kind == constants.KindTurn:
-			b.actions++
+			b.Actions++
 			if actor, ok := strikeActor(c.Key); ok && identity[actor] {
-				b.basic++
+				b.Basic++
 				if strings.HasPrefix(c.Key, constants.PrefixAttack) {
-					b.attacks++
+					b.Attacks++
 				}
 			}
 		}
@@ -121,12 +131,12 @@ func (b *behaviour) add(r Record) {
 }
 
 // endTurn classifies how a turn ended from the board and the options left.
-func (b *behaviour) endTurn(form string, threat, target int, offered []string, identity map[string]bool) {
-	b.ends++
+func (b *Behaviour) endTurn(form string, threat, target int, offered []string, identity map[string]bool) {
+	b.Ends++
 	if form == constants.TypeAlterEgo {
-		b.aeEnds++
+		b.AEEnds++
 		if threat+riskyThreatMargin >= target {
-			b.aeRisky++
+			b.AERisky++
 		}
 	}
 	var hero, ally, card bool
@@ -136,9 +146,9 @@ func (b *behaviour) endTurn(form string, threat, target int, offered []string, i
 		ally = ally || (strike && !identity[actor])
 		card = card || strings.HasPrefix(k, constants.PrefixPlay)
 	}
-	b.idleHero += count(hero)
-	b.idleAlly += count(ally)
-	b.cardLeft += count(card)
+	b.IdleHero += count(hero)
+	b.IdleAlly += count(ally)
+	b.CardLeft += count(card)
 }
 
 // strikeActor returns who attacks or thwarts in an attack:/thwart: key.

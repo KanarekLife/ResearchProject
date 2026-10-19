@@ -9,8 +9,11 @@ export default defineConfig({
   build: {
     outDir: "../static",
     emptyOutDir: false,
-    rolldownOptions: { output: { entryFileNames: "assets/app.js", assetFileNames: "assets/[name][extname]" } },
+    rolldownOptions: {
+      input: { board: "index.html", stats: "stats.html" },
+      output: { entryFileNames: "assets/[name].js", chunkFileNames: "assets/[name].js", assetFileNames: "assets/[name][extname]" },
+    },
   },
-  // `npm run dev` asks a running `go run ./cmd board_gui` for the steps.
+  // `npm run dev` asks a running `go run ./cmd board_gui` for the data.
   server: { proxy: { "/api": "http://127.0.0.1:8090" } },
 });

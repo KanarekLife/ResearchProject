@@ -5,24 +5,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Board, CodesContext, OpenContext, type Shown } from "./Board";
 import { CardModal } from "./CardModal";
+import { Nav } from "./Nav";
+import { Picker, type Selection } from "./Picker";
 import { Side } from "./Side";
-import type { Codes, GameInfo, Result, Runs, Snapshot, Step } from "./types";
+import type { Codes, Runs } from "./types";
+import { useReplay } from "./useReplay";
 
-const POLL_MS = 1000;
 const RUNS_POLL_MS = 5000;
-
-interface Replay {
-  steps: Step[];
-  game?: string;
-  info?: GameInfo;
-  end?: Result;
-  error?: string;
-}
-
-interface Selection {
-  run: string;
-  game: string;
-}
 
 // fromAddress reads the selection in the address, if any.
 function fromAddress(): Selection | null {
@@ -32,17 +21,16 @@ function fromAddress(): Selection | null {
 }
 
 export function App() {
-  const [replay, setReplay] = useState<Replay>({ steps: [] });
   const [codes, setCodes] = useState<Codes>({});
   const [runs, setRuns] = useState<Runs | null>(null);
   const [sel, setSel] = useState<Selection | null>(fromAddress);
   const [cur, setCur] = useState(0);
-  const [disconnected, setDisconnected] = useState(false);
   const [shown, setShown] = useState<Shown | null>(null);
   // A #N in the address opens step N (1-based) instead of following the game.
   const wanted = useRef(parseInt(location.hash.slice(1), 10) - 1);
   const [follow, setFollow] = useState(!(wanted.current >= 0));
   const shownGame = useRef<string | undefined>(undefined);
+  const { replay, setReplay, disconnected } = useReplay(sel, runs);
 
   useEffect(() => {
     fetch("api/cards").then((r) => r.json()).then(setCodes).catch(() => {});
@@ -57,10 +45,11 @@ export function App() {
         .then((r: Runs) => {
           setRuns(r);
           setSel((s) => s ?? { run: r.run, game: r.game });
+          if (r.static) clearInterval(timer);
         })
         .catch(() => {});
-    load();
     const timer = setInterval(load, RUNS_POLL_MS);
+    load();
     const onPop = () => {
       wanted.current = parseInt(location.hash.slice(1), 10) - 1;
       setReplay({ steps: [] });
@@ -74,50 +63,10 @@ export function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!sel) return;
-    let steps: Step[] = [];
-    let game = ""; // the game the steps held are from
-    let rebuilds = 0; // the server's replay version of the steps held
-    let timer = 0;
-    let stopped = false;
-    const query = `api/steps?run=${encodeURIComponent(sel.run)}&game=${encodeURIComponent(sel.game)}&from=`;
-    async function poll() {
-      try {
-        // Re-fetch the last step too: its choice arrives with the next one.
-        const res = await fetch(query + Math.max(steps.length - 1, 0), { cache: "no-store" });
-        if (!res.ok) {
-          if (!stopped) setReplay({ steps: [], error: (await res.text()).trim() });
-          return;
-        }
-        const s: Snapshot = await res.json();
-        if (stopped) return;
-        if (s.rebuilds !== rebuilds || s.game !== game) {
-          rebuilds = s.rebuilds;
-          game = s.game;
-          steps = [];
-          if (s.from > 0) return poll();
-        }
-        steps = [...steps.slice(0, s.from), ...s.steps];
-        setReplay({ steps, game, info: s.info, end: s.end, error: s.error });
-        setDisconnected(false);
-        // A followed run goes on to its next game, so keep asking.
-        if (sel!.game && (s.end || s.error)) return;
-      } catch (e) {
-        console.error(e);
-        setDisconnected(true);
-      }
-      if (!stopped) timer = setTimeout(poll, POLL_MS);
-    }
-    poll();
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-  }, [sel]);
 
-  const { steps, info, end, error } = replay;
+  const { steps, end, error } = replay;
   const n = steps.length;
+  const local = !!runs?.runs.find((r) => r.id === sel?.run)?.local;
 
   // New steps move to the last one when following, or to the #N asked for. A
   // new game opens on its first step when not following.
@@ -127,12 +76,12 @@ export function App() {
     if (wanted.current >= 0 && wanted.current < n) {
       setCur(wanted.current);
       wanted.current = -1;
-    } else if (follow) {
+    } else if (follow && local) {
       setCur(Math.max(n - 1, 0));
     } else if (newGame && wanted.current < 0) {
       setCur(0);
     }
-  }, [replay, follow, n]);
+  }, [replay, follow, local, n]);
 
   const go = useCallback(
     (i: number, keepFollow = false) => {
@@ -168,8 +117,8 @@ export function App() {
       ArrowRight: () => go(cur + 1),
       Home: () => go(0),
       End: () => go(n - 1),
-      f: () => toggleFollow(!follow),
     };
+    if (local) keys.f = () => toggleFollow(!follow);
     const onKey = (e: KeyboardEvent) => {
       // While a card is open, Esc closes it and no other key steps the game.
       if (shown) {
@@ -182,25 +131,17 @@ export function App() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [go, toggleFollow, cur, n, follow, shown]);
+  }, [go, toggleFollow, cur, n, follow, local, shown]);
 
   const state = end ? end.status : error ? "stopped" : "live";
   const step = steps[cur];
-  const run = runs?.runs.find((r) => r.id === sel?.run);
   return (
     <CodesContext.Provider value={codes}>
       <OpenContext.Provider value={setShown}>
         <header className="bar">
           <div className="title">
-            <select title="Run" value={sel?.run ?? ""} onChange={(e) => choose({ run: e.target.value, game: "" })}>
-              {sel && !run && <option value={sel.run}>{sel.run}</option>}
-              {runs?.runs.map((r) => <option key={r.id} value={r.id}>{r.id}</option>)}
-            </select>
-            <select title="Game" value={sel?.game ?? ""} onChange={(e) => choose({ run: sel!.run, game: e.target.value })}>
-              <option value="">{"follow the run" + (replay.game && !sel?.game ? ` (${replay.game})` : "")}</option>
-              {run?.games.map((g) => <option key={g.name} value={g.name}>{`${g.name} · ${g.state}`}</option>)}
-            </select>
-            <span className="dim">{info?.player ? "player " + info.player : ""}</span>
+            <Nav on="board" />
+            <Picker runs={runs} sel={sel} following={replay.game} choose={choose} />
             <span className={"badge " + state}>{disconnected ? "disconnected" : state}</span>
           </div>
           <nav className="nav">
@@ -210,9 +151,11 @@ export function App() {
             <button title="Next step (→)" disabled={cur >= n - 1} onClick={() => go(cur + 1)}>▶</button>
             <button title="Last step (End)" disabled={cur >= n - 1} onClick={() => go(n - 1)}>⏭</button>
             <span id="counter" className="dim">{n ? `${cur + 1} / ${n}` : "0 / 0"}</span>
-            <label title="Jump to each new step as the game is played (F)" className={end && sel?.game ? "gone" : undefined}>
-              <input type="checkbox" checked={follow} onChange={(e) => toggleFollow(e.target.checked)} /> follow
-            </label>
+            {local && (
+              <label title="Jump to each new step as the game is played (F)" className={end && sel?.game ? "gone" : undefined}>
+                <input type="checkbox" checked={follow} onChange={(e) => toggleFollow(e.target.checked)} /> follow
+              </label>
+            )}
           </nav>
         </header>
         <main className="layout">
