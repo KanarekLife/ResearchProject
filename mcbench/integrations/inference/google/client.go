@@ -24,7 +24,7 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	}
 	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathModels + c.cfg.Model + methodSuffix
 	headers := map[string]string{headerAPIKey: c.cfg.APIKey}
-	maps.Copy(headers, c.cfg.Headers)
+	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
 	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
 		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {

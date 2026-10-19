@@ -16,6 +16,7 @@ type Config struct {
 	Samples  int // games per seed
 	Parallel int // concurrent games
 	TraceDir string
+	RunName  string // names the run to the player, e.g. for request-header placeholders
 }
 
 type job struct {
@@ -46,6 +47,7 @@ func plan(scenarios []*scenario.Scenario, cfg Config) []job {
 // runs on the caller's goroutine, so it need not be concurrency-safe.
 func Run(ctx context.Context, scenarios []*scenario.Scenario, p player.Player, instr instruction.Instructions, cfg Config, weights Weights, emit func(Record)) {
 	jobs := plan(scenarios, cfg)
+	ctx = player.WithRun(ctx, cfg.RunName)
 	runID := time.Now().UTC().Format("20060102T150405Z")
 
 	work := make(chan job)

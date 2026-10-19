@@ -38,6 +38,8 @@ func (m *Model) Name() string { return "model:" + m.Label }
 // Play answers every decision until the game is no longer awaiting one.
 func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, error) {
 	var u player.Usage
+	g := player.GameFrom(ctx)
+	ctx = inference.WithGame(ctx, g.Run, g.Name)
 	msgs := m.add(s, nil, inference.Message{Role: inference.RoleSystem, Content: m.system()}, nil)
 	msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: firstPrompt(s)}, nil)
 	for s.Status() == constants.AwaitingDecision {

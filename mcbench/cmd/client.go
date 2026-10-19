@@ -71,6 +71,10 @@ func (h headerFlag) Set(s string) error {
 	if !ok || name == "" {
 		return fmt.Errorf("header %q: want \"Name: value\"", s)
 	}
-	h[name] = strings.TrimSpace(value)
+	value = strings.TrimSpace(value)
+	if err := inference.ValidateHeaderValue(value); err != nil {
+		return fmt.Errorf("header %q: %w", name, err)
+	}
+	h[name] = value
 	return nil
 }
