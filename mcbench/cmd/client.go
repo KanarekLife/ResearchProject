@@ -81,19 +81,14 @@ func (h headerFlag) Set(s string) error {
 }
 
 // resolveServer picks the base URL: -server, then the environment variable
-// named by server_env (OPENAI_BASE_URL when unset, for openai and responses),
-// then the configured server. A protocol with its own provider URL keeps that
-// one (empty) while the configured server is still the OpenAI-compatible
-// default.
+// named by server_env, then the configured server. A protocol with its own
+// provider URL keeps that one (empty) while the configured server is still the
+// OpenAI-compatible default.
 func resolveServer(api, flagServer string, flagSet bool, cfg inferenceConfig) string {
 	if flagSet {
 		return flagServer
 	}
-	env := cfg.ServerEnv
-	if env == "" && (api == apiOpenAI || api == apiResponses) {
-		env = envOpenAIBaseURL
-	}
-	if v := os.Getenv(env); env != "" && v != "" {
+	if v := os.Getenv(cfg.ServerEnv); cfg.ServerEnv != "" && v != "" {
 		return v
 	}
 	if api != apiOpenAI && cfg.Server == defaultServer {

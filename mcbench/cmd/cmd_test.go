@@ -101,7 +101,7 @@ func TestSentReasoning(t *testing.T) {
 }
 
 func TestResolveServer(t *testing.T) {
-	t.Setenv(envOpenAIBaseURL, "http://openai-gateway/v1")
+	t.Setenv(defaultServerEnv, "http://openai-gateway/v1")
 	t.Setenv("MY_GATEWAY", "http://my-gateway/v1")
 	cfg := func(server, env string) inferenceConfig { return inferenceConfig{Server: server, ServerEnv: env} }
 	for _, tc := range []struct {
@@ -110,12 +110,12 @@ func TestResolveServer(t *testing.T) {
 		cfg       inferenceConfig
 		want      string
 	}{
-		{apiOpenAI, "", false, cfg(defaultServer, ""), "http://openai-gateway/v1"},
-		{apiResponses, "", false, cfg(defaultServer, ""), "http://openai-gateway/v1"},
-		{apiAnthropic, "", false, cfg(defaultServer, ""), ""},
-		{apiGoogle, "", false, cfg("http://cfg/v1", ""), "http://cfg/v1"},
+		{apiOpenAI, "", false, cfg(defaultServer, defaultServerEnv), "http://openai-gateway/v1"},
+		{apiAnthropic, "", false, cfg(defaultServer, defaultServerEnv), "http://openai-gateway/v1"},
 		{apiAnthropic, "", false, cfg(defaultServer, "MY_GATEWAY"), "http://my-gateway/v1"},
-		{apiOpenAI, "", false, cfg(defaultServer, "MY_GATEWAY"), "http://my-gateway/v1"},
+		{apiAnthropic, "", false, cfg(defaultServer, "UNSET_VAR"), ""},
+		{apiGoogle, "", false, cfg("http://cfg/v1", "UNSET_VAR"), "http://cfg/v1"},
+		{apiOpenAI, "", false, cfg(defaultServer, ""), defaultServer},
 		{apiAnthropic, "http://flag/v1", true, cfg(defaultServer, "MY_GATEWAY"), "http://flag/v1"},
 	} {
 		if got := resolveServer(tc.api, tc.flag, tc.flagSet, tc.cfg); got != tc.want {

@@ -22,8 +22,7 @@ type inferenceConfig struct {
 	API       string `yaml:"api"` // openai, google or anthropic
 	Server    string `yaml:"server"`
 	APIKeyEnv string `yaml:"api_key_env"`
-	// ServerEnv names the variable that overrides the server; empty means
-	// OPENAI_BASE_URL for openai and responses, none for the other protocols.
+	// ServerEnv names the variable that overrides Server.
 	ServerEnv   string  `yaml:"server_env"`
 	Model       string  `yaml:"model"`
 	Temperature float64 `yaml:"temperature"`
@@ -59,7 +58,7 @@ type onlineConfig struct {
 func defaultConfig() config {
 	return config{
 		Inference: inferenceConfig{
-			API: apiOpenAI, Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, Temperature: defaultTemperature,
+			API: apiOpenAI, Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, ServerEnv: defaultServerEnv, Temperature: defaultTemperature,
 			MaxTokens: defaultMaxTokens, Retries: defaultRetries,
 			ReasoningEffort: defaultReasoningEffort, ReasoningBudget: defaultReasoningBudget,
 		},
