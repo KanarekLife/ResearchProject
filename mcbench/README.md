@@ -77,6 +77,17 @@ go generate ./boardgui && go run ./cmd site -out site   # -source as for report;
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `online`, `scoring`); flags override it. Key flags:
 
+When `mcbench` starts, it automatically loads an optional `.env` file from the
+current directory. Existing environment variables are kept, so shell exports
+override values from `.env`. For example, from `mcbench/`:
+
+```dotenv
+OPENAI_BASE_URL=https://opencode.ai/zen/go/v1
+OPENAI_API_KEY=your-key
+```
+
+The `.env` file is ignored by Git. Do not commit API keys.
+
 - `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
