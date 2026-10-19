@@ -32,3 +32,27 @@ type Usage struct {
 	OutputTokens int64 `json:"output_tokens,omitempty"`
 	CachedTokens int64 `json:"cached_tokens,omitempty"`
 }
+
+type gameKey struct{}
+
+// Game names the run and game being played. A model player forwards it to its
+// inference client, which fills request-header placeholders from it.
+type Game struct{ Run, Name string }
+
+// WithRun and WithGame set the parts of the Game carried by ctx.
+func WithRun(ctx context.Context, run string) context.Context {
+	g := GameFrom(ctx)
+	g.Run = run
+	return context.WithValue(ctx, gameKey{}, g)
+}
+
+func WithGame(ctx context.Context, name string) context.Context {
+	g := GameFrom(ctx)
+	g.Name = name
+	return context.WithValue(ctx, gameKey{}, g)
+}
+
+func GameFrom(ctx context.Context) Game {
+	g, _ := ctx.Value(gameKey{}).(Game)
+	return g
+}

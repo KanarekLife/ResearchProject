@@ -16,7 +16,8 @@ type Config struct {
 	Model       string
 	Temperature float64 // sent when >= 0; a negative value leaves the provider's default
 	MaxTokens   int
-	Retries     int // extra attempts after a transient failure
+	Retries     int               // extra attempts after a transient failure
+	Headers     map[string]string // extra request headers; they override the defaults
 
 	// ReasoningEffort is a named thinking level (e.g. "high") for hosted
 	// models; empty leaves the provider default.

@@ -67,12 +67,24 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `online`, `scoring`); flags override it. Key flags:
 
 - `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
-  `-temperature`, `-max-tokens`, `-max-failures`
+  `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key
+
+`-header` adds a request header to every API call. In its value, `{run}` (the
+run's directory name, unique per run) and `{game}` (scenario, seed and sample,
+e.g. `spider-man-vs-rhino_seed2_s0`) are filled per game, so each game can get
+its own id. For a gateway that groups requests by session:
+
+```bash
+go run ./cmd run -model <id> -header "x-opencode-session: {run}_{game}"
+```
+
+Without placeholders the value is the same for the whole run. Any other
+`{...}` in a value is rejected.
 
 ## Docs
 

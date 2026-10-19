@@ -10,6 +10,7 @@ type Config struct {
 	Temperature float64 // sent when >= 0
 	MaxTokens   int
 	Retries     int
+	Headers     map[string]string // extra request headers; they override the defaults
 	// ReasoningEffort is a thinking level ("low", "medium", "high"); ReasoningBudget
 	// a thinking token cap, used only when no level is set. Empty or 0 leaves the
 	// model's default.

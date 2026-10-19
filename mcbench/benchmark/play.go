@@ -20,6 +20,7 @@ import (
 // trace to <dir>/<scenario>_seed<N>_s<K>.jsonl as the game happens.
 func Play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights) Record {
 	start := time.Now()
+	ctx = player.WithGame(ctx, gameName(sc.ID, seed, sample))
 	rec := Record{Scenario: sc.ID, Player: p.Name(), Instructions: instr, Seed: seed, Sample: sample}
 	log := slog.Default().With("scenario", sc.ID, "seed", seed, "sample", sample)
 
@@ -120,10 +121,16 @@ func attachTrace(opts *session.Options, dir, scenarioName string, seed uint64, s
 	if dir == "" {
 		return nil, nil
 	}
-	f, err := os.Create(filepath.Join(dir, fmt.Sprintf("%s_seed%d_s%d.jsonl", scenarioName, seed, sample)))
+	f, err := os.Create(filepath.Join(dir, gameName(scenarioName, seed, sample)+".jsonl"))
 	if err != nil {
 		return nil, err
 	}
 	opts.Trace = f
 	return f, nil
+}
+
+// gameName names a game by its scenario, seed and sample; it is also the base
+// of the game's trace file.
+func gameName(scenario string, seed uint64, sample int) string {
+	return fmt.Sprintf("%s_seed%d_s%d", scenario, seed, sample)
 }

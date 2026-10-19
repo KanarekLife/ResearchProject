@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"mcbench/integrations/inference"
 	"mcbench/integrations/inference/anthropic"
@@ -17,24 +18,24 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 	case apiOpenAI:
 		return openaicompatible.New(openaicompatible.Config{
 			BaseURL: o.server, APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
 		}), nil
 	case apiGoogle:
 		return google.New(google.Config{
 			BaseURL: orDefault(o.server, google.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
 		}), nil
 	case apiResponses:
 		return openairesponses.New(openairesponses.Config{
 			BaseURL: orDefault(o.server, openairesponses.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, ReasoningEffort: o.effort,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers, ReasoningEffort: o.effort,
 		}), nil
 	case apiAnthropic:
 		return anthropic.New(anthropic.Config{
 			BaseURL: orDefault(o.server, anthropic.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
 		}), nil
 	}
@@ -57,4 +58,23 @@ func orDefault(s, def string) string {
 		return def
 	}
 	return s
+}
+
+// headerFlag collects repeated -header "Name: value" flags.
+type headerFlag map[string]string
+
+func (h headerFlag) String() string { return fmt.Sprint(map[string]string(h)) }
+
+func (h headerFlag) Set(s string) error {
+	name, value, ok := strings.Cut(s, ":")
+	name = strings.TrimSpace(name)
+	if !ok || name == "" {
+		return fmt.Errorf("header %q: want \"Name: value\"", s)
+	}
+	value = strings.TrimSpace(value)
+	if err := inference.ValidateHeaderValue(value); err != nil {
+		return fmt.Errorf("header %q: %w", name, err)
+	}
+	h[name] = value
+	return nil
 }

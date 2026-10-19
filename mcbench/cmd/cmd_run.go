@@ -31,6 +31,7 @@ type runSettings struct {
 	temp        float64
 	maxTokens   int
 	retries     int
+	headers     map[string]string
 	effort      string
 	budget      int
 	maxFailures int
@@ -84,6 +85,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
+	headers := headerFlag{}
+	fs.Var(headers, "header", "extra request header \"Name: value\"; repeatable; {run} and {game} in the value are filled per game")
 	effort := fs.String("reasoning-effort", cfg.Inference.ReasoningEffort, "reasoning level for hosted models, e.g. low, medium, high (empty: provider default)")
 	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
 	maxFailures := fs.Int("max-failures", cfg.Player.MaxFailures, "failed model replies (no tool call or a tool error) allowed per decision")
@@ -116,7 +119,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 	return l, runSettings{
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
-		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxFailures: *maxFailures,
+		temp: *temp, maxTokens: *maxTokens, retries: *retries, headers: headers, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish,
 	}
@@ -195,7 +198,7 @@ func prepareRunDir(o runSettings, p player.Player) (*os.File, benchmark.Config, 
 		name += runNameSep + sanitize(strings.Join(o.instr, "+"))
 	}
 	dir, err := newRunDir(o.out, name)
-	runCfg := benchmark.Config{Seeds: o.seeds, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir)}
+	runCfg := benchmark.Config{Seeds: o.seeds, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir), RunName: filepath.Base(dir)}
 	if err != nil {
 		return nil, runCfg, err
 	}
