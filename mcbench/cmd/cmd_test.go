@@ -102,21 +102,24 @@ func TestSentReasoning(t *testing.T) {
 
 func TestResolveServer(t *testing.T) {
 	t.Setenv(envOpenAIBaseURL, "http://openai-gateway/v1")
-	t.Setenv(envAnthropicBaseURL, "http://anthropic-gateway/v1")
+	t.Setenv("MY_GATEWAY", "http://my-gateway/v1")
+	cfg := func(server, env string) inferenceConfig { return inferenceConfig{Server: server, ServerEnv: env} }
 	for _, tc := range []struct {
 		api, flag string
 		flagSet   bool
-		cfg, want string
+		cfg       inferenceConfig
+		want      string
 	}{
-		{apiOpenAI, "", false, defaultServer, "http://openai-gateway/v1"},
-		{apiResponses, "", false, defaultServer, "http://openai-gateway/v1"},
-		{apiAnthropic, "", false, defaultServer, "http://anthropic-gateway/v1"},
-		{apiGoogle, "", false, defaultServer, ""},
-		{apiGoogle, "", false, "http://cfg/v1", "http://cfg/v1"},
-		{apiAnthropic, "http://flag/v1", true, defaultServer, "http://flag/v1"},
+		{apiOpenAI, "", false, cfg(defaultServer, ""), "http://openai-gateway/v1"},
+		{apiResponses, "", false, cfg(defaultServer, ""), "http://openai-gateway/v1"},
+		{apiAnthropic, "", false, cfg(defaultServer, ""), ""},
+		{apiGoogle, "", false, cfg("http://cfg/v1", ""), "http://cfg/v1"},
+		{apiAnthropic, "", false, cfg(defaultServer, "MY_GATEWAY"), "http://my-gateway/v1"},
+		{apiOpenAI, "", false, cfg(defaultServer, "MY_GATEWAY"), "http://my-gateway/v1"},
+		{apiAnthropic, "http://flag/v1", true, cfg(defaultServer, "MY_GATEWAY"), "http://flag/v1"},
 	} {
 		if got := resolveServer(tc.api, tc.flag, tc.flagSet, tc.cfg); got != tc.want {
-			t.Errorf("%s flag=%q cfg=%q: got %q, want %q", tc.api, tc.flag, tc.cfg, got, tc.want)
+			t.Errorf("%s flag=%q cfg=%+v: got %q, want %q", tc.api, tc.flag, tc.cfg, got, tc.want)
 		}
 	}
 }

@@ -39,7 +39,6 @@ const (
 	defaultServer          = "http://localhost:1234/v1"
 	defaultAPIKeyEnv       = "OPENAI_API_KEY"
 	envOpenAIBaseURL       = "OPENAI_BASE_URL"
-	envAnthropicBaseURL    = "ANTHROPIC_BASE_URL"
 	defaultRulesDoc        = "rules_agent"
 	defaultContractDoc     = "mcbench"
 	// defaultTemperature is not sent: the provider's default applies.

@@ -80,29 +80,24 @@ func (h headerFlag) Set(s string) error {
 	return nil
 }
 
-// baseURLEnv is the base-URL variable each protocol's own SDK reads; Gemini
-// has none here.
-var baseURLEnv = map[string]string{
-	apiOpenAI:    envOpenAIBaseURL,
-	apiResponses: envOpenAIBaseURL,
-	apiAnthropic: envAnthropicBaseURL,
-}
-
-// resolveServer picks the base URL: -server, then the protocol's environment
-// variable, then the configured server. A protocol with its own provider URL
-// keeps that one (empty) while the configured server is still the
-// OpenAI-compatible default.
-func resolveServer(api, flagServer string, flagSet bool, cfgServer string) string {
+// resolveServer picks the base URL: -server, then the environment variable
+// named by server_env (OPENAI_BASE_URL when unset, for openai and responses),
+// then the configured server. A protocol with its own provider URL keeps that
+// one (empty) while the configured server is still the OpenAI-compatible
+// default.
+func resolveServer(api, flagServer string, flagSet bool, cfg inferenceConfig) string {
 	if flagSet {
 		return flagServer
 	}
-	if env := baseURLEnv[api]; env != "" {
-		if v := os.Getenv(env); v != "" {
-			return v
-		}
+	env := cfg.ServerEnv
+	if env == "" && (api == apiOpenAI || api == apiResponses) {
+		env = envOpenAIBaseURL
 	}
-	if api != apiOpenAI && cfgServer == defaultServer {
+	if v := os.Getenv(env); env != "" && v != "" {
+		return v
+	}
+	if api != apiOpenAI && cfg.Server == defaultServer {
 		return ""
 	}
-	return cfgServer
+	return cfg.Server
 }

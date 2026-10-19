@@ -81,7 +81,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
 	api := fs.String("api", cfg.Inference.API, "API protocol: openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent), anthropic (Messages)")
-	server := fs.String("server", cfg.Inference.Server, "API base URL (default: the protocol's environment variable, then the config; openai is local LM Studio by default, the other protocols use their provider's own URL)")
+	server := fs.String("server", cfg.Inference.Server, "API base URL (default: the server_env variable, then the config; openai is local LM Studio by default, the other protocols use their provider's own URL)")
 	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
@@ -101,7 +101,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	fs.Parse(args)
 	serverSet := false
 	fs.Visit(func(f *flag.Flag) { serverSet = serverSet || f.Name == "server" })
-	*server = resolveServer(*api, *server, serverSet, cfg.Inference.Server)
+	*server = resolveServer(*api, *server, serverSet, cfg.Inference)
 
 	*effort, *budget = sentReasoning(*api, *effort, *budget)
 

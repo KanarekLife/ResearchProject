@@ -72,7 +72,7 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
-- `OPENAI_BASE_URL` (`openai` and `responses`) or `ANTHROPIC_BASE_URL` (`anthropic`): override the endpoint, below `-server`; `OPENAI_API_KEY`: the key
+- `OPENAI_BASE_URL` overrides the endpoint for `openai` and `responses`, below `-server`; `inference.server_env` names a different variable, for any protocol. `OPENAI_API_KEY` is the key (`inference.api_key_env`)
 
 `-header` adds a request header to every API call. In its value, `{run}` (the
 run's directory name, unique per run) and `{game}` (scenario, seed and sample,

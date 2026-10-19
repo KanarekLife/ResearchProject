@@ -19,9 +19,12 @@ type config struct {
 }
 
 type inferenceConfig struct {
-	API         string  `yaml:"api"` // openai, google or anthropic
-	Server      string  `yaml:"server"`
-	APIKeyEnv   string  `yaml:"api_key_env"`
+	API       string `yaml:"api"` // openai, google or anthropic
+	Server    string `yaml:"server"`
+	APIKeyEnv string `yaml:"api_key_env"`
+	// ServerEnv names the variable that overrides the server; empty means
+	// OPENAI_BASE_URL for openai and responses, none for the other protocols.
+	ServerEnv   string  `yaml:"server_env"`
 	Model       string  `yaml:"model"`
 	Temperature float64 `yaml:"temperature"`
 	MaxTokens   int     `yaml:"max_tokens"`
