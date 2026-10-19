@@ -20,10 +20,10 @@ import (
 // poll is how long one read of a growing trace waits for new lines.
 const poll = 500 * time.Millisecond
 
-// Serve serves the games under the results directory at addr until the server
-// fails, opening run and game first. An empty game follows the run: it shows
+// Serve serves the games under the results directories at addr until the
+// server fails, opening run and game first. An empty game follows the run: it shows
 // the game being played and moves on to the next one when it ends.
-func Serve(addr, results, run, game string, scs []*scenario.Scenario) error {
+func Serve(addr string, results []string, run, game string, scs []*scenario.Scenario) error {
 	return http.ListenAndServe(addr, newServer(newViewer(results, run, game, scs)))
 }
 
@@ -31,25 +31,26 @@ func Serve(addr, results, run, game string, scs []*scenario.Scenario) error {
 // and a live game keeps being followed.
 const maxReplays = 8
 
-// viewer serves the traces found under one results directory. A trace is
+// viewer serves the traces found under the results directories. A trace is
 // chosen by run id and game name from that listing, never by path.
 type viewer struct {
-	results, run, game string
-	scs                []*scenario.Scenario
+	results   []string
+	run, game string
+	scs       []*scenario.Scenario
 
 	mu      sync.Mutex
 	replays map[string]*replay
 	recent  []string // trace paths, least recently used first
 }
 
-func newViewer(results, run, game string, scs []*scenario.Scenario) *viewer {
+func newViewer(results []string, run, game string, scs []*scenario.Scenario) *viewer {
 	return &viewer{results: results, run: run, game: game, scs: scs, replays: map[string]*replay{}}
 }
 
 // pick resolves a run id and game name, or the run's current game when game is
 // empty, to a discovered game.
 func (v *viewer) pick(runID, game string) (trace.Game, bool) {
-	runs, err := trace.Discover(v.results)
+	runs, err := trace.Discover(v.results...)
 	if err != nil {
 		return trace.Game{}, false
 	}
@@ -125,7 +126,7 @@ func newServer(v *viewer) http.Handler {
 		q := req.URL.Query()
 		g, ok := v.pick(q.Get("run"), q.Get("game"))
 		if !ok {
-			http.Error(w, "no such run or game under the results directory", http.StatusNotFound)
+			http.Error(w, "no such run or game under the results directories", http.StatusNotFound)
 			return
 		}
 		from, _ := strconv.Atoi(q.Get("from"))

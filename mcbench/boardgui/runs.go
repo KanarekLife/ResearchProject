@@ -19,7 +19,7 @@ const stateLive = "live"
 // is short and always the last line.
 const tailBytes = 16 << 10
 
-// RunInfo is one run of the results directory as listed to the page.
+// RunInfo is one run of the results directories as listed to the page.
 type RunInfo struct {
 	ID    string     `json:"id"`
 	Games []GameItem `json:"games"`
@@ -94,9 +94,9 @@ func current(run trace.Run) trace.Game {
 	return run.Games[len(run.Games)-1]
 }
 
-// listRuns lists the runs under dir with each game's state.
-func listRuns(dir string) ([]RunInfo, error) {
-	runs, err := trace.Discover(dir)
+// listRuns lists the runs under dirs with each game's state.
+func listRuns(dirs []string) ([]RunInfo, error) {
+	runs, err := trace.Discover(dirs...)
 	if err != nil {
 		return nil, err
 	}

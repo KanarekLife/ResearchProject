@@ -3,17 +3,21 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"mcbench/benchmark"
+	"mcbench/constants"
 	"mcbench/game/scenario"
+	"mcbench/online"
 	"mcbench/player"
 	"mcbench/player/instruction"
 )
@@ -37,6 +41,7 @@ type runSettings struct {
 	parallel    int
 	logLevel    string
 	out         string
+	publish     bool
 }
 
 func cmdRun(args []string) error {
@@ -67,7 +72,7 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	return executeRun(scs, p, instr, o, cfg.Scoring)
+	return executeRun(scs, p, instr, o, cfg.Scoring, store(cfg))
 }
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
@@ -88,6 +93,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	samples := fs.Int("samples", cfg.Run.Samples, "games per seed (more than 1 whenever sampling is not deterministic)")
 	parallel := fs.Int("parallel", cfg.Run.Parallel, "concurrent games")
 	out := fs.String("out", cfg.Run.Out, "results directory")
+	publish := fs.Bool("publish", cfg.Online.Publish, "publish the run to the "+cfg.Online.Branch+" branch once it finishes with no infra_error game")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
 	fs.Parse(args)
 	if *api != apiOpenAI {
@@ -112,11 +118,11 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
-		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel,
+		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish,
 	}
 }
 
-func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, scoring map[string]float64) error {
+func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, scoring map[string]float64, st online.Store) error {
 	f, runCfg, err := prepareRunDir(o, p)
 	if err != nil {
 		return err
@@ -129,6 +135,7 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 	log := slog.Default()
 	enc := json.NewEncoder(f)
 	total, done := benchmark.Count(scs, runCfg), 0
+	info := startInfo(scs, o, scoring, total)
 	var recs []benchmark.Record
 	log.Info("run started", "player", p.Name(), "games", total, "parallel", o.parallel, "live_dir", runCfg.TraceDir)
 	benchmark.Run(ctx, scs, p, instr, runCfg, benchmark.Weights(scoring), func(r benchmark.Record) {
@@ -142,20 +149,57 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 	})
 	log.Info("run finished", "games_file", f.Name())
 	benchmark.Report(os.Stdout, recs, terminalTheme(os.Stdout))
+	dir := filepath.Dir(f.Name())
+	if err := info.finish(dir, recs); err != nil {
+		return err
+	}
+	if o.publish {
+		publishRun(dir, info, st)
+	}
 	return nil
+}
+
+// publishRun skips a run cut short or with an infra_error game: it is incomplete.
+func publishRun(dir string, info runInfo, st online.Store) {
+	log := slog.Default().With("run", filepath.Base(dir))
+	finished := 0
+	for _, n := range info.Statuses {
+		finished += n
+	}
+	switch {
+	case finished < info.Planned:
+		log.Warn("run not published: cut short", "finished", finished, "planned", info.Planned)
+		return
+	case info.Statuses[constants.InfraError] > 0:
+		log.Warn("run not published: flaky", "infra_errors", info.Statuses[constants.InfraError])
+		return
+	}
+	name, err := st.Publish(dir)
+	if err != nil {
+		log.Error("run not published", "error", err)
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, constants.PublishedFile), []byte(name+"\n"), 0o644); err != nil {
+		log.Error("run published, but recording that failed", "error", err)
+	}
+	log.Info("run published", "remote", st.Remote, "branch", st.Branch, "dir", name)
 }
 
 // prepareRunDir creates results/<run>-<player>[__<instructions>]/, the live/
 // trace directory and the games.jsonl file. The instruction documents are in
-// the name so runs of one model that differ only in them stay apart.
+// the name so runs of one model that differ only in them stay apart; a run
+// started in the same second as one of the same name gets a -2, -3, ... suffix.
 func prepareRunDir(o runSettings, p player.Player) (*os.File, benchmark.Config, error) {
 	name := time.Now().UTC().Format(runIDLayout) + "-" + sanitize(p.Name())
 	if len(o.instr) > 0 {
 		name += runNameSep + sanitize(strings.Join(o.instr, "+"))
 	}
-	dir := filepath.Join(o.out, name)
+	dir, err := newRunDir(o.out, name)
 	runCfg := benchmark.Config{Seeds: o.seeds, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir)}
-	if err := os.MkdirAll(runCfg.TraceDir, 0o755); err != nil {
+	if err != nil {
+		return nil, runCfg, err
+	}
+	if err := os.Mkdir(runCfg.TraceDir, 0o755); err != nil {
 		return nil, runCfg, err
 	}
 	f, err := os.Create(filepath.Join(dir, gamesFile))
@@ -163,4 +207,18 @@ func prepareRunDir(o runSettings, p player.Player) (*os.File, benchmark.Config, 
 		return nil, runCfg, err
 	}
 	return f, runCfg, nil
+}
+
+func newRunDir(out, name string) (string, error) {
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		return "", err
+	}
+	dir := filepath.Join(out, name)
+	for n := 2; ; n++ {
+		err := os.Mkdir(dir, 0o755)
+		if !errors.Is(err, os.ErrExist) {
+			return dir, err
+		}
+		dir = filepath.Join(out, name+"-"+strconv.Itoa(n))
+	}
 }

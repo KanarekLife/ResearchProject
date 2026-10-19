@@ -3,9 +3,12 @@ package trace
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"mcbench/constants"
 )
 
 // writeTrace writes lines to a trace file, newline-terminated as session.Trace
@@ -187,5 +190,29 @@ func appendFile(t *testing.T, path, s string) {
 	defer f.Close()
 	if _, err := f.WriteString(s); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDiscoverDirs(t *testing.T) {
+	local, remote := filepath.Join(t.TempDir(), "results"), filepath.Join(t.TempDir(), "online")
+	addRun := func(dir, run string) {
+		live := filepath.Join(dir, run, "live")
+		os.MkdirAll(live, 0o755)
+		os.WriteFile(filepath.Join(live, "g.jsonl"), []byte(startLine+"\n"), 0o644)
+	}
+	addRun(local, "r1")
+	os.WriteFile(filepath.Join(local, "r1", constants.PublishedFile), []byte("r1-2\n"), 0o644)
+	addRun(remote, "r1")
+	addRun(remote, "r1-2")
+	runs, err := Discover(local, remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, r := range runs {
+		ids = append(ids, r.ID)
+	}
+	if want := []string{"r1@online", "r1"}; !slices.Equal(ids, want) {
+		t.Errorf("runs %v, want %v", ids, want)
 	}
 }

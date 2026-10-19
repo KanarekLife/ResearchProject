@@ -14,6 +14,7 @@ type config struct {
 	Inference inferenceConfig    `yaml:"inference"`
 	Player    playerConfig       `yaml:"player"`
 	Run       runConfig          `yaml:"run"`
+	Online    onlineConfig       `yaml:"online"`
 	Scoring   map[string]float64 `yaml:"scoring"`
 }
 
@@ -44,6 +45,14 @@ type runConfig struct {
 	Out      string `yaml:"out"`
 }
 
+type onlineConfig struct {
+	Remote  string `yaml:"remote"`
+	Branch  string `yaml:"branch"`
+	Dir     string `yaml:"dir"`
+	Publish bool   `yaml:"publish"`
+	Source  string `yaml:"source"`
+}
+
 func defaultConfig() config {
 	return config{
 		Inference: inferenceConfig{
@@ -55,7 +64,11 @@ func defaultConfig() config {
 			Name: playerModel, MaxFailures: defaultModelMaxFailures,
 			InstructionsDir: defaultInstructionsDir, Instructions: []string{defaultRulesDoc, defaultContractDoc},
 		},
-		Run:     runConfig{Seeds: defaultSeeds, Samples: defaultSamples, Parallel: defaultParallel, Out: defaultResultsDir},
+		Run: runConfig{Seeds: defaultSeeds, Samples: defaultSamples, Parallel: defaultParallel, Out: defaultResultsDir},
+		Online: onlineConfig{
+			Remote: defaultRemote, Branch: defaultResultsBranch, Dir: defaultOnlineDir,
+			Publish: defaultPublish, Source: sourceHybrid,
+		},
 		Scoring: map[string]float64{},
 	}
 }

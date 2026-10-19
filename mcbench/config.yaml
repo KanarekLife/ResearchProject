@@ -21,6 +21,13 @@ run:
   parallel: 1
   out: results
 
+online: # the git branch every finished run is published to, one directory per run
+  remote: origin
+  branch: results
+  dir: online-results # local checkout of the branch
+  publish: true # a run cut short or with an infra_error game is never published
+  source: hybrid # what report, analyze, view and board_gui read: local, online or hybrid
+
 scoring:
   win: 0.40
   villain_damage: 0.25
