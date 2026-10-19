@@ -1,6 +1,7 @@
 package main
 
 import (
+	"mcbench/benchmark"
 	"os"
 	"path/filepath"
 	"strings"
@@ -133,5 +134,40 @@ func TestParseSeeds(t *testing.T) {
 	}
 	if _, err := parseSeeds("1,x"); err == nil {
 		t.Error("bad seed accepted")
+	}
+}
+
+func TestMergeRecords(t *testing.T) {
+	rec := func(seed uint64, status string, score float64) benchmark.Record {
+		return benchmark.Record{Scenario: "s", Player: "p", Seed: seed, Status: status, Score: score}
+	}
+	recs, from, err := mergeRecords([][]benchmark.Record{
+		{rec(1, "infra_error", 0), rec(2, "lost", 0.2), rec(3, "infra_error", 0)},
+		{rec(1, "won", 0.9), rec(3, "infra_error", 0), rec(2, "lost", 0.3)},
+	})
+	if err != nil || len(recs) != 2 {
+		t.Fatalf("got %d records, err=%v, want 2 (seed 3 stays failed and is dropped)", len(recs), err)
+	}
+	if recs[0].Seed != 1 || recs[0].Status != "won" || from[0] != 1 {
+		t.Errorf("seed 1: %+v from set %d, want the retry's win", recs[0], from[0])
+	}
+	if recs[1].Seed != 2 || recs[1].Score != 0.3 || from[1] != 1 {
+		t.Errorf("seed 2: %+v from set %d, want the later run's record", recs[1], from[1])
+	}
+	other := rec(1, "won", 1)
+	other.Player = "q"
+	if _, _, err := mergeRecords([][]benchmark.Record{{rec(1, "won", 1)}, {other}}); err == nil {
+		t.Error("runs of different players merged, want an error")
+	}
+}
+
+func TestMergeRunsSkipsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	run := filepath.Join(dir, "r1")
+	os.MkdirAll(run, 0o755)
+	os.WriteFile(filepath.Join(run, gamesFile), []byte(`{"scenario":"s","player":"p","seed":1,"status":"infra_error"}`+"\n"), 0o644)
+	os.WriteFile(filepath.Join(run, runInfoFile), []byte(`{"planned_games":1}`), 0o644)
+	if _, err := mergeRuns([]string{run}, t.TempDir(), true); err == nil || !strings.Contains(err.Error(), "no graded games") {
+		t.Errorf("err=%v, want a refusal to publish a run with no graded games", err)
 	}
 }

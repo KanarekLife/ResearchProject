@@ -55,3 +55,6 @@ func ReadRecords(path string) ([]Record, error) {
 	}
 	return out, sc.Err()
 }
+
+// GameName is the base name of the game's trace file.
+func (r Record) GameName() string { return gameName(r.Scenario, r.Seed, r.Sample) }
