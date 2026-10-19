@@ -1,0 +1,51 @@
+name: Pages
+
+# A push to the results branch dispatches this from main (see results.yml there).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcbench
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: results
+          path: results-branch
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: mcbench/go.mod
+          cache-dependency-path: mcbench/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: go generate ./boardgui
+      - run: go run ./cmd site -out ../_site ../results-branch
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

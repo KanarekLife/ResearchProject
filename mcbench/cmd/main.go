@@ -17,6 +17,7 @@ Commands:
   analyze    how players behaved in games.jsonl files: loss causes, turn use, form, defence
   view       read a run's traces: a game transcript, a live game, or final results
   board_gui  show a game trace as a board in the browser, step by step
+  site       write the board and the report and analyze tables as a static website
 
 Run "mcbench <command> -h" for flags.
 `
@@ -30,7 +31,7 @@ func main() {
 	cmds := map[string]func([]string) error{
 		cmdNameList: cmdList, cmdNameValidate: cmdValidate,
 		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport, cmdNameAnalyze: cmdAnalyze,
-		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI,
+		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI, cmdNameSite: cmdSite,
 	}
 	cmd, ok := cmds[os.Args[1]]
 	if !ok {

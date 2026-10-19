@@ -20,11 +20,19 @@ import (
 // poll is how long one read of a growing trace waits for new lines.
 const poll = 500 * time.Millisecond
 
-// Serve serves the games under the results directories at addr until the
-// server fails, opening run and game first. An empty game follows the run: it shows
-// the game being played and moves on to the next one when it ends.
-func Serve(addr string, results []string, run, game string, scs []*scenario.Scenario) error {
-	return http.ListenAndServe(addr, newServer(newViewer(results, run, game, scs)))
+// Data is what the board shows.
+type Data struct {
+	Results   []string
+	Online    string // the directory of published runs: finished, never followed
+	Scenarios []*scenario.Scenario
+	Stats     func() (any, error)
+}
+
+// Serve serves the games of d at addr until the server fails, opening run and
+// game first. An empty game follows the run: it shows the game being played
+// and moves on to the next one when it ends.
+func Serve(addr string, d Data, run, game string) error {
+	return http.ListenAndServe(addr, newServer(newViewer(d, run, game)))
 }
 
 // maxReplays bounds the replays kept, so switching back to a game is instant
@@ -34,23 +42,22 @@ const maxReplays = 8
 // viewer serves the traces found under the results directories. A trace is
 // chosen by run id and game name from that listing, never by path.
 type viewer struct {
-	results   []string
+	Data
 	run, game string
-	scs       []*scenario.Scenario
 
 	mu      sync.Mutex
 	replays map[string]*replay
 	recent  []string // trace paths, least recently used first
 }
 
-func newViewer(results []string, run, game string, scs []*scenario.Scenario) *viewer {
-	return &viewer{results: results, run: run, game: game, scs: scs, replays: map[string]*replay{}}
+func newViewer(d Data, run, game string) *viewer {
+	return &viewer{Data: d, run: run, game: game, replays: map[string]*replay{}}
 }
 
 // pick resolves a run id and game name, or the run's current game when game is
 // empty, to a discovered game.
 func (v *viewer) pick(runID, game string) (trace.Game, bool) {
-	runs, err := trace.Discover(v.results...)
+	runs, err := trace.Discover(v.Results...)
 	if err != nil {
 		return trace.Game{}, false
 	}
@@ -76,7 +83,7 @@ func (v *viewer) replay(path string) *replay {
 	v.recent = append(v.recent, path)
 	r, ok := v.replays[path]
 	if !ok {
-		r = newReplay(v.scs)
+		r = newReplay(v.Scenarios)
 		v.replays[path] = r
 		go r.follow(path, poll)
 	}
@@ -115,7 +122,7 @@ func newServer(v *viewer) http.Handler {
 	mux.Handle("GET /", files)
 	mux.HandleFunc("GET /api/cards", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, codes) })
 	mux.HandleFunc("GET /api/runs", func(w http.ResponseWriter, _ *http.Request) {
-		runs, err := listRuns(v.results)
+		runs, err := listRuns(v.Results, v.Online)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -133,6 +140,14 @@ func newServer(v *viewer) http.Handler {
 		snap := v.replay(g.Trace).snapshot(from)
 		snap.Run, snap.Game = q.Get("run"), g.Name
 		writeJSON(w, snap)
+	})
+	mux.HandleFunc("GET /api/stats", func(w http.ResponseWriter, _ *http.Request) {
+		stats, err := v.Stats()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, stats)
 	})
 	return mux
 }

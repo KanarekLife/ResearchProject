@@ -63,6 +63,17 @@ scenario and seed, and stops with an error if the replay no longer matches the
 trace (the engine or data changed since it was recorded). Card images load from
 marvelcdb.com by card code; a card without one is drawn as text.
 
+The runs on the `results` branch are also online at
+https://kanareklife.github.io/ResearchProject/: the board, and a statistics
+page that filters and groups every recorded game and aggregates it as `report`
+and `analyze` do. Only a local run can be followed. The `Pages` workflow rebuilds it
+on each push to `main` or `results`, with the `site` command, which writes the
+same static site from any results directories:
+
+```bash
+go generate ./boardgui && go run ./cmd site -out site   # -source as for report; or list results directories
+```
+
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `online`, `scoring`); flags override it. Key flags:
 
@@ -70,7 +81,7 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
-- `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`): which results to read (default `hybrid`)
+- `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`, `site`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key
 
