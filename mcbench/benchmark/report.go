@@ -234,6 +234,9 @@ type summary struct {
 // short by an infrastructure failure is counted but not graded.
 func summarize(rs []Record) summary {
 	s := summary{criteria: map[string]*stat{}, status: map[string]int{}}
+	for _, c := range CriteriaOrder {
+		s.criteria[c] = &stat{}
+	}
 	for _, r := range rs {
 		s.status[r.Status]++
 		if r.Status == constants.InfraError {
@@ -241,9 +244,6 @@ func summarize(rs []Record) summary {
 		}
 		s.score.add(r.Score)
 		for _, c := range CriteriaOrder {
-			if s.criteria[c] == nil {
-				s.criteria[c] = &stat{}
-			}
 			s.criteria[c].add(r.Criteria[c])
 		}
 		if r.Status == constants.Won {

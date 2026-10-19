@@ -19,6 +19,7 @@ import (
 	"mcbench/player"
 	"mcbench/player/heuristic"
 	"mcbench/player/instruction"
+	"mcbench/ui"
 )
 
 func scenarios(t *testing.T) []*scenario.Scenario {
@@ -103,6 +104,13 @@ func TestInfraErrorsAreNotGraded(t *testing.T) {
 	if len(s.score.xs) != 1 || s.status[constants.InfraError] != 1 {
 		t.Errorf("graded %d games, statuses %v", len(s.score.xs), s.status)
 	}
+}
+
+// A configuration whose every game hit an infra error has nothing graded; the
+// report must still render it.
+func TestReportWithOnlyInfraErrors(t *testing.T) {
+	infra := Record{Scenario: "s", Player: "p", Status: constants.InfraError, Seed: 1}
+	Report(io.Discard, []Record{infra}, ui.Theme{})
 }
 
 // Replaying a game's recorded choices on a fresh session must reach the same
