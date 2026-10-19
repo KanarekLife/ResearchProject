@@ -7,13 +7,6 @@ import (
 	"mcbench/ui"
 )
 
-func envOr(k, def string) string {
-	if v := os.Getenv(k); v != "" {
-		return v
-	}
-	return def
-}
-
 // flagValue reads -name value or -name=value from raw args before flags are
 // defined, so config can supply the flag defaults.
 func flagValue(args []string, name, def string) string {

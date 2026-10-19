@@ -81,7 +81,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
 	api := fs.String("api", cfg.Inference.API, "API protocol: openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent), anthropic (Messages)")
-	server := fs.String("server", envOr("OPENAI_BASE_URL", cfg.Inference.Server), "API base URL (OpenAI-compatible: local LM Studio by default; google and anthropic: the provider's own URL unless set here)")
+	server := fs.String("server", cfg.Inference.Server, "API base URL (default: the protocol's environment variable, then the config; openai is local LM Studio by default, the other protocols use their provider's own URL)")
 	temp := fs.Float64("temperature", cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int("max-tokens", cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
@@ -99,17 +99,9 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	publish := fs.Bool("publish", cfg.Online.Publish, "publish the run to the "+cfg.Online.Branch+" branch once it finishes with no infra_error game")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
 	fs.Parse(args)
-	if *api != apiOpenAI {
-		// Only an explicit -server or a configured server applies; otherwise the
-		// provider's own URL does, never the OpenAI-compatible default.
-		serverSet := false
-		fs.Visit(func(f *flag.Flag) { serverSet = serverSet || f.Name == "server" })
-		if !serverSet && cfg.Inference.Server == defaultServer {
-			*server = ""
-		} else if !serverSet {
-			*server = cfg.Inference.Server
-		}
-	}
+	serverSet := false
+	fs.Visit(func(f *flag.Flag) { serverSet = serverSet || f.Name == "server" })
+	*server = resolveServer(*api, *server, serverSet, cfg.Inference.Server)
 
 	*effort, *budget = sentReasoning(*api, *effort, *budget)
 
