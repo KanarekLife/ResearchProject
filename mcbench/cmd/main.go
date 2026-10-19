@@ -24,6 +24,10 @@ Run "mcbench <command> -h" for flags.
 `
 
 func main() {
+	if err := loadDotEnv(".env"); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
