@@ -62,6 +62,7 @@ func (g *Game) fireForced(ev *Event) {
 // then continues with next. At most one card is played per window.
 func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
 	var opts []Option
+	seen := map[string]bool{}
 	for _, c := range g.S.Hand {
 		sc := c.Def.Script
 		if sc == nil || sc.PlayWindow != ev.Trigger || sc.OnPlayEvent == nil {
@@ -86,7 +87,12 @@ func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
 		}
 		// Cancelling a payment offers the same window again.
 		back := func() { g.playerWindow(ev, prompt, next) }
-		opts = append(opts, g.payOption(constants.PrefixPlay+card.Name(), "Play "+card.Name(), pays, play, back))
+		o := g.payOption(constants.PrefixPlay+card.Name(), "Play "+card.Name(), pays, play, back)
+		if seen[o.FullKey()] {
+			continue
+		}
+		seen[o.FullKey()] = true
+		opts = append(opts, o)
 	}
 	if len(opts) == 0 {
 		g.Do(next)

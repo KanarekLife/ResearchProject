@@ -104,6 +104,40 @@ func TestPaymentsAreMinimalAndCancellable(t *testing.T) {
 	}
 }
 
+func TestDuplicateHandCardsShareOnePlayOption(t *testing.T) {
+	g := newGame(t, []string{"Haymaker", "Haymaker", "Genius", "Energy"})
+	var found int
+	for _, o := range g.Pending().Options {
+		if strings.HasPrefix(o.Key, "play:Haymaker") {
+			found++
+		}
+	}
+	if found != 1 {
+		t.Fatalf("found %d Haymaker play options, want 1: %v", found, keys(g))
+	}
+	choose(t, g, "play:Haymaker>Rhino")
+	if g.Pending() == nil || g.Pending().Kind != constants.KindPayment {
+		t.Fatalf("no payment decision after playing Haymaker: %v", keys(g))
+	}
+	for _, o := range g.Pending().Options {
+		if o.Key != constants.KeyCancel {
+			if err := g.Choose(o.ID); err != nil {
+				t.Fatal(err)
+			}
+			break
+		}
+	}
+	remaining := 0
+	for _, c := range g.S.Hand {
+		if c.Name() == "Haymaker" {
+			remaining++
+		}
+	}
+	if remaining != 1 {
+		t.Fatalf("hand has %d Haymakers after playing one, want 1", remaining)
+	}
+}
+
 func TestGuardBlocksVillain(t *testing.T) {
 	g := newGame(t, nil, "Hydra Mercenary")
 	for _, k := range keys(g) {

@@ -9,8 +9,15 @@ import (
 // TurnOptions lists the legal actions in the player's main window.
 func (g *Game) TurnOptions() []Option {
 	var opts []Option
+	seen := map[string]bool{}
 	for _, c := range g.S.Hand {
-		opts = append(opts, g.playOptions(c)...)
+		for _, o := range g.playOptions(c) {
+			if seen[o.FullKey()] {
+				continue
+			}
+			seen[o.FullKey()] = true
+			opts = append(opts, o)
+		}
 	}
 	opts = append(opts, g.basicOptions()...)
 	opts = append(opts, g.allyOptions()...)
