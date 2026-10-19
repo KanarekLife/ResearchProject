@@ -39,6 +39,7 @@ const (
 	defaultResultsDir      = "results"
 	defaultServer          = "http://localhost:1234/v1"
 	defaultAPIKeyEnv       = "OPENAI_API_KEY"
+	defaultServerEnv       = "OPENAI_BASE_URL"
 	defaultRulesDoc        = "rules_agent"
 	defaultContractDoc     = "mcbench"
 	// defaultTemperature is not sent: the provider's default applies.

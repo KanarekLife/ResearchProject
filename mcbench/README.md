@@ -83,7 +83,7 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`, `site`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
-- `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key
+- `OPENAI_BASE_URL` overrides the endpoint for every protocol, below `-server`; `inference.server_env` names a different variable. `OPENAI_API_KEY` is the key (`inference.api_key_env`)
 
 `-header` adds a request header to every API call. In its value, `{run}` (the
 run's directory name, unique per run) and `{game}` (scenario, seed and sample,

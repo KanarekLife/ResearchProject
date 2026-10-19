@@ -2,6 +2,7 @@ inference:
   api: openai # openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent) or anthropic (Messages)
   server: http://localhost:1234/v1
   api_key_env: OPENAI_API_KEY
+  server_env: OPENAI_BASE_URL
   model: ""
   temperature: -1 # -1: not sent, the provider default applies; 0 or more is sent
   max_tokens: 32768

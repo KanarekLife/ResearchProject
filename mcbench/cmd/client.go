@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"mcbench/integrations/inference"
@@ -77,4 +78,21 @@ func (h headerFlag) Set(s string) error {
 	}
 	h[name] = value
 	return nil
+}
+
+// resolveServer picks the base URL: -server, then the environment variable
+// named by server_env, then the configured server. A protocol with its own
+// provider URL keeps that one (empty) while the configured server is still the
+// OpenAI-compatible default.
+func resolveServer(api, flagServer string, flagSet bool, cfg inferenceConfig) string {
+	if flagSet {
+		return flagServer
+	}
+	if v := os.Getenv(cfg.ServerEnv); cfg.ServerEnv != "" && v != "" {
+		return v
+	}
+	if api != apiOpenAI && cfg.Server == defaultServer {
+		return ""
+	}
+	return cfg.Server
 }
