@@ -67,7 +67,7 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
 `player`, `run`, `online`, `scoring`); flags override it. Key flags:
 
 - `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
-  `-temperature`, `-max-tokens`, `-max-failures`
+  `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`): which results to read (default `hybrid`)

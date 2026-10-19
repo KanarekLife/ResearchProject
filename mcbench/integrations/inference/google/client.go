@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 
 	"mcbench/integrations/inference"
@@ -22,8 +23,10 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 		return inference.Reply{}, err
 	}
 	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathModels + c.cfg.Model + methodSuffix
+	headers := map[string]string{headerAPIKey: c.cfg.APIKey}
+	maps.Copy(headers, c.cfg.Headers)
 	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
-		raw, err := inference.PostJSON(ctx, url, map[string]string{headerAPIKey: c.cfg.APIKey}, body)
+		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {
 			return inference.Reply{}, err
 		}

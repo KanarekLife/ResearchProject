@@ -131,6 +131,9 @@ func (c *Client) post(ctx context.Context, data []byte) (*http.Response, error) 
 	if c.cfg.APIKey != "" {
 		req.Header.Set(headerAuthorization, bearerPrefix+c.cfg.APIKey)
 	}
+	for k, v := range c.cfg.Headers {
+		req.Header.Set(k, v)
+	}
 	return httpClient.Do(req)
 }
 
