@@ -143,3 +143,11 @@ func TestReplayReachesSameResult(t *testing.T) {
 		}
 	}
 }
+
+func TestPlanPick(t *testing.T) {
+	scs := scenarios(t)
+	jobs := plan(scs[:1], Config{Seeds: 10, Pick: []uint64{scs[0].Seeds[1], scs[0].Seeds[9]}})
+	if len(jobs) != 2 || jobs[0].seed != scs[0].Seeds[1] || jobs[1].seed != scs[0].Seeds[9] {
+		t.Errorf("got %d jobs %+v, want the 2nd and 10th seeds", len(jobs), jobs)
+	}
+}

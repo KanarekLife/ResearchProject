@@ -11,6 +11,7 @@ const (
 	cmdNameView     = "view"
 	cmdNameBoardGUI = "board_gui"
 	cmdNameSite     = "site"
+	cmdNamePublish  = "publish"
 )
 
 // Player names accepted by -player.

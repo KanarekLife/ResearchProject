@@ -81,9 +81,21 @@ Configuration lives in `config.yaml` (grouped into `data`, `inference`,
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
+- `-pick 1,2,10`: play only these seeds, for example to repeat the games of a run that ended in `infra_error`
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`, `site`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` overrides the endpoint for every protocol, below `-server`; `inference.server_env` names a different variable. `OPENAI_API_KEY` is the key (`inference.api_key_env`)
+
+`publish` merges the runs of one player and instruction set and publishes them
+as one run, for example a run and the retries of its failed games. Per game it
+keeps the latest result that is not an `infra_error`; failed games are dropped.
+It refuses a run with fewer finished games than planned unless `-partial` is
+given, and a run with no graded game at all. It fetches the results branch
+before it pushes, never force-pushes, and retries a lost push race:
+
+```bash
+go run ./cmd publish results/<run> results/<retry-of-failed-seeds>
+```
 
 `-header` adds a request header to every API call. In its value, `{run}` (the
 run's directory name, unique per run) and `{game}` (scenario, seed and sample,

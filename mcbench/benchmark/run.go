@@ -2,6 +2,7 @@ package benchmark
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -12,9 +13,10 @@ import (
 
 // Config of a run.
 type Config struct {
-	Seeds    int // first N seeds of each scenario (0 = all)
-	Samples  int // games per seed
-	Parallel int // concurrent games
+	Seeds    int      // first N seeds of each scenario (0 = all)
+	Pick     []uint64 // if set, only these seeds (e.g. to repeat games that hit an infra error)
+	Samples  int      // games per seed
+	Parallel int      // concurrent games
 	TraceDir string
 	RunName  string // names the run to the player, e.g. for request-header placeholders
 }
@@ -35,6 +37,9 @@ func plan(scenarios []*scenario.Scenario, cfg Config) []job {
 			seeds = seeds[:cfg.Seeds]
 		}
 		for _, seed := range seeds {
+			if len(cfg.Pick) > 0 && !slices.Contains(cfg.Pick, seed) {
+				continue
+			}
 			for sample := 0; sample < max(1, cfg.Samples); sample++ {
 				out = append(out, job{sc, seed, sample})
 			}
