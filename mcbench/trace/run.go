@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"mcbench/constants"
 )
 
 // Run is one results directory: its id, where it lives and the games in it.
@@ -21,8 +23,47 @@ type Game struct {
 	Trace string
 }
 
-// Discover lists the runs under dir, newest first (run ids sort by timestamp).
-func Discover(dir string) ([]Run, error) {
+// Discover lists the runs under dirs, newest first (run ids sort by timestamp).
+// A run an earlier dir published is listed once; a clashing id from a later dir
+// becomes <id>@<dir name>.
+func Discover(dirs ...string) ([]Run, error) {
+	var runs []Run
+	taken, published := map[string]bool{}, map[string]bool{}
+	for _, dir := range dirs {
+		found, err := discover(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range found {
+			if published[r.ID] {
+				continue
+			}
+			if taken[r.ID] {
+				r.ID += "@" + filepath.Base(dir)
+			}
+			taken[r.ID] = true
+			runs = append(runs, r)
+		}
+		for _, r := range found {
+			if name := Published(r.Dir); name != "" {
+				published[name] = true
+			}
+		}
+	}
+	sort.Slice(runs, func(i, j int) bool { return runs[i].ID > runs[j].ID })
+	return runs, nil
+}
+
+// Published is the name a local run directory was published under, or empty.
+func Published(runDir string) string {
+	b, err := os.ReadFile(filepath.Join(runDir, constants.PublishedFile))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func discover(dir string) ([]Run, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -42,7 +83,6 @@ func Discover(dir string) ([]Run, error) {
 		}
 		runs = append(runs, Run{ID: e.Name(), Dir: rdir, Games: games})
 	}
-	sort.Slice(runs, func(i, j int) bool { return runs[i].ID > runs[j].ID })
 	return runs, nil
 }
 

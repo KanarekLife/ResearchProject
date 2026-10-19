@@ -27,14 +27,17 @@ go run ./cmd run -model google/gemma-4-26b-a4b-qat -instructions rules_agent,mcb
 go run ./cmd run -player random
 go run ./cmd run -player heuristic
 
-go run ./cmd report                 # every run under results/; or pass run dirs / games.jsonl files
+go run ./cmd report                 # every run under results/ and on the results branch; or pass run dirs / games.jsonl files
 go run ./cmd analyze                # how the players behaved: loss causes, turn use, form, defence
 ```
 
 Each run writes, per game, a JSON trace to `results/<run>/live/<game>.jsonl` (`<run>` is `<time>-<player>__<instructions>`)
 (watch it with `go run ./cmd view -follow`), plus one record per finished game
-in `games.jsonl`. Progress is
-logged as structured `slog` to stderr.
+in `games.jsonl` and the run's metadata (runner, machine, commit, settings) in
+`run.json`. Progress is logged as structured `slog` to stderr. A finished run
+with no `infra_error` game is then published to the `results` branch; `report`,
+`analyze`, `view` and `board_gui` read local and published runs together by
+default (`-source hybrid`; [details](../docs/architecture.md#records-and-live-status)).
 
 To see a game as a board in the browser, step by step (arrow keys, Home/End or
 the buttons), run the `board_gui` command from `mcbench/` and open
@@ -61,12 +64,13 @@ trace (the engine or data changed since it was recorded). Card images load from
 marvelcdb.com by card code; a card without one is drawn as text.
 
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,
-`player`, `run`, `scoring`); flags override it. Key flags:
+`player`, `run`, `online`, `scoring`); flags override it. Key flags:
 
 - `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
   `-temperature`, `-max-tokens`, `-max-failures`
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
-- `-seeds N`, `-samples K`, `-parallel N`, `-out results`
+- `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
+- `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`): which results to read (default `hybrid`)
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` / `OPENAI_API_KEY`: override the endpoint and key
 

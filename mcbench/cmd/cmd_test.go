@@ -60,17 +60,22 @@ func TestResolveSelection(t *testing.T) {
 	for _, n := range []string{"a_seed1_s0.jsonl", "a_seed2_s0.jsonl"} {
 		os.WriteFile(filepath.Join(live, n), nil, 0o644)
 	}
-	for _, tc := range []struct{ path, results, game, want string }{
-		{filepath.Join(live, "a_seed1_s0.jsonl"), "", "", "a_seed1_s0"},
-		{"", results, "", ""}, // no game pinned: follow the run
-		{run, "", "seed1", "a_seed1_s0"},
+	for _, tc := range []struct {
+		path    string
+		results []string
+		game    string
+		want    string
+	}{
+		{filepath.Join(live, "a_seed1_s0.jsonl"), nil, "", "a_seed1_s0"},
+		{"", []string{results}, "", ""}, // no game pinned: follow the run
+		{run, nil, "seed1", "a_seed1_s0"},
 	} {
 		res, id, game, err := resolveSelection(tc.path, tc.results, "", tc.game)
-		if err != nil || res != results || id != filepath.Base(run) || game != tc.want {
+		if err != nil || len(res) != 1 || res[0] != results || id != filepath.Base(run) || game != tc.want {
 			t.Fatalf("resolveSelection(%q, %q, %q) = %q, %q, %q, %v; want game %q", tc.path, tc.results, tc.game, res, id, game, err, tc.want)
 		}
 	}
-	if _, _, _, err := resolveSelection(filepath.Join(t.TempDir(), "g.jsonl"), "", "", ""); err == nil {
+	if _, _, _, err := resolveSelection(filepath.Join(t.TempDir(), "g.jsonl"), nil, "", ""); err == nil {
 		t.Fatal("a trace outside a run was accepted")
 	}
 }

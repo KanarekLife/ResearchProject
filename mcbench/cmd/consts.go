@@ -51,12 +51,24 @@ const (
 	defaultSeeds           = 10
 	defaultSamples         = 1
 	defaultParallel        = 1
+	defaultRemote          = "origin"
+	defaultResultsBranch   = "results"
+	defaultOnlineDir       = "online-results"
+	defaultPublish         = true
+)
+
+// Result sources accepted by -source.
+const (
+	sourceLocal  = "local"
+	sourceOnline = "online"
+	sourceHybrid = "hybrid"
 )
 
 // Subdirectories written under the results directory.
 const (
 	liveSubdir  = "live"
 	gamesFile   = "games.jsonl"
+	runInfoFile = "run.json"
 	runIDLayout = "20060102T150405Z"
 	runNameSep  = "__" // between the player and the instruction documents in a run directory name
 )

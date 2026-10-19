@@ -18,7 +18,8 @@ func cmdView(args []string) error {
 		return err
 	}
 	var (
-		dir    = fs.String("results", cfg.Run.Out, "results directory")
+		dir    = fs.String("results", cfg.Run.Out, "local results directory")
+		source = sourceFlag(fs, cfg)
 		runSel = fs.String("run", "", "run id or prefix (default: newest)")
 		game   = fs.String("game", "", "game name or substring (default: last)")
 		list   = fs.Bool("list", false, "list runs and their games")
@@ -27,7 +28,11 @@ func cmdView(args []string) error {
 	)
 	fs.Parse(args)
 
-	runs, err := trace.Discover(*dir)
+	dirs, err := resultDirs(*source, *dir, store(cfg))
+	if err != nil {
+		return err
+	}
+	runs, err := trace.Discover(dirs...)
 	if err != nil {
 		return err
 	}

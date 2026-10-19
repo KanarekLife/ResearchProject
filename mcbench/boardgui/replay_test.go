@@ -215,7 +215,7 @@ func TestServerIsReadOnly(t *testing.T) {
 	scs, path, _ := oneTrace(t)
 	data, _ := os.ReadFile(path)
 	results := runDir(t, map[string][]byte{"a": data})
-	srv := httptest.NewServer(newServer(newViewer(results, testRun, "a", scs)))
+	srv := httptest.NewServer(newServer(newViewer([]string{results}, testRun, "a", scs)))
 	defer srv.Close()
 
 	snap := finished(t, srv.URL+"/api/steps?run="+testRun+"&game=a&from=1")
@@ -251,7 +251,7 @@ func TestServerSelectsListedGames(t *testing.T) {
 	data, _ := os.ReadFile(path)
 	results := runDir(t, map[string][]byte{"a": data, "b": data[:bytes.IndexByte(data, '\n')+1]})
 	os.WriteFile(filepath.Join(filepath.Dir(results), "outside.jsonl"), data, 0o644)
-	srv := httptest.NewServer(newServer(newViewer(results, testRun, "", scs)))
+	srv := httptest.NewServer(newServer(newViewer([]string{results}, testRun, "", scs)))
 	defer srv.Close()
 
 	var runs Runs
@@ -279,7 +279,7 @@ func TestServerFollowsRunToNextGame(t *testing.T) {
 	scs, path, _ := oneTrace(t)
 	data, _ := os.ReadFile(path)
 	results := runDir(t, map[string][]byte{"a": data})
-	srv := httptest.NewServer(newServer(newViewer(results, testRun, "", scs)))
+	srv := httptest.NewServer(newServer(newViewer([]string{results}, testRun, "", scs)))
 	defer srv.Close()
 	url := srv.URL + "/api/steps?run=" + testRun
 

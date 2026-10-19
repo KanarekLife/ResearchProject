@@ -236,9 +236,29 @@ plus rounds to win, decisions, invalid choices and tokens.
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log. Each choice also records the hero's form and HP, the main-scheme
   threat and the option keys offered at that moment.
+- **`run.json`** — who ran it (git `user.name`), when, on what machine
+  (hostname, OS, kernel, CPU, cores, memory, GPUs, Go version), from which
+  commit and whether the tree was dirty, the run settings and scenarios, and how
+  many games ended in each status.
+
+A run started in the same second as one of the same name gets a `-2`, `-3`, ...
+suffix. When it ends, `cmd run` publishes the run directory (unless
+`-publish=false`) to the `results` branch of `origin`: one commit adds it as a
+top-level directory, with the same suffixing if another run already holds the
+name, and a push that loses a race is retried on the new branch tip. A run cut
+short or with any `infra_error` game is not published, because reports leave
+infra errors out and the run would be incomplete. A published local run records
+its name on the branch in a `published` file. The branch is kept in a detached
+worktree (`online-results/`) that only this step writes to.
+
+`report`, `analyze`, `view` and `board_gui` read `-source local` (the results
+directory), `online` (the branch, fetched first; offline, the last fetched copy)
+or `hybrid` (both, the default). In `hybrid`, a published local run is read
+once, and a different online run whose name is taken is listed as
+`<run>@online-results`.
 
 `cmd report` summarizes `games.jsonl` files, or every one under the directories
-it is given (all of `results/` by default): an overview per scenario, then a
+it is given (all of `-source` by default): an overview per scenario, then a
 panel per player and instruction set with a row per game. Records of the same
 player, instructions and scenario are pooled, even across runs.
 

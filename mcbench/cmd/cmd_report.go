@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"mcbench/benchmark"
+	"mcbench/trace"
 	"mcbench/ui"
 )
 
@@ -27,7 +28,7 @@ func cmdAnalyze(args []string) error {
 
 // showRecords reads games.jsonl files and writes them with show. Each
 // argument is a games file or a directory searched recursively for them; with
-// none, every run under the results directory is read.
+// none, every run under the directories of -source is read.
 func showRecords(name, usage string, args []string, show func(io.Writer, []benchmark.Record, ui.Theme)) error {
 	flags, cfg, err := newFlagSet(name, args)
 	if err != nil {
@@ -37,27 +38,59 @@ func showRecords(name, usage string, args []string, show func(io.Writer, []bench
 		flags.Output().Write([]byte(usage))
 		flags.PrintDefaults()
 	}
+	source := sourceFlag(flags, cfg)
 	flags.Parse(args)
 	paths := flags.Args()
+	var files []string
 	if len(paths) == 0 {
-		paths = []string{cfg.Run.Out}
-	}
-	var all []benchmark.Record
-	for _, p := range paths {
-		files, err := gamesFiles(p)
+		dirs, err := resultDirs(*source, cfg.Run.Out, store(cfg))
 		if err != nil {
 			return err
 		}
-		for _, f := range files {
-			recs, err := benchmark.ReadRecords(f)
-			if err != nil {
-				return err
-			}
-			all = append(all, recs...)
+		if files, err = sourceGamesFiles(dirs); err != nil {
+			return err
 		}
+	}
+	for _, p := range paths {
+		found, err := gamesFiles(p)
+		if err != nil {
+			return err
+		}
+		files = append(files, found...)
+	}
+	var all []benchmark.Record
+	for _, f := range files {
+		recs, err := benchmark.ReadRecords(f)
+		if err != nil {
+			return err
+		}
+		all = append(all, recs...)
 	}
 	show(os.Stdout, all, terminalTheme(os.Stdout))
 	return nil
+}
+
+// sourceGamesFiles skips a later dir's copy of a run an earlier dir published.
+func sourceGamesFiles(dirs []string) ([]string, error) {
+	var out []string
+	published := map[string]bool{}
+	for _, dir := range dirs {
+		files, err := gamesFiles(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range files {
+			if !published[filepath.Base(filepath.Dir(f))] {
+				out = append(out, f)
+			}
+		}
+		for _, f := range files {
+			if name := trace.Published(filepath.Dir(f)); name != "" {
+				published[name] = true
+			}
+		}
+	}
+	return out, nil
 }
 
 // gamesFiles returns path itself when it is a file, else every games.jsonl
