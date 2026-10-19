@@ -1,0 +1,55 @@
+{
+  "runner": "Krzysztof Nasuta",
+  "started": "2026-10-17T20:23:47Z",
+  "finished": "2026-10-17T20:28:39Z",
+  "commit": "2ae34c1f67711af578558a782bd4fd5ef2f791dc",
+  "dirty": true,
+  "machine": {
+    "hostname": "nasusPC",
+    "os": "Fedora Linux 44 (KDE Plasma Desktop Edition)",
+    "kernel": "7.2.10-200.fc44.x86_64",
+    "arch": "amd64",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor",
+    "cores": 12,
+    "memory_mb": 32006,
+    "gpus": [
+      "Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] (rev c4)"
+    ],
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "model": "gemini-3.8-flash-high",
+    "api": "openai",
+    "server": "http://localhost:1234/v1",
+    "temperature": -1.0,
+    "max_tokens": 32768,
+    "retries": 3,
+    "reasoning_effort": "medium",
+    "reasoning_budget": 2048,
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench",
+      "algorithm"
+    ],
+    "seeds": 5,
+    "samples": 1,
+    "parallel": 0,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "spider-man-vs-rhino"
+  ],
+  "planned_games": 5,
+  "statuses": {
+    "lost": 2,
+    "won": 3
+  }
+}
