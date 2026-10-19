@@ -38,6 +38,7 @@ type runSettings struct {
 	instrDir    string
 	instr       []string
 	seeds       int
+	pick        string
 	samples     int
 	parallel    int
 	logLevel    string
@@ -93,6 +94,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
 	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none)")
 	seeds := fs.Int("seeds", cfg.Run.Seeds, "play only the first N seeds of each scenario (0 = all)")
+	pick := fs.String("pick", "", "comma-separated seeds to play, e.g. to repeat games that hit an infra error (default: all)")
 	samples := fs.Int("samples", cfg.Run.Samples, "games per seed (more than 1 whenever sampling is not deterministic)")
 	parallel := fs.Int("parallel", cfg.Run.Parallel, "concurrent games")
 	out := fs.String("out", cfg.Run.Out, "results directory")
@@ -113,7 +115,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, headers: headers, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
-		seeds: *seeds, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish,
+		seeds: *seeds, pick: *pick, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish,
 	}
 }
 
@@ -185,12 +187,16 @@ func publishRun(dir string, info runInfo, st online.Store) {
 // the name so runs of one model that differ only in them stay apart; a run
 // started in the same second as one of the same name gets a -2, -3, ... suffix.
 func prepareRunDir(o runSettings, p player.Player) (*os.File, benchmark.Config, error) {
+	pick, err := parseSeeds(o.pick)
+	if err != nil {
+		return nil, benchmark.Config{}, err
+	}
 	name := time.Now().UTC().Format(runIDLayout) + "-" + sanitize(p.Name())
 	if len(o.instr) > 0 {
 		name += runNameSep + sanitize(strings.Join(o.instr, "+"))
 	}
 	dir, err := newRunDir(o.out, name)
-	runCfg := benchmark.Config{Seeds: o.seeds, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir), RunName: filepath.Base(dir)}
+	runCfg := benchmark.Config{Seeds: o.seeds, Pick: pick, Samples: o.samples, Parallel: o.parallel, TraceDir: filepath.Join(dir, liveSubdir), RunName: filepath.Base(dir)}
 	if err != nil {
 		return nil, runCfg, err
 	}

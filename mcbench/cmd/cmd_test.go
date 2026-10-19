@@ -123,3 +123,15 @@ func TestResolveServer(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSeeds(t *testing.T) {
+	if got, err := parseSeeds("1, 2,10"); err != nil || len(got) != 3 || got[2] != 10 {
+		t.Errorf("got %v, %v", got, err)
+	}
+	if got, err := parseSeeds(""); err != nil || got != nil {
+		t.Errorf("empty: got %v, %v", got, err)
+	}
+	if _, err := parseSeeds("1,x"); err == nil {
+		t.Error("bad seed accepted")
+	}
+}

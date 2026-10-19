@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"mcbench/ui"
@@ -42,4 +44,20 @@ func terminalTheme(f *os.File) ui.Theme {
 	fi, err := f.Stat()
 	tty := err == nil && fi.Mode()&os.ModeCharDevice != 0
 	return ui.Theme{Color: tty && os.Getenv("NO_COLOR") == ""}
+}
+
+// parseSeeds reads a comma-separated list of seeds; empty means none.
+func parseSeeds(s string) ([]uint64, error) {
+	if s == "" {
+		return nil, nil
+	}
+	var out []uint64
+	for _, f := range strings.Split(s, ",") {
+		n, err := strconv.ParseUint(strings.TrimSpace(f), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("-pick: %q is not a seed", f)
+		}
+		out = append(out, n)
+	}
+	return out, nil
 }
