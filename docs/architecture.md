@@ -207,7 +207,11 @@ caller builds; it reads no files and no environment variables. It:
 - with `-stream` asks for the reply as a stream and assembles it into the same
   reply. A gateway that cuts a request after about two minutes (HTTP 524) kills
   a slow reasoning model on a long conversation, and every retry takes as long;
-  a stream keeps the connection alive. Scoring and traces are unchanged.
+  a stream keeps the connection alive. Scoring and traces are unchanged. The
+  flag works for every `-api`: chat completions assembles the deltas, Responses
+  takes the response in its last event, Messages rebuilds the content blocks
+  (thinking keeps its signature), and Gemini joins the chunks of the candidate.
+  The event reader is shared (`inference.PostSSE`).
 
 `config.yaml` (loaded by `cmd`, flags override) holds the endpoint, sampling,
 run size and scoring weights.

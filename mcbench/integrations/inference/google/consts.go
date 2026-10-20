@@ -9,6 +9,8 @@ const (
 
 	pathModels   = "/models/"
 	methodSuffix = ":generateContent"
+	// methodStreamSuffix asks for server-sent events, one response chunk each.
+	methodStreamSuffix = ":streamGenerateContent?alt=sse"
 
 	roleUser  = "user"
 	roleModel = "model"

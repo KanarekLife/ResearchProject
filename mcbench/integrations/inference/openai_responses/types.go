@@ -14,6 +14,9 @@ type Config struct {
 	// ReasoningEffort is a named thinking level (e.g. "high"); empty leaves the
 	// model's default.
 	ReasoningEffort string
+	// Stream asks for the reply as a stream, so that a gateway that cuts a
+	// quiet request after a couple of minutes lets a slow reply through.
+	Stream bool
 }
 
 // inputItem is one item of the input list: a message, a function call the
@@ -63,4 +66,11 @@ type response struct {
 			ReasoningTokens int64 `json:"reasoning_tokens"`
 		} `json:"output_tokens_details"`
 	} `json:"usage"`
+}
+
+// streamEvent is the part of a stream event we read: its type, and for the
+// last one the whole response.
+type streamEvent struct {
+	Type     string          `json:"type"`
+	Response json.RawMessage `json:"response"`
 }

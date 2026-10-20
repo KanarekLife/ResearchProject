@@ -20,6 +20,7 @@ const (
 	blockToolResult = "tool_result"
 	blockThinking   = "thinking"
 
+	fieldStream      = "stream"
 	fieldModel       = "model"
 	fieldMaxTokens   = "max_tokens"
 	fieldTemperature = "temperature"

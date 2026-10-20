@@ -114,7 +114,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	fs.Var(headers, "header", "extra request header \"Name: value\"; repeatable; {run} and {game} in the value are filled per game")
 	effort := fs.String("reasoning-effort", cfg.Inference.ReasoningEffort, "reasoning level for hosted models, e.g. low, medium, high (empty: provider default)")
 	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
-	stream := fs.Bool("stream", cfg.Inference.Stream, "openai protocol: stream the replies, for gateways that cut a slow request after a couple of minutes")
+	stream := fs.Bool("stream", cfg.Inference.Stream, "stream the replies (every -api), for gateways that cut a slow request after a couple of minutes")
 	maxFailures := fs.Int("max-failures", cfg.Player.MaxFailures, "failed model replies (no tool call or a tool error) allowed per decision")
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
 	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none; none by default for -player systemone, which takes rules_short)")

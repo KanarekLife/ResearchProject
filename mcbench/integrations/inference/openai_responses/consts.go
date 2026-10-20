@@ -10,6 +10,7 @@ const (
 	headerAuthorization = "Authorization"
 	bearerPrefix        = "Bearer "
 
+	fieldStream          = "stream"
 	fieldModel           = "model"
 	fieldInstructions    = "instructions"
 	fieldInput           = "input"
@@ -38,6 +39,11 @@ const (
 	contentOutputText      = "output_text"
 
 	includeEncryptedReasoning = "reasoning.encrypted_content"
+
+	eventCompleted  = "response.completed"
+	eventIncomplete = "response.incomplete"
+	eventFailed     = "response.failed"
+	eventError      = "error"
 
 	statusIncomplete      = "incomplete"
 	reasonMaxOutputTokens = "max_output_tokens"

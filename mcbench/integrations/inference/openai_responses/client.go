@@ -30,6 +30,9 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	}
 	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
 	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+		if c.cfg.Stream {
+			return c.stream(ctx, url, headers, body)
+		}
 		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {
 			return inference.Reply{}, err
@@ -38,12 +41,41 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	})
 }
 
+// stream reads a streamed reply. Its last event carries the whole response, so
+// the deltas before it are not needed.
+func (c *Client) stream(ctx context.Context, url string, headers map[string]string, body []byte) (inference.Reply, error) {
+	var final json.RawMessage
+	err := inference.PostSSE(ctx, url, headers, body, func(_ string, data []byte) error {
+		var ev streamEvent
+		if err := json.Unmarshal(data, &ev); err != nil {
+			return nil // [DONE] and the like
+		}
+		switch ev.Type {
+		case eventCompleted, eventIncomplete:
+			final = ev.Response
+		case eventFailed, eventError:
+			return fmt.Errorf("responses stream failed: %.300s", data)
+		}
+		return nil
+	})
+	if err != nil {
+		return inference.Reply{}, err
+	}
+	if final == nil {
+		return inference.Reply{}, fmt.Errorf("responses stream ended before the response completed")
+	}
+	return decodeReply(final)
+}
+
 func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[string]any {
 	// Nothing is stored server side, so the reasoning comes back encrypted
 	// and is returned with the reply it belongs to on every later request.
 	body := map[string]any{
 		fieldModel: c.cfg.Model, fieldMaxOutputTokens: c.cfg.MaxTokens, fieldStore: false,
 		fieldInclude: []string{includeEncryptedReasoning},
+	}
+	if c.cfg.Stream {
+		body[fieldStream] = true
 	}
 	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature
