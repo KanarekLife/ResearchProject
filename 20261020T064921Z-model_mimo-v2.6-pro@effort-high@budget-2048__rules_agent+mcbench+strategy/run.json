@@ -1,0 +1,77 @@
+{
+  "runner": "Krzysztof Nasuta",
+  "started": "2026-10-20T06:49:21Z",
+  "finished": "2026-10-20T11:13:49.234479367Z",
+  "commit": "0c1851045f05c2aad5c85827049223c5eb776548",
+  "dirty": true,
+  "machine": {
+    "hostname": "nasusPC",
+    "os": "Fedora Linux 44 (KDE Plasma Desktop Edition)",
+    "kernel": "7.2.10-200.fc44.x86_64",
+    "arch": "amd64",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor",
+    "cores": 12,
+    "memory_mb": 32006,
+    "gpus": [
+      "Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] (rev c4)"
+    ],
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "model": "mimo-v2.6-pro",
+    "api": "openai",
+    "server": "https://opencode.ai/zen/go/v1",
+    "temperature": -1,
+    "max_tokens": 32768,
+    "retries": 3,
+    "reasoning_effort": "high",
+    "reasoning_budget": 2048,
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench",
+      "strategy"
+    ],
+    "seeds": 10,
+    "samples": 1,
+    "parallel": 10,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "spider-man-vs-rhino"
+  ],
+  "planned_games": 10,
+  "statuses": {
+    "lost": 5,
+    "won": 5
+  },
+  "resumed": [
+    {
+      "time": "2026-10-20T08:39:53.476104587Z",
+      "server": "https://api.commandcode.ai/provider/v1",
+      "commit": "0c1851045f05c2aad5c85827049223c5eb776548"
+    },
+    {
+      "time": "2026-10-20T08:54:32.844789852Z",
+      "server": "https://api.commandcode.ai/provider/v1",
+      "commit": "ac32f628384a8466eecf143384937b75fb288226"
+    },
+    {
+      "time": "2026-10-20T09:21:05.261344783Z",
+      "server": "https://api.commandcode.ai/provider/v1",
+      "commit": "8a1ef09d448120024916eb7c82fbb8102aee8baa"
+    },
+    {
+      "time": "2026-10-20T09:55:37.503477102Z",
+      "server": "https://api.commandcode.ai/provider/v1",
+      "commit": "8a1ef09d448120024916eb7c82fbb8102aee8baa"
+    }
+  ]
+}
