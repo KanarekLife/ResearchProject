@@ -203,7 +203,11 @@ caller builds; it reads no files and no environment variables. It:
   Gemini and Messages drop the budget when a level is set, and Responses
   takes no budget;
 - reads reasoning from either `reasoning_content` or `reasoning`, and reports
-  cached and reasoning tokens when the provider includes them.
+  cached and reasoning tokens when the provider includes them;
+- with `-stream` asks for the reply as a stream and assembles it into the same
+  reply. A gateway that cuts a request after about two minutes (HTTP 524) kills
+  a slow reasoning model on a long conversation, and every retry takes as long;
+  a stream keeps the connection alive. Scoring and traces are unchanged.
 
 `config.yaml` (loaded by `cmd`, flags override) holds the endpoint, sampling,
 run size and scoring weights.
