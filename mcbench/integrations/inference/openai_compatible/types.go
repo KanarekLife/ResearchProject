@@ -25,6 +25,10 @@ type Config struct {
 	// ReasoningBudget caps thinking tokens on llama.cpp-style local servers;
 	// 0 leaves the server default.
 	ReasoningBudget int
+	// Stream asks for the reply as a stream and assembles it. A gateway that
+	// cuts a request after a couple of minutes lets a stream through, which
+	// matters for slow reasoning on a long conversation.
+	Stream bool
 }
 
 // errTokenParam means the provider rejected max_tokens.
@@ -50,17 +54,19 @@ type replyResponse struct {
 		Message      apiMessage `json:"message"`
 		FinishReason string     `json:"finish_reason"`
 	} `json:"choices"`
-	Usage struct {
-		PromptTokens         int64 `json:"prompt_tokens"`
-		CompletionTokens     int64 `json:"completion_tokens"`
-		PromptCacheHitTokens int64 `json:"prompt_cache_hit_tokens"` // DeepSeek
-		PromptTokensDetails  struct {
-			CachedTokens int64 `json:"cached_tokens"`
-		} `json:"prompt_tokens_details"` // OpenAI
-		CompletionTokensDetails struct {
-			ReasoningTokens int64 `json:"reasoning_tokens"`
-		} `json:"completion_tokens_details"`
-	} `json:"usage"`
+	Usage apiUsage `json:"usage"`
+}
+
+type apiUsage struct {
+	PromptTokens         int64 `json:"prompt_tokens"`
+	CompletionTokens     int64 `json:"completion_tokens"`
+	PromptCacheHitTokens int64 `json:"prompt_cache_hit_tokens"` // DeepSeek
+	PromptTokensDetails  struct {
+		CachedTokens int64 `json:"cached_tokens"`
+	} `json:"prompt_tokens_details"` // OpenAI
+	CompletionTokensDetails struct {
+		ReasoningTokens int64 `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details"`
 }
 
 // apiMessage decodes a provider message. Providers disagree on the field name

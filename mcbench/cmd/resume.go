@@ -51,7 +51,7 @@ func (rs *resumeState) overlay(cfg config) config {
 	s := rs.info.Settings
 	cfg.Inference.API, cfg.Inference.Server, cfg.Inference.Model = s.API, s.Server, s.Model
 	cfg.Inference.Temperature, cfg.Inference.MaxTokens, cfg.Inference.Retries = s.Temperature, s.MaxTokens, s.Retries
-	cfg.Inference.ReasoningEffort, cfg.Inference.ReasoningBudget = s.ReasoningEffort, s.ReasoningBudget
+	cfg.Inference.ReasoningEffort, cfg.Inference.ReasoningBudget, cfg.Inference.Stream = s.ReasoningEffort, s.ReasoningBudget, s.Stream
 	cfg.Player.Name, cfg.Player.MaxFailures, cfg.Player.Instructions = s.Player, s.MaxFailures, s.Instructions
 	cfg.Run.Seeds, cfg.Run.Samples, cfg.Run.Parallel = s.Seeds, s.Samples, s.Parallel
 	return cfg

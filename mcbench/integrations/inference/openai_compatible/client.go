@@ -79,6 +79,9 @@ func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []
 		return inference.Reply{}, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK && c.cfg.Stream {
+		return decodeStream(resp.Body)
+	}
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return inference.Reply{}, err
@@ -110,6 +113,10 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCo
 		// thinking_budget_tokens alias.
 		body[fieldReasoningBudget] = c.cfg.ReasoningBudget
 		body[fieldThinkingBudget] = c.cfg.ReasoningBudget
+	}
+	if c.cfg.Stream {
+		body[fieldStream] = true
+		body[fieldStreamOptions] = map[string]any{fieldIncludeUsage: true}
 	}
 	if len(tools) > 0 {
 		fns := make([]any, len(tools))

@@ -21,7 +21,7 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 		return openaicompatible.New(openaicompatible.Config{
 			BaseURL: o.server, APIKey: apiKey, Model: o.modelID,
 			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
-			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
+			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	case apiGoogle:
 		return google.New(google.Config{

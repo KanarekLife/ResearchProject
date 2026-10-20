@@ -31,6 +31,8 @@ type inferenceConfig struct {
 	// ReasoningEffort and ReasoningBudget are sent only when set.
 	ReasoningEffort string `yaml:"reasoning_effort"`
 	ReasoningBudget int    `yaml:"reasoning_budget"`
+	// Stream asks the openai protocol for streamed replies.
+	Stream bool `yaml:"stream"`
 }
 
 type playerConfig struct {
