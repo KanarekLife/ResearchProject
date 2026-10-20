@@ -17,6 +17,7 @@ const (
 // Player names accepted by -player.
 const (
 	playerModel     = "model"
+	playerSystemOne = "systemone"
 	playerHeuristic = "heuristic"
 	playerRandom    = "random"
 	playerFirst     = "first"
@@ -29,6 +30,9 @@ const (
 	apiAnthropic = "anthropic"
 	apiResponses = "responses"
 )
+
+// defaultRecentEvents is how many log lines the systemone player sends.
+const defaultRecentEvents = 10
 
 // randomPlayerSeed makes the random baseline reproducible.
 const randomPlayerSeed = 1

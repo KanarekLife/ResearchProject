@@ -10,6 +10,7 @@ import (
 	"mcbench/integrations/inference/google"
 	openaicompatible "mcbench/integrations/inference/openai_compatible"
 	openairesponses "mcbench/integrations/inference/openai_responses"
+	"mcbench/integrations/systemone"
 )
 
 // newClient builds the inference client for the -api protocol. An empty
@@ -41,6 +42,20 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 		}), nil
 	}
 	return nil, fmt.Errorf("unknown -api %q: use %s, %s, %s or %s", o.api, apiOpenAI, apiResponses, apiGoogle, apiAnthropic)
+}
+
+// systemOneClient builds the System One client. The server is -server or the
+// server_env variable; without either it is TypeSafe's own, never the local
+// chat default.
+func systemOneClient(o runSettings, apiKey string) *systemone.Client {
+	server := o.server
+	if server == defaultServer {
+		server = ""
+	}
+	return systemone.New(systemone.Config{
+		BaseURL: orDefault(server, systemone.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
+		Retries: o.retries, Headers: o.headers,
+	})
 }
 
 // sentReasoning is the reasoning setting the -api client actually sends, so

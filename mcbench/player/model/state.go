@@ -35,3 +35,7 @@ func compactState(v session.View) stateView {
 		AccelerationTokens: v.AccelerationTokens, NextCardCostReduced: v.NextCardCostReduced,
 	}
 }
+
+// BoardState is the board as get_state shows it, for players that are not
+// driven through the tools.
+func BoardState(s *session.Session) any { return compactState(s.View()) }

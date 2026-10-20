@@ -18,6 +18,7 @@ import (
 	"mcbench/benchmark"
 	"mcbench/constants"
 	"mcbench/game/scenario"
+	"mcbench/integrations/inference"
 	"mcbench/online"
 	"mcbench/player"
 	"mcbench/player/instruction"
@@ -25,28 +26,29 @@ import (
 
 // runSettings are the parsed flags of `mcbench run`.
 type runSettings struct {
-	player      string
-	modelID     string
-	api         string
-	server      string
-	temp        float64
-	maxTokens   int
-	retries     int
-	headers     map[string]string
-	effort      string
-	budget      int
-	maxFailures int
-	instrDir    string
-	instr       []string
-	seeds       int
-	pick        string
-	samples     int
-	parallel    int
-	logLevel    string
-	out         string
-	publish     bool
-	resume      string // run directory to continue
-	label       string // the model label of a resumed run
+	player       string
+	modelID      string
+	api          string
+	server       string
+	temp         float64
+	maxTokens    int
+	retries      int
+	headers      map[string]string
+	effort       string
+	budget       int
+	maxFailures  int
+	instrDir     string
+	instr        []string
+	seeds        int
+	pick         string
+	samples      int
+	parallel     int
+	logLevel     string
+	out          string
+	publish      bool
+	recentEvents int
+	resume       string // run directory to continue
+	label        string // the model label of a resumed run
 }
 
 func cmdRun(args []string) error {
@@ -76,8 +78,8 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.player == playerModel && o.modelID == "" {
-		return fmt.Errorf("-model is required for -player model")
+	if (o.player == playerModel || o.player == playerSystemOne) && o.modelID == "" {
+		return fmt.Errorf("-model is required for -player %s", o.player)
 	}
 	if rs != nil {
 		if err := rs.check(instr); err != nil {
@@ -85,11 +87,13 @@ func cmdRun(args []string) error {
 		}
 	}
 	apiKey := os.Getenv(cfg.Inference.APIKeyEnv)
-	client, err := newClient(o, apiKey)
-	if err != nil {
-		return err
+	var client inference.Client
+	if o.player != playerSystemOne {
+		if client, err = newClient(o, apiKey); err != nil {
+			return err
+		}
 	}
-	p, err := buildPlayer(o, client, instr)
+	p, err := buildPlayer(o, client, systemOneClient(o, apiKey), instr)
 	if err != nil {
 		return err
 	}
@@ -98,7 +102,7 @@ func cmdRun(args []string) error {
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
 	l := scenarioFlags(fs)
-	playerName := fs.String("player", cfg.Player.Name, "player: model, heuristic, random, first")
+	playerName := fs.String("player", cfg.Player.Name, "player: model, systemone (a System One classifier, see -model and -server), heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
 	api := fs.String("api", cfg.Inference.API, "API protocol: openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent), anthropic (Messages)")
 	server := fs.String("server", cfg.Inference.Server, "API base URL (default: the server_env variable, then the config; openai is local LM Studio by default, the other protocols use their provider's own URL)")
@@ -111,23 +115,32 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	budget := fs.Int("reasoning-budget", cfg.Inference.ReasoningBudget, "max thinking tokens for llama.cpp-style servers, e.g. 4096 (0: server default)")
 	maxFailures := fs.Int("max-failures", cfg.Player.MaxFailures, "failed model replies (no tool call or a tool error) allowed per decision")
 	instrDir := fs.String("instructions-dir", cfg.Player.InstructionsDir, "instruction documents directory")
-	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none)")
+	instrNames := fs.String("instructions", strings.Join(cfg.Player.Instructions, ","), "comma-separated instruction documents (empty for none; none by default for -player systemone, which takes rules_short)")
 	seeds := fs.Int("seeds", cfg.Run.Seeds, "play only the first N seeds of each scenario (0 = all)")
 	pick := fs.String("pick", "", "comma-separated seeds to play, e.g. to repeat games that hit an infra error (default: all)")
 	samples := fs.Int("samples", cfg.Run.Samples, "games per seed (more than 1 whenever sampling is not deterministic)")
 	parallel := fs.Int("parallel", cfg.Run.Parallel, "concurrent games")
 	out := fs.String("out", cfg.Run.Out, "results directory")
 	publish := fs.Bool("publish", cfg.Online.Publish, "publish the run to the "+cfg.Online.Branch+" branch once it finishes with no infra_error game")
+	recentEvents := fs.Int("recent-events", defaultRecentEvents, "systemone player: log lines sent with each decision (0: the whole log)")
 	fs.String("resume", "", "continue the run in this results directory: its finished games are kept, the others continue from their traces (the run's own settings apply unless a flag changes them, e.g. -server)")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
 	fs.Parse(args)
-	serverSet := false
-	fs.Visit(func(f *flag.Flag) { serverSet = serverSet || f.Name == "server" })
+	serverSet, instrSet := false, false
+	fs.Visit(func(f *flag.Flag) {
+		serverSet = serverSet || f.Name == "server"
+		instrSet = instrSet || f.Name == "instructions"
+	})
 	*server = resolveServer(*api, *server, serverSet, cfg.Inference)
 
 	*effort, *budget = sentReasoning(*api, *effort, *budget)
 
 	var instr []string
+	// The System One classifier cannot take the long documents, so it gets
+	// none unless asked.
+	if *playerName == playerSystemOne && !instrSet {
+		*instrNames = ""
+	}
 	if *instrNames != "" {
 		instr = strings.Split(*instrNames, ",")
 	}
@@ -135,7 +148,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
 		temp: *temp, maxTokens: *maxTokens, retries: *retries, headers: headers, effort: *effort, budget: *budget, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
-		seeds: *seeds, pick: *pick, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish,
+		seeds: *seeds, pick: *pick, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish, recentEvents: *recentEvents,
 	}
 }
 
