@@ -21,24 +21,24 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 		return openaicompatible.New(openaicompatible.Config{
 			BaseURL: o.server, APIKey: apiKey, Model: o.modelID,
 			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
-			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
+			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	case apiGoogle:
 		return google.New(google.Config{
 			BaseURL: orDefault(o.server, google.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
 			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
-			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
+			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	case apiResponses:
 		return openairesponses.New(openairesponses.Config{
 			BaseURL: orDefault(o.server, openairesponses.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers, ReasoningEffort: o.effort,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers, ReasoningEffort: o.effort, Stream: o.stream,
 		}), nil
 	case apiAnthropic:
 		return anthropic.New(anthropic.Config{
 			BaseURL: orDefault(o.server, anthropic.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
 			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
-			ReasoningEffort: o.effort, ReasoningBudget: o.budget,
+			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	}
 	return nil, fmt.Errorf("unknown -api %q: use %s, %s, %s or %s", o.api, apiOpenAI, apiResponses, apiGoogle, apiAnthropic)

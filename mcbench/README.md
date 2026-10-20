@@ -88,7 +88,7 @@ OPENAI_API_KEY=your-key
 
 The `.env` file is ignored by Git. Do not commit API keys.
 
-- `-player model|systemone|heuristic|random|first` (`systemone` asks a System One classifier, e.g. `-model openjev-latest`, to pick an option from the board; it gets no instruction documents unless `-instructions` names some, e.g. `rules_short`), `-model`, `-server`, `-retries`,
+- `-player model|systemone|heuristic|random|first` (`systemone` asks a System One classifier, e.g. `-model openjev-latest`, to pick an option from the board; it gets no instruction documents unless `-instructions` names some, e.g. `rules_short`), `-model`, `-server`, `-retries`, `-stream` (stream the replies of any `-api`, for gateways that cut slow requests),
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)

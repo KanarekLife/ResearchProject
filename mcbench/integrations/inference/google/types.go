@@ -16,6 +16,9 @@ type Config struct {
 	// model's default.
 	ReasoningEffort string
 	ReasoningBudget int
+	// Stream asks for the reply as a stream, so that a gateway that cuts a
+	// quiet request after a couple of minutes lets a slow reply through.
+	Stream bool
 }
 
 type content struct {

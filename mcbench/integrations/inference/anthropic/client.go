@@ -26,6 +26,9 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	headers := map[string]string{headerAPIKey: c.cfg.APIKey, headerVersion: apiVersion}
 	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
 	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+		if c.cfg.Stream {
+			return stream(ctx, url, headers, body)
+		}
 		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {
 			return inference.Reply{}, err
@@ -41,6 +44,9 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool) map[stri
 	body := map[string]any{
 		fieldModel: c.cfg.Model, fieldMaxTokens: c.cfg.MaxTokens,
 		fieldCacheControl: map[string]any{fieldType: cacheEphemeral},
+	}
+	if c.cfg.Stream {
+		body[fieldStream] = true
 	}
 	if c.cfg.Temperature >= 0 {
 		body[fieldTemperature] = c.cfg.Temperature

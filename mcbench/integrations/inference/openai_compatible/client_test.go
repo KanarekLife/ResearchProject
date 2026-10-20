@@ -170,3 +170,49 @@ func TestCompleteDropsReasoningWhenRejected(t *testing.T) {
 		t.Errorf("%d requests, want 3", len(bodies))
 	}
 }
+
+// A streamed reply is assembled into the reply a plain request returns: text,
+// reasoning, tool-call fragments by index, and the usage of the last event.
+func TestStreamAssemblesTheReply(t *testing.T) {
+	c := serve(t, 0, func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		if body["stream"] != true {
+			t.Errorf("request did not ask for a stream: %v", body["stream"])
+		}
+		for _, ev := range []string{
+			`{"choices":[{"delta":{"role":"assistant"}}]}`,
+			`{"choices":[{"delta":{"reasoning_content":"think "}}]}`,
+			`{"choices":[{"delta":{"reasoning_content":"hard"}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"choose_option","arguments":"{\"option"}}]}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_id\":2}"}}]}}]}`,
+			`{"choices":[{"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":10,"completion_tokens":7,"completion_tokens_details":{"reasoning_tokens":5}}}`,
+		} {
+			fmt.Fprintf(w, "data: %s\n\n", ev)
+		}
+		fmt.Fprint(w, ": keep-alive\n\ndata: [DONE]\n\n")
+	})
+	c.cfg.Stream = true
+	r, err := complete(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := r.Message.ToolCalls
+	if len(call) != 1 || call[0].ID != "c1" || call[0].Function.Name != "choose_option" || call[0].Function.Arguments != `{"option_id":2}` {
+		t.Errorf("tool calls %+v", call)
+	}
+	if r.Message.Reasoning != "think hard" || r.InputTokens != 10 || r.OutputTokens != 7 || r.ReasoningTokens != 5 {
+		t.Errorf("reply %+v", r)
+	}
+}
+
+// A stream that stops before a finish reason was cut off and is not a reply.
+func TestStreamCutOffIsAnError(t *testing.T) {
+	c := serve(t, 0, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"par\"}}]}\n\n")
+	})
+	c.cfg.Stream = true
+	if _, err := complete(c); err == nil {
+		t.Error("a stream with no finish reason decoded without error")
+	}
+}

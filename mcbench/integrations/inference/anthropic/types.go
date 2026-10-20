@@ -17,6 +17,9 @@ type Config struct {
 	// ReasoningBudget is a thinking-token budget for models that take one
 	// (at least 1024); used only when ReasoningEffort is empty.
 	ReasoningBudget int
+	// Stream asks for the reply as a stream, so that a gateway that cuts a
+	// quiet request after a couple of minutes lets a slow reply through.
+	Stream bool
 }
 
 type turn struct {
@@ -38,10 +41,39 @@ type block struct {
 type response struct {
 	Content    json.RawMessage `json:"content"`
 	StopReason string          `json:"stop_reason"`
-	Usage      struct {
-		InputTokens         int64 `json:"input_tokens"`
-		OutputTokens        int64 `json:"output_tokens"`
-		CacheReadTokens     int64 `json:"cache_read_input_tokens"`
-		CacheCreationTokens int64 `json:"cache_creation_input_tokens"`
-	} `json:"usage"`
+	Usage      usage           `json:"usage"`
+}
+
+type usage struct {
+	InputTokens         int64 `json:"input_tokens"`
+	OutputTokens        int64 `json:"output_tokens"`
+	CacheReadTokens     int64 `json:"cache_read_input_tokens"`
+	CacheCreationTokens int64 `json:"cache_creation_input_tokens"`
+}
+
+// streamEvent is the part of a stream event we read.
+type streamEvent struct {
+	Type         string         `json:"type"`
+	Index        int            `json:"index"`
+	ContentBlock map[string]any `json:"content_block"`
+	Message      struct {
+		Usage usage `json:"usage"`
+	} `json:"message"`
+	Delta struct {
+		Type        string `json:"type"`
+		Text        string `json:"text"`
+		Thinking    string `json:"thinking"`
+		Signature   string `json:"signature"`
+		PartialJSON string `json:"partial_json"`
+		StopReason  string `json:"stop_reason"`
+	} `json:"delta"`
+	Usage usage `json:"usage"`
+}
+
+// streamResponse is a response rebuilt from a stream, in the shape decodeReply
+// reads.
+type streamResponse struct {
+	Content    json.RawMessage `json:"content"`
+	StopReason string          `json:"stop_reason"`
+	Usage      usage           `json:"usage"`
 }

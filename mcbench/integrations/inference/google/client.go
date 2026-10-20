@@ -22,10 +22,17 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	if err != nil {
 		return inference.Reply{}, err
 	}
-	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathModels + c.cfg.Model + methodSuffix
+	method := methodSuffix
+	if c.cfg.Stream {
+		method = methodStreamSuffix
+	}
+	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathModels + c.cfg.Model + method
 	headers := map[string]string{headerAPIKey: c.cfg.APIKey}
 	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
 	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+		if c.cfg.Stream {
+			return stream(ctx, url, headers, body)
+		}
 		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {
 			return inference.Reply{}, err
@@ -138,6 +145,11 @@ func decodeReply(raw []byte) (inference.Reply, error) {
 	if err := json.Unmarshal(raw, &r); err != nil {
 		return inference.Reply{}, fmt.Errorf("decoding generateContent response: %w", err)
 	}
+	return replyFrom(r, raw)
+}
+
+// replyFrom is the reply of a decoded response; raw is only quoted in errors.
+func replyFrom(r response, raw []byte) (inference.Reply, error) {
 	if len(r.Candidates) == 0 {
 		return inference.Reply{}, fmt.Errorf("response has no candidates (block reason %q): %.300s", r.PromptFeedback.BlockReason, raw)
 	}
