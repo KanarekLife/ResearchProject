@@ -21,6 +21,8 @@ import (
 // Session is one game in progress.
 type Session struct {
 	g      *engine.Game
+	sc     *scenario.Scenario
+	seed   uint64
 	opts   Options
 	log    *slog.Logger
 	stages int // villain stages at setup
@@ -42,7 +44,7 @@ func New(sc *scenario.Scenario, seed uint64, opts Options) (*Session, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	s := &Session{g: g, opts: opts, log: logger, stages: 1 + len(g.S.VillainStages)}
+	s := &Session{g: g, sc: sc, seed: seed, opts: opts, log: logger, stages: 1 + len(g.S.VillainStages)}
 	g.Logger = logger
 	g.OnPhase = func(p engine.Phase, round int) {
 		if opts.MaxRounds > 0 && p == engine.PhasePlayer && round > opts.MaxRounds {
@@ -106,6 +108,45 @@ func (s *Session) Decision() *Decision {
 		out.Options = append(out.Options, Option{ID: o.ID, Text: o.Text, Key: o.FullKey()})
 	}
 	return out
+}
+
+// Preview is the decision that follows option id, or nil when the game ends
+// there. It changes nothing: the game is replayed from the start on a copy and
+// the choice is made there, so it costs a replay per call.
+func (s *Session) Preview(id int) (*Decision, error) {
+	opts := s.opts
+	opts.Trace, opts.Logger = nil, slog.New(slog.DiscardHandler)
+	c, err := New(s.sc, s.seed, opts)
+	if err != nil {
+		return nil, err
+	}
+	for _, past := range s.Choices {
+		if past.Auto && !s.opts.KeepForced {
+			continue // the copy applies forced choices itself
+		}
+		if err := c.chooseKey(past.Key); err != nil {
+			return nil, fmt.Errorf("replaying %q: %w", past.Key, err)
+		}
+	}
+	if _, err := c.Choose(id, ""); err != nil {
+		return nil, err
+	}
+	return c.Decision(), nil
+}
+
+// chooseKey makes the option with the given engine key.
+func (s *Session) chooseKey(key string) error {
+	d := s.Decision()
+	if d == nil {
+		return fmt.Errorf("the game is over")
+	}
+	for _, o := range d.Options {
+		if o.Key == key {
+			_, err := s.Choose(o.ID, "")
+			return err
+		}
+	}
+	return fmt.Errorf("%q is not offered", key)
 }
 
 // Choose answers the current decision with a shown option id and runs the

@@ -1,6 +1,7 @@
 package session_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -136,5 +137,30 @@ func TestForcedDecisionsAreAutoResolved(t *testing.T) {
 		if c.Auto {
 			t.Fatal("KeepForced still auto-resolved a decision")
 		}
+	}
+}
+
+// Preview shows the decision an option leads to and leaves the game as it was.
+func TestPreviewDoesNotChangeTheGame(t *testing.T) {
+	s := newSession(t, session.Options{})
+	for s.Decision().Kind != constants.KindTurn {
+		s.Choose(len(s.Decision().Options), "") // the mulligan's last option keeps the hand
+	}
+	before, n := keys(s.Decision()), len(s.Choices)
+	payments := 0
+	for _, o := range s.Decision().Options {
+		next, err := s.Preview(o.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if next != nil && next.Kind == constants.KindPayment {
+			payments++
+		}
+	}
+	if !slices.Equal(keys(s.Decision()), before) || len(s.Choices) != n {
+		t.Errorf("preview changed the game")
+	}
+	if payments == 0 {
+		t.Errorf("no option of the first turn led to a payment")
 	}
 }

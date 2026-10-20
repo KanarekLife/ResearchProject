@@ -59,9 +59,10 @@ func (p *SystemOne) Play(ctx context.Context, s *session.Session) (player.Usage,
 	ctx = inference.WithGame(ctx, g.Run, g.Name)
 	for s.Status() == constants.AwaitingDecision {
 		d := s.Decision()
-		opts := make([]systemone.Option, len(d.Options))
-		for i, o := range d.Options {
-			opts[i] = systemone.Option{Name: strconv.Itoa(o.ID), Description: o.Text}
+		acts := actions(s, d)
+		opts := make([]systemone.Option, len(acts))
+		for i, a := range acts {
+			opts[i] = systemone.Option{Name: strconv.Itoa(i + 1), Description: a.text}
 		}
 		state := request{Board: model.BoardState(s), Recent: s.Log(p.RecentEvents), Decision: d.Prompt, Kind: d.Kind}
 		ans, err := p.Client.Choose(ctx, state, p.question(), opts)
@@ -70,11 +71,11 @@ func (p *SystemOne) Play(ctx context.Context, s *session.Session) (player.Usage,
 		if err != nil {
 			return u, fmt.Errorf("%w: %w", player.ErrInference, err)
 		}
-		id, err := strconv.Atoi(ans.Choice)
-		if err != nil {
-			return u, fmt.Errorf("%w: system one answered %q, not an option id", player.ErrInference, ans.Choice)
+		n, err := strconv.Atoi(ans.Choice)
+		if err != nil || n < 1 || n > len(acts) {
+			return u, fmt.Errorf("%w: system one answered %q, not an option", player.ErrInference, ans.Choice)
 		}
-		if _, err := s.Choose(id, fmt.Sprintf("p=%.2f", ans.Probabilities[ans.Choice])); err != nil {
+		if err := acts[n-1].play(s, fmt.Sprintf("p=%.2f", ans.Probabilities[ans.Choice])); err != nil {
 			return u, fmt.Errorf("%w: %w", player.ErrInference, err)
 		}
 	}
