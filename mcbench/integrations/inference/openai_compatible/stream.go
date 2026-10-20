@@ -17,31 +17,6 @@ const (
 	maxStreamLine = 1 << 24
 )
 
-// streamChunk is one event of a streamed chat completion.
-type streamChunk struct {
-	Choices []struct {
-		Delta struct {
-			Content          string `json:"content"`
-			ReasoningContent string `json:"reasoning_content"`
-			Reasoning        string `json:"reasoning"`
-			ToolCalls        []struct {
-				Index    int    `json:"index"`
-				ID       string `json:"id"`
-				Type     string `json:"type"`
-				Function struct {
-					Name      string `json:"name"`
-					Arguments string `json:"arguments"`
-				} `json:"function"`
-			} `json:"tool_calls"`
-		} `json:"delta"`
-		FinishReason string `json:"finish_reason"`
-	} `json:"choices"`
-	Usage *apiUsage `json:"usage"`
-	Error *struct {
-		Message string `json:"message"`
-	} `json:"error"`
-}
-
 // decodeStream assembles a streamed reply into the reply a plain request returns.
 func decodeStream(r io.Reader) (inference.Reply, error) {
 	var (
