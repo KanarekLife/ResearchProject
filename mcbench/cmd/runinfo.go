@@ -27,6 +27,14 @@ type runInfo struct {
 	Scenarios []string       `json:"scenarios"`
 	Planned   int            `json:"planned_games"`
 	Statuses  map[string]int `json:"statuses"`
+	// Resumed lists each time the run was continued after being cut short.
+	Resumed []resumeInfo `json:"resumed,omitempty"`
+}
+
+type resumeInfo struct {
+	Time   time.Time `json:"time"`
+	Server string    `json:"server,omitempty"`
+	Commit string    `json:"commit"`
 }
 
 type settingsInfo struct {
@@ -87,6 +95,12 @@ func (info *runInfo) finish(dir string, recs []benchmark.Record) error {
 	for _, r := range recs {
 		info.Statuses[r.Status]++
 	}
+	return info.write(dir)
+}
+
+// write saves run.json. A run writes it when it starts too, so that one that is
+// killed can still be resumed.
+func (info *runInfo) write(dir string) error {
 	b, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
 		return err

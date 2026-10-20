@@ -18,7 +18,7 @@ func buildPlayer(o runSettings, client inference.Client, instr instruction.Instr
 		if client == nil {
 			return nil, fmt.Errorf("-player model needs a model id")
 		}
-		return &model.Model{Client: client, Label: modelLabel(o), MaxFailures: o.maxFailures, Instructions: instr}, nil
+		return &model.Model{Client: client, Label: orDefault(o.label, modelLabel(o)), MaxFailures: o.maxFailures, Instructions: instr}, nil
 	case playerHeuristic:
 		return heuristic.Heuristic{}, nil
 	case playerRandom:

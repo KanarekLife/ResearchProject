@@ -19,12 +19,24 @@ import (
 // Play plays one game and scores it. With a traceDir it also writes a JSON
 // trace to <dir>/<scenario>_seed<N>_s<K>.jsonl as the game happens.
 func Play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights) Record {
+	return play(ctx, sc, p, instr, seed, sample, traceDir, weights, false)
+}
+
+// play is Play that, with resume, hands the player the game's earlier trace to
+// continue from. The trace file is written anew: the player replays the old one
+// into it.
+func play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights, resume bool) Record {
 	start := time.Now()
 	ctx = player.WithGame(ctx, gameName(sc.ID, seed, sample))
 	rec := Record{Scenario: sc.ID, Player: p.Name(), Instructions: instr, Seed: seed, Sample: sample}
 	log := slog.Default().With("scenario", sc.ID, "seed", seed, "sample", sample)
 
 	opts := session.Options{Logger: log, MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions}
+	if resume && traceDir != "" {
+		if prior, err := os.ReadFile(tracePath(traceDir, sc.ID, seed, sample)); err == nil {
+			ctx = player.WithResume(ctx, prior)
+		}
+	}
 	traceFile, err := attachTrace(&opts, traceDir, sc.ID, seed, sample)
 	if err != nil {
 		rec.Status, rec.Error = constants.InfraError, err.Error()
@@ -121,12 +133,16 @@ func attachTrace(opts *session.Options, dir, scenarioName string, seed uint64, s
 	if dir == "" {
 		return nil, nil
 	}
-	f, err := os.Create(filepath.Join(dir, gameName(scenarioName, seed, sample)+".jsonl"))
+	f, err := os.Create(tracePath(dir, scenarioName, seed, sample))
 	if err != nil {
 		return nil, err
 	}
 	opts.Trace = f
 	return f, nil
+}
+
+func tracePath(dir, scenarioName string, seed uint64, sample int) string {
+	return filepath.Join(dir, gameName(scenarioName, seed, sample)+".jsonl")
 }
 
 // gameName names a game by its scenario, seed and sample; it is also the base

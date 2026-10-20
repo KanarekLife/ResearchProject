@@ -19,6 +19,11 @@ type Config struct {
 	Parallel int      // concurrent games
 	TraceDir string
 	RunName  string // names the run to the player, e.g. for request-header placeholders
+	// Resume continues the games in TraceDir that have a trace instead of
+	// starting them again; Done lists the games already finished, which are
+	// not played.
+	Resume bool
+	Done   map[string]bool
 }
 
 type job struct {
@@ -41,6 +46,9 @@ func plan(scenarios []*scenario.Scenario, cfg Config) []job {
 				continue
 			}
 			for sample := 0; sample < max(1, cfg.Samples); sample++ {
+				if cfg.Done[gameName(sc.ID, seed, sample)] {
+					continue
+				}
 				out = append(out, job{sc, seed, sample})
 			}
 		}
@@ -63,7 +71,7 @@ func Run(ctx context.Context, scenarios []*scenario.Scenario, p player.Player, i
 		go func() {
 			defer wg.Done()
 			for j := range work {
-				rec := Play(ctx, j.sc, p, instr, j.seed, j.sample, cfg.TraceDir, weights)
+				rec := play(ctx, j.sc, p, instr, j.seed, j.sample, cfg.TraceDir, weights, cfg.Resume)
 				rec.RunID = runID
 				results <- rec
 			}

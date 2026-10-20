@@ -40,10 +40,15 @@ func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, err
 	var u player.Usage
 	g := player.GameFrom(ctx)
 	ctx = inference.WithGame(ctx, g.Run, g.Name)
-	msgs := m.add(s, nil, inference.Message{Role: inference.RoleSystem, Content: m.system()}, nil)
-	msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: firstPrompt(s)}, nil)
+	msgs, err := m.restore(s, player.ResumeFrom(ctx), &u)
+	if err != nil {
+		return u, fmt.Errorf("%w: resuming: %w", player.ErrInference, err)
+	}
+	if msgs == nil {
+		msgs = m.add(s, nil, inference.Message{Role: inference.RoleSystem, Content: m.system()}, nil)
+		msgs = m.add(s, msgs, inference.Message{Role: inference.RoleUser, Content: firstPrompt(s)}, nil)
+	}
 	for s.Status() == constants.AwaitingDecision {
-		var err error
 		if msgs, err = m.decide(ctx, s, msgs, &u); err != nil {
 			return u, err
 		}
