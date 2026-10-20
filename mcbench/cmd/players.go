@@ -4,21 +4,25 @@ import (
 	"fmt"
 
 	"mcbench/integrations/inference"
+	"mcbench/integrations/systemone"
 	"mcbench/player"
 	"mcbench/player/heuristic"
 	"mcbench/player/instruction"
 	"mcbench/player/model"
+	sysoneplayer "mcbench/player/systemone"
 )
 
 // buildPlayer builds the named player. Model settings are configured here,
 // in cmd, and passed to the model player; the scripted players ignore them.
-func buildPlayer(o runSettings, client inference.Client, instr instruction.Instructions) (player.Player, error) {
+func buildPlayer(o runSettings, client inference.Client, sysone *systemone.Client, instr instruction.Instructions) (player.Player, error) {
 	switch o.player {
 	case playerModel:
 		if client == nil {
 			return nil, fmt.Errorf("-player model needs a model id")
 		}
 		return &model.Model{Client: client, Label: orDefault(o.label, modelLabel(o)), MaxFailures: o.maxFailures, Instructions: instr}, nil
+	case playerSystemOne:
+		return &sysoneplayer.SystemOne{Client: sysone, Label: sysoneLabel(o), RecentEvents: o.recentEvents, Instructions: instr}, nil
 	case playerHeuristic:
 		return heuristic.Heuristic{}, nil
 	case playerRandom:
@@ -42,8 +46,15 @@ func modelLabel(o runSettings) string {
 	return label
 }
 
+// sysoneLabel names the System One player in results; the instruction
+// documents it is shown are named in the run, as for a model.
+func sysoneLabel(o runSettings) string {
+	return fmt.Sprintf("%s%s%d", o.modelID, labelEvents, o.recentEvents)
+}
+
 // Suffixes modelLabel adds for the reasoning setting.
 const (
 	labelEffort = "@effort-"
 	labelBudget = "@budget-"
+	labelEvents = "@events-"
 )

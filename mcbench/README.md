@@ -88,12 +88,13 @@ OPENAI_API_KEY=your-key
 
 The `.env` file is ignored by Git. Do not commit API keys.
 
-- `-player model|heuristic|random|first`, `-model`, `-server`, `-retries`,
+- `-player model|systemone|heuristic|random|first` (`systemone` asks a System One classifier, e.g. `-model openjev-latest`, to pick an option from the board; it gets no instruction documents unless `-instructions` names some, e.g. `rules_short`), `-model`, `-server`, `-retries`,
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
 - `-seeds N`, `-samples K`, `-parallel N`, `-out results`, `-publish=false` (keep the run local)
 - `-pick 1,2,10`: play only these seeds, for example to repeat the games of a run that ended in `infra_error`
 - `-source hybrid|local|online` (`report`, `analyze`, `view`, `board_gui`, `site`): which results to read (default `hybrid`)
+- `-resume <run dir>` continues a model run that was cut short (quota, crash, kill): finished games are kept, each unfinished one is replayed from its trace to the same board and conversation and played on. The run's own settings apply unless a flag overrides them, so `-server` moves the rest of the run to another provider; the games keep the original model label. The instruction documents must be unchanged. `run.json` lists each resume.
 - `-log-level debug|info|warn|error` (default `info` for `run`): structured `slog` output on stderr. `info` logs every game action and every choice, tagged with scenario, seed and sample; `debug` adds each model request; `warn` shows only rejected choices, API retries and games that end abnormally
 - `OPENAI_BASE_URL` overrides the endpoint for every protocol, below `-server`; `inference.server_env` names a different variable. `OPENAI_API_KEY` is the key (`inference.api_key_env`)
 
