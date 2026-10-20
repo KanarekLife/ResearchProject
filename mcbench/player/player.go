@@ -56,3 +56,16 @@ func GameFrom(ctx context.Context) Game {
 	g, _ := ctx.Value(gameKey{}).(Game)
 	return g
 }
+
+type resumeKey struct{}
+
+// WithResume hands a player the trace of a game it is to continue.
+func WithResume(ctx context.Context, trace []byte) context.Context {
+	return context.WithValue(ctx, resumeKey{}, trace)
+}
+
+// ResumeFrom is the trace of the game to continue, or nil for a new game.
+func ResumeFrom(ctx context.Context) []byte {
+	t, _ := ctx.Value(resumeKey{}).([]byte)
+	return t
+}

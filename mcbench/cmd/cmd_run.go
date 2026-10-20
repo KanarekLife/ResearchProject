@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,8 @@ type runSettings struct {
 	logLevel    string
 	out         string
 	publish     bool
+	resume      string // run directory to continue
+	label       string // the model label of a resumed run
 }
 
 func cmdRun(args []string) error {
@@ -51,7 +54,17 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
+	var rs *resumeState
+	if dir := flagValue(args, "resume", ""); dir != "" {
+		if rs, err = loadResume(dir); err != nil {
+			return err
+		}
+		cfg = rs.overlay(cfg)
+	}
 	l, o := parseRunFlags(fs, args, cfg)
+	if rs != nil {
+		o.resume, o.label = rs.dir, rs.label()
+	}
 	if err := setupLogging(o.logLevel); err != nil {
 		return err
 	}
@@ -66,7 +79,13 @@ func cmdRun(args []string) error {
 	if o.player == playerModel && o.modelID == "" {
 		return fmt.Errorf("-model is required for -player model")
 	}
-	client, err := newClient(o, os.Getenv(cfg.Inference.APIKeyEnv))
+	if rs != nil {
+		if err := rs.check(instr); err != nil {
+			return err
+		}
+	}
+	apiKey := os.Getenv(cfg.Inference.APIKeyEnv)
+	client, err := newClient(o, apiKey)
 	if err != nil {
 		return err
 	}
@@ -74,7 +93,7 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	return executeRun(scs, p, instr, o, cfg.Scoring, store(cfg))
+	return executeRun(scs, p, instr, o, cfg.Scoring, store(cfg), rs)
 }
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
@@ -99,6 +118,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	parallel := fs.Int("parallel", cfg.Run.Parallel, "concurrent games")
 	out := fs.String("out", cfg.Run.Out, "results directory")
 	publish := fs.Bool("publish", cfg.Online.Publish, "publish the run to the "+cfg.Online.Branch+" branch once it finishes with no infra_error game")
+	fs.String("resume", "", "continue the run in this results directory: its finished games are kept, the others continue from their traces (the run's own settings apply unless a flag changes them, e.g. -server)")
 	logLevel := fs.String("log-level", "info", logLevelUsage)
 	fs.Parse(args)
 	serverSet := false
@@ -119,8 +139,20 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 }
 
-func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, scoring map[string]float64, st online.Store) error {
-	f, runCfg, err := prepareRunDir(o, p)
+func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, scoring map[string]float64, st online.Store, rs *resumeState) error {
+	var (
+		f      *os.File
+		runCfg benchmark.Config
+		err    error
+	)
+	if rs != nil {
+		if f, runCfg, err = rs.reopen(); err == nil {
+			runCfg.Seeds, runCfg.Samples, runCfg.Parallel = o.seeds, o.samples, o.parallel
+			runCfg.Pick, err = parseSeeds(o.pick)
+		}
+	} else {
+		f, runCfg, err = prepareRunDir(o, p)
+	}
 	if err != nil {
 		return err
 	}
@@ -134,6 +166,14 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 	total, done := benchmark.Count(scs, runCfg), 0
 	info := startInfo(scs, o, scoring, total)
 	var recs []benchmark.Record
+	if rs != nil {
+		info, recs = rs.info, slices.Clone(rs.finished)
+		info.Statuses = map[string]int{}
+		info.Resumed = append(info.Resumed, resumeInfo{Time: time.Now().UTC(), Server: o.server, Commit: gitLine("rev-parse", "HEAD")})
+	}
+	if err := info.write(filepath.Dir(f.Name())); err != nil {
+		return err
+	}
 	log.Info("run started", "player", p.Name(), "games", total, "parallel", o.parallel, "live_dir", runCfg.TraceDir)
 	benchmark.Run(ctx, scs, p, instr, runCfg, benchmark.Weights(scoring), func(r benchmark.Record) {
 		done++
