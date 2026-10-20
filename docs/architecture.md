@@ -15,6 +15,8 @@ mcbench/player/
   instruction/ loads the instruction documents
   model/       the LLM player: agentic loop, the JSON tool contract and its
                dispatch, system prompt
+  systemone/   the System One classifier player
+mcbench/integrations/systemone/   System One client (a classifier, not a chat model)
 mcbench/integrations/inference/
   inference.go            the Client interface and Message/Tool/Reply types
   openai_compatible/      the HTTP implementation
@@ -124,8 +126,8 @@ shuffled one ([research](research.md)).
 ## The player and the agentic loop
 
 A `player.Player` answers every decision of one game through the session
-contract. There are three implementations: `heuristic` (scripted,
-deterministic), `human`, and `model`.
+contract. There are four implementations: `heuristic` (scripted,
+deterministic), `human`, `model` and `systemone`.
 
 `player/model.Model` plays a game as one conversation with an
 `inference.Client`. There is one protocol: **the model calls the game tools
@@ -160,6 +162,25 @@ no user turn repeats it.
   response, or a cancelled run), the game ends as `infra_error`. It says
   nothing about the model, so reports count it but leave it out of every mean;
   rerun that seed.
+
+**Resuming a game.** The trace of a game holds every message and choice, so a
+cut-short game can be continued: `run -resume <dir>` keeps the finished games,
+and the model player replays the recorded choices of each unfinished game
+(restoring the board, since the same choices give the same game) and reloads its
+conversation up to the last complete exchange. Only the endpoint may change, so a
+run can move to another provider and keep one model label; the instruction
+documents must be unchanged. `run.json` lists each resume.
+
+**The System One player.** `systemone` is a baseline, not a model run in the
+agentic loop. A System One endpoint is a classifier: given a state and a
+multiple-choice question it returns a probability per option. For every decision
+the player sends the compact board, the last log lines, the decision prompt and
+the options, and plays the most probable one. It has no memory between
+decisions, takes instruction documents only when asked (`rules_short` is written
+for it), and sees a card with several payments as one option per payment, with
+the cards discarded in its text, because a separate payment step with `cancel`
+let it loop forever. The session's `Preview` finds those payments by replaying
+the game on a copy.
 
 ## The inference client
 

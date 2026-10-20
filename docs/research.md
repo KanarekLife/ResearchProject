@@ -212,6 +212,16 @@ answering one question, with several games per seed.
 - `algorithm` was added as an add-on next to `strategy`: the same lessons written
   as an ordered procedure, so the two framings can be compared.
 
+## A classifier baseline
+
+A System One classifier that sees the board, the legal options and the last few
+log lines plays far below the instruction-driven models and near the scripted
+heuristic. Neither a longer log nor a short rules summary changes that
+consistently. It has no memory, so given a step that can be undone it repeats
+it forever (play a card, back out of the payment, play it again) until the
+decision limit; offering each payment as part of the card play removed the
+loops without making it win.
+
 ## Open questions
 
 - A mandatory strategy or a play algorithm only partly fixes Haiku's habits and
