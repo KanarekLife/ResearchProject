@@ -72,7 +72,7 @@ func mergeRuns(dirs []string, tmp string, partial bool) (string, error) {
 		return "", err
 	}
 	var info runInfo
-	b, err := os.ReadFile(filepath.Join(dirs[0], runInfoFile))
+	b, err := os.ReadFile(filepath.Join(dirs[0], constants.RunInfoFile))
 	if err != nil {
 		return "", err
 	}
@@ -113,7 +113,7 @@ func mergeRuns(dirs []string, tmp string, partial bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return out, os.WriteFile(filepath.Join(out, runInfoFile), append(b, '\n'), 0o644)
+	return out, os.WriteFile(filepath.Join(out, constants.RunInfoFile), append(b, '\n'), 0o644)
 }
 
 type gameKey struct {

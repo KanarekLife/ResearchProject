@@ -75,7 +75,6 @@ const (
 const (
 	liveSubdir  = "live"
 	gamesFile   = "games.jsonl"
-	runInfoFile = "run.json"
 	runIDLayout = "20060102T150405Z"
 	runNameSep  = "__" // between the player and the instruction documents in a run directory name
 )

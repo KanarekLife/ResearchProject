@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"mcbench/benchmark"
+	"mcbench/constants"
 	"mcbench/game/scenario"
 )
 
@@ -106,7 +107,7 @@ func (info *runInfo) write(dir string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, runInfoFile), append(b, '\n'), 0o644)
+	return os.WriteFile(filepath.Join(dir, constants.RunInfoFile), append(b, '\n'), 0o644)
 }
 
 const (

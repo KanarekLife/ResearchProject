@@ -142,7 +142,7 @@ export interface Scheme {
 // The runs under the results directory and the selection to open by default
 // (boardgui.Runs). An empty game follows the run's current game.
 export interface Runs {
-  runs: { id: string; games: { name: string; state: string; steps?: string }[]; local?: boolean }[];
+  runs: { id: string; version?: string; games: { name: string; state: string; steps?: string }[]; local?: boolean }[];
   run: string;
   game: string;
   static?: boolean;

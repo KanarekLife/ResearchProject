@@ -42,7 +42,8 @@ export function Side({ steps, cur, go, end }: { steps: Step[]; cur: number; go: 
 }
 
 function DecisionView({ s, i, last, end }: { s: Step; i: number; last: boolean; end?: Result }) {
-  const chosen = s.choice?.key;
+  // An old trace records "play:X|pay:Y" where the step offers "play:X".
+  const isChosen = (key: string) => !!s.choice && (s.choice.key === key || s.choice.key.startsWith(key + "|pay:"));
   return (
     <>
       <h3>{s.decision ? `Decision ${i + 1} · ${s.decision.kind}` : "Game over"}</h3>
@@ -52,8 +53,8 @@ function DecisionView({ s, i, last, end }: { s: Step; i: number; last: boolean; 
           <div className="prompt">{s.decision.prompt}</div>
           <ol className="options">
             {s.decision.options.map((o) => (
-              <li key={o.id} className={o.key === chosen ? "chosen" : undefined} title={o.key}>
-                {(o.key === chosen ? "✓ " : "") + o.text}
+              <li key={o.id} className={isChosen(o.key) ? "chosen" : undefined} title={o.key}>
+                {(isChosen(o.key) ? "✓ " : "") + o.text}
               </li>
             ))}
           </ol>

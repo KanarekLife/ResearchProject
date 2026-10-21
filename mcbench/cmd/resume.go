@@ -22,13 +22,13 @@ type resumeState struct {
 }
 
 func loadResume(dir string) (*resumeState, error) {
-	b, err := os.ReadFile(filepath.Join(dir, runInfoFile))
+	b, err := os.ReadFile(filepath.Join(dir, constants.RunInfoFile))
 	if err != nil {
 		return nil, fmt.Errorf("-resume: %w", err)
 	}
 	rs := &resumeState{dir: dir}
 	if err := json.Unmarshal(b, &rs.info); err != nil {
-		return nil, fmt.Errorf("-resume: %s: %w", runInfoFile, err)
+		return nil, fmt.Errorf("-resume: %s: %w", constants.RunInfoFile, err)
 	}
 	recs, err := benchmark.ReadRecords(filepath.Join(dir, gamesFile))
 	if err != nil {
