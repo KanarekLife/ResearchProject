@@ -10,3 +10,6 @@ const (
 
 // PublishedFile in a local run directory holds its name on the results branch.
 const PublishedFile = "published"
+
+// RunInfoFile in a run directory describes the run, e.g. the commit it ran on.
+const RunInfoFile = "run.json"

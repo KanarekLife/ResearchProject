@@ -124,6 +124,54 @@ func TestReplayDetectsDivergence(t *testing.T) {
 	}
 }
 
+// A trace recorded before an option's text was reworded still replays.
+func TestReplayToleratesRewordedOptions(t *testing.T) {
+	scs, path, rec := oneTrace(t)
+	entries, err := trace.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, e := range entries {
+		if e.Type != constants.TraceChoice {
+			continue
+		}
+		entries[i].Text = "old wording"
+		for j, ev := range e.Events {
+			if strings.HasPrefix(ev, constants.EventChose) {
+				e.Events[j] = constants.EventChose + "old wording"
+			}
+		}
+	}
+	r := newReplay(scs)
+	r.apply(entries)
+	checkReplay(t, r.snapshot(0), rec)
+}
+
+// A trace from before payment decisions still replays.
+func TestReplayReadsCombinedPayments(t *testing.T) {
+	scs, path, rec := oneTrace(t)
+	entries, err := trace.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old []trace.Entry
+	for _, e := range entries {
+		if prev := len(old) - 1; e.Type == constants.TraceChoice && e.Choice.Kind == constants.KindPayment {
+			old[prev].Choice.Key += constants.SepPayment + strings.TrimPrefix(e.Choice.Key, constants.PrefixPay)
+			old[prev].Events = append(old[prev].Events, e.Events...)
+			rec.Decisions--
+			continue
+		}
+		old = append(old, e)
+	}
+	if len(old) == len(entries) {
+		t.Fatal("the trace has no payment decision")
+	}
+	r := newReplay(scs)
+	r.apply(old)
+	checkReplay(t, r.snapshot(0), rec)
+}
+
 // Following a trace that is still being written picks up new lines, including
 // one that was half written on the first read.
 func TestReplayFollowsGrowingTrace(t *testing.T) {

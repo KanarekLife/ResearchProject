@@ -66,7 +66,8 @@ export function App() {
 
   const { steps, end, error } = replay;
   const n = steps.length;
-  const local = !!runs?.runs.find((r) => r.id === sel?.run)?.local;
+  const run = runs?.runs.find((r) => r.id === sel?.run);
+  const local = !!run?.local;
 
   // New steps move to the last one when following, or to the #N asked for. A
   // new game opens on its first step when not following.
@@ -143,6 +144,7 @@ export function App() {
             <Nav on="board" />
             <Picker runs={runs} sel={sel} following={replay.game} choose={choose} />
             <span className={"badge " + state}>{disconnected ? "disconnected" : state}</span>
+            {run?.version && <span className="badge" title="Commit the run was played on">{run.version}</span>}
           </div>
           <nav className="nav">
             <button title="First step (Home)" disabled={cur <= 0} onClick={() => go(0)}>⏮</button>

@@ -37,7 +37,7 @@ func Export(out string, d Data) error {
 		list.Run = runs[0].ID
 	}
 	for i, r := range runs {
-		info := RunInfo{ID: r.ID}
+		info := RunInfo{ID: r.ID, Version: version(r.Dir)}
 		for j, g := range r.Games {
 			// Files are numbered: run ids and game names need not be URL-safe.
 			file := fmt.Sprintf("api/steps/%d-%d.json", i, j)

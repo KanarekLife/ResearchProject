@@ -2,6 +2,7 @@ package main
 
 import (
 	"mcbench/benchmark"
+	"mcbench/constants"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,7 +167,7 @@ func TestMergeRunsSkipsEmpty(t *testing.T) {
 	run := filepath.Join(dir, "r1")
 	os.MkdirAll(run, 0o755)
 	os.WriteFile(filepath.Join(run, gamesFile), []byte(`{"scenario":"s","player":"p","seed":1,"status":"infra_error"}`+"\n"), 0o644)
-	os.WriteFile(filepath.Join(run, runInfoFile), []byte(`{"planned_games":1}`), 0o644)
+	os.WriteFile(filepath.Join(run, constants.RunInfoFile), []byte(`{"planned_games":1}`), 0o644)
 	if _, err := mergeRuns([]string{run}, t.TempDir(), true); err == nil || !strings.Contains(err.Error(), "no graded games") {
 		t.Errorf("err=%v, want a refusal to publish a run with no graded games", err)
 	}

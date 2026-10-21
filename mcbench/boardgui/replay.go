@@ -210,28 +210,54 @@ func (r *replay) choose(e trace.Entry) error {
 	if last.Decision == nil {
 		return fmt.Errorf("decision %d: the replayed game is already over (%s)", e.Decision, last.Status)
 	}
+	var events []string
+	for _, key := range keys(last.Decision, e.Choice.Key) {
+		ev, err := r.pick(key, e.Text)
+		if err != nil {
+			return fmt.Errorf("decision %d: %w", e.Decision, err)
+		}
+		events = append(events, ev...)
+	}
+	last.Choice = &Chosen{Key: e.Choice.Key, Text: e.Text, Reasoning: e.Choice.Reasoning, Thinking: strings.Join(r.thinking, "\n\n"), Events: e.Events}
+	r.thinking = nil
+	if !slices.Equal(withoutEcho(events), withoutEcho(e.Events)) {
+		return fmt.Errorf("decision %d: the replay diverged from the trace (engine or data changed since the trace?)", e.Decision)
+	}
+	r.record()
+	return nil
+}
+
+// keys splits an old "play:X|pay:Y" choice into "play:X", then "pay:Y".
+func keys(d *session.Decision, key string) []string {
+	action, pay, ok := strings.Cut(key, constants.SepPayment)
+	if !ok || slices.ContainsFunc(d.Options, func(o session.Option) bool { return o.Key == key }) {
+		return []string{key}
+	}
+	return []string{action, constants.PrefixPay + pay}
+}
+
+func (r *replay) pick(key, text string) ([]string, error) {
 	n := r.choices
 	r.choices++
-	ids := optionIDs(last.Decision, e.Choice.Key, e.Text)
+	d := r.sess.Decision()
+	if d == nil {
+		return nil, fmt.Errorf("the replayed game is already over (%s)", r.sess.Status())
+	}
+	ids := optionIDs(d, key, text)
 	if len(ids) == 0 {
-		return fmt.Errorf("decision %d: option %q is not offered in the replay (engine or data changed since the trace?)", e.Decision, e.Choice.Key)
+		return nil, fmt.Errorf("option %q is not offered in the replay (engine or data changed since the trace?)", key)
 	}
 	if n == len(r.picks) {
 		r.picks = append(r.picks, 0)
 		r.matches = append(r.matches, 0)
 	}
 	r.matches[n] = len(ids)
-	events, err := r.sess.Choose(ids[r.picks[n]], "")
-	if err != nil {
-		return fmt.Errorf("decision %d: %w", e.Decision, err)
-	}
-	last.Choice = &Chosen{Key: e.Choice.Key, Text: e.Text, Reasoning: e.Choice.Reasoning, Thinking: strings.Join(r.thinking, "\n\n"), Events: e.Events}
-	r.thinking = nil
-	if !slices.Equal(events, e.Events) {
-		return fmt.Errorf("decision %d: the replay diverged from the trace (engine or data changed since the trace?)", e.Decision)
-	}
-	r.record()
-	return nil
+	return r.sess.Choose(ids[r.picks[n]], "")
+}
+
+// withoutEcho drops the echoed option texts, which may have been reworded.
+func withoutEcho(events []string) []string {
+	return slices.DeleteFunc(slices.Clone(events), func(e string) bool { return strings.HasPrefix(e, constants.EventChose) })
 }
 
 // optionIDs lists the decision's options with the recorded key and text, or

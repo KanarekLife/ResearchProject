@@ -260,7 +260,9 @@ plus rounds to win, decisions, invalid choices and tokens.
   renders it; `cmd view -follow` watches a game in progress. The trace holds
   choices, not boards, so `cmd board_gui` rebuilds each board by replaying the choices
   on the same scenario and seed. A replay needs an engine that offers the same
-  option keys: traces recorded before the `payment` decision do not replay.
+  option keys; a choice recorded before the `payment` decision
+  (`play:X|pay:Y`) replays as the action and then its payment. The board shows
+  the commit from `run.json` each run was played on.
 - **`games.jsonl`** — one record per finished game: scenario, seed, player and
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log. Each choice also records the hero's form and HP, the main-scheme

@@ -22,9 +22,10 @@ const tailBytes = 16 << 10
 
 // RunInfo is one run of the results directories as listed to the page.
 type RunInfo struct {
-	ID    string     `json:"id"`
-	Games []GameItem `json:"games"`
-	Local bool       `json:"local,omitempty"` // not published: it may still be played
+	ID      string     `json:"id"`
+	Version string     `json:"version,omitempty"` // the commit the run was played on
+	Games   []GameItem `json:"games"`
+	Local   bool       `json:"local,omitempty"` // not published: it may still be played
 }
 
 // GameItem is one game of a run: its name and "live" or its end status.
@@ -41,6 +42,24 @@ type Runs struct {
 	Game string    `json:"game"` // empty: follow the run's current game
 	// Static is an exported site.
 	Static bool `json:"static,omitempty"`
+}
+
+// version reads the commit a run was played on from its run.json, marked
+// "-dirty" when it had uncommitted changes.
+func version(runDir string) string {
+	var info struct {
+		Commit string `json:"commit"`
+		Dirty  bool   `json:"dirty"`
+	}
+	b, _ := os.ReadFile(filepath.Join(runDir, constants.RunInfoFile))
+	if json.Unmarshal(b, &info) != nil || info.Commit == "" {
+		return ""
+	}
+	v := info.Commit[:min(len(info.Commit), 7)]
+	if info.Dirty {
+		v += "-dirty"
+	}
+	return v
 }
 
 // peek reads when a game started (zero before its start entry is written) and
@@ -108,6 +127,7 @@ func listRuns(dirs []string, online string) ([]RunInfo, error) {
 	out := make([]RunInfo, len(runs))
 	for i, r := range runs {
 		out[i].ID = r.ID
+		out[i].Version = version(r.Dir)
 		out[i].Local = online == "" || filepath.Dir(r.Dir) != filepath.Clean(online)
 		for _, g := range r.Games {
 			_, state := peek(g.Trace)
