@@ -1,0 +1,44 @@
+{
+  "runner": "",
+  "started": "2026-10-16T16:54:45Z",
+  "finished": "0001-01-01T00:00:00Z",
+  "commit": "",
+  "dirty": false,
+  "machine": {
+    "hostname": "",
+    "os": "",
+    "kernel": "",
+    "arch": "",
+    "cpu": "",
+    "cores": 0,
+    "memory_mb": 0,
+    "gpus": null,
+    "go": ""
+  },
+  "settings": {
+    "player": "model",
+    "model": "deepseek-flash",
+    "api": "",
+    "temperature": 0,
+    "max_tokens": 0,
+    "retries": 0,
+    "max_failures": 0,
+    "instructions": [
+      "rules_agent",
+      "mcbench"
+    ],
+    "seeds": 10,
+    "samples": 1,
+    "parallel": 0,
+    "scoring": null
+  },
+  "scenarios": [
+    "spider-man-vs-rhino"
+  ],
+  "planned_games": 10,
+  "statuses": {
+    "agent_error": 3,
+    "lost": 2,
+    "won": 5
+  }
+}
