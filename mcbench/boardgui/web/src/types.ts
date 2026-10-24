@@ -26,6 +26,10 @@ export interface Result {
   rounds: number;
   score: number;
   criteria?: Record<string, number>;
+  // What the model spent over the game and how long it took; absent for
+  // scripted players and old traces.
+  usage?: { requests?: number; input_tokens?: number; output_tokens?: number; cached_tokens?: number };
+  ms?: number;
 }
 
 // The board at one decision; the last step of a finished game has no decision.
@@ -54,6 +58,11 @@ export interface Chosen {
   reasoning?: string;
   // The model's reasoning_content for this decision; scripted players have none.
   thinking?: string;
+  // The model's token usage for the replies to this decision; scripted players
+  // have none.
+  tokens_in?: number;
+  tokens_out?: number;
+  tokens_cached?: number;
   events: string[] | null;
 }
 

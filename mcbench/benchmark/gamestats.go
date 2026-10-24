@@ -24,8 +24,10 @@ type GameStats struct {
 	Decisions    int                `json:"decisions"`
 	Invalid      int                `json:"invalid"`
 	Stats        map[string]float64 `json:"stats"` // the final board facts the criteria come from
+	Requests     int                `json:"requests,omitempty"`
 	TokensIn     int64              `json:"tokens_in"`
 	TokensOut    int64              `json:"tokens_out"`
+	TokensCached int64              `json:"tokens_cached,omitempty"`
 	Millis       int64              `json:"ms"`
 	// Behaviour is empty for an infra_error game, which Analyze leaves out.
 	Behaviour Behaviour `json:"behaviour"`
@@ -38,7 +40,8 @@ func StatsOf(run string, r Record) GameStats {
 		Instructions: strings.Join(r.Instructions.Names, ","), InstrSHA: r.Instructions.SHA256,
 		Seed: r.Seed, Sample: r.Sample, Status: r.Status, Error: firstLine(r.Error),
 		Score: r.Score, Criteria: r.Criteria, Rounds: r.Rounds, Decisions: r.Decisions, Invalid: r.Invalid,
-		Stats: r.Stats, TokensIn: r.Usage.InputTokens, TokensOut: r.Usage.OutputTokens, Millis: r.Millis,
+		Stats: r.Stats, TokensIn: r.Usage.InputTokens, TokensOut: r.Usage.OutputTokens,
+		TokensCached: r.Usage.CachedTokens, Requests: r.Usage.Requests, Millis: r.Millis,
 	}
 	if r.Status != constants.InfraError {
 		g.Behaviour.add(r)

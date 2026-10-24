@@ -12,6 +12,7 @@ import (
 	"mcbench/constants"
 	"mcbench/game/scenario"
 	"mcbench/game/session"
+	"mcbench/player"
 	"mcbench/trace"
 )
 
@@ -37,8 +38,13 @@ type Chosen struct {
 	Reasoning string `json:"reasoning,omitempty"`
 	// Thinking is the model's reasoning_content from its replies to this
 	// decision; scripted players have none.
-	Thinking string   `json:"thinking,omitempty"`
-	Events   []string `json:"events"`
+	Thinking string `json:"thinking,omitempty"`
+	// The model's token usage for the replies to this decision; scripted
+	// players have none.
+	TokensIn     int64    `json:"tokens_in,omitempty"`
+	TokensOut    int64    `json:"tokens_out,omitempty"`
+	TokensCached int64    `json:"tokens_cached,omitempty"`
+	Events       []string `json:"events"`
 }
 
 // GameInfo is what the trace's start entry says about the game.
@@ -56,6 +62,10 @@ type Result struct {
 	Rounds   int                `json:"rounds"`
 	Score    float64            `json:"score"`
 	Criteria map[string]float64 `json:"criteria,omitempty"`
+	Usage    player.Usage       `json:"usage,omitempty"`
+	// Millis is the time between the trace's start and end entries; zero
+	// when either time is missing or unparsable.
+	Millis int64 `json:"ms,omitempty"`
 }
 
 // Snapshot is the replay as served to the page: the steps from From on.
@@ -94,12 +104,14 @@ type replay struct {
 	stopped  bool // the viewer dropped this replay
 
 	// rebuilt from entries and picks
-	game     *GameInfo
-	end      *Result
-	sess     *session.Session
-	steps    []Step
-	choices  int
-	thinking []string // the current decision's model reasoning so far
+	game        *GameInfo
+	end         *Result
+	sess        *session.Session
+	steps       []Step
+	choices     int
+	thinking    []string     // the current decision's model reasoning so far
+	replyTokens player.Usage // the current decision's replies' token usage so far
+	started     time.Time    // the trace's start-entry time, zero when unknown
 }
 
 func newReplay(scs []*scenario.Scenario) *replay { return &replay{scenarios: scs} }
@@ -158,7 +170,7 @@ func (r *replay) nextPicks() bool {
 
 // rebuild replays every entry from the start with the current picks.
 func (r *replay) rebuild() error {
-	r.game, r.end, r.sess, r.steps, r.choices, r.thinking = nil, nil, nil, nil, 0, nil
+	r.game, r.end, r.sess, r.steps, r.choices, r.thinking, r.replyTokens = nil, nil, nil, nil, 0, nil, player.Usage{}
 	for _, e := range r.entries {
 		if err := r.applyOne(e); err != nil {
 			return err
@@ -175,12 +187,26 @@ func (r *replay) applyOne(e trace.Entry) error {
 		if e.Message.Reasoning != "" {
 			r.thinking = append(r.thinking, e.Message.Reasoning)
 		}
+		r.replyTokens.InputTokens += e.PromptTokens
+		r.replyTokens.OutputTokens += e.CompletionTokens
+		r.replyTokens.CachedTokens += e.CachedTokens
 	case constants.TraceChoice:
 		return r.choose(e)
 	case constants.TraceEnd:
-		r.end = &Result{Status: e.Status, Error: e.Error, Rounds: e.Rounds, Score: e.Score, Criteria: e.Criteria}
+		r.end = &Result{Status: e.Status, Error: e.Error, Rounds: e.Rounds, Score: e.Score, Criteria: e.Criteria,
+			Usage: e.Usage, Millis: millisBetween(r.started, e.Time)}
 	}
 	return nil
+}
+
+// millisBetween is end - start for RFC3339 trace times, or zero when either
+// side is missing or unparsable.
+func millisBetween(start time.Time, end string) int64 {
+	t, err := time.Parse(time.RFC3339, end)
+	if err != nil || start.IsZero() {
+		return 0
+	}
+	return max(t.Sub(start).Milliseconds(), 0)
 }
 
 // start sets up the recorded scenario and seed. Option order does not matter:
@@ -196,6 +222,7 @@ func (r *replay) start(e trace.Entry) error {
 		return err
 	}
 	r.game = &GameInfo{Scenario: e.Scenario, Seed: e.Seed, Sample: e.Sample, Player: e.Player}
+	r.started, _ = time.Parse(time.RFC3339, e.Time)
 	r.sess = s
 	r.record()
 	return nil
@@ -218,8 +245,13 @@ func (r *replay) choose(e trace.Entry) error {
 		}
 		events = append(events, ev...)
 	}
-	last.Choice = &Chosen{Key: e.Choice.Key, Text: e.Text, Reasoning: e.Choice.Reasoning, Thinking: strings.Join(r.thinking, "\n\n"), Events: e.Events}
-	r.thinking = nil
+	last.Choice = &Chosen{
+		Key: e.Choice.Key, Text: e.Text, Reasoning: e.Choice.Reasoning,
+		Thinking: strings.Join(r.thinking, "\n\n"),
+		TokensIn: r.replyTokens.InputTokens, TokensOut: r.replyTokens.OutputTokens, TokensCached: r.replyTokens.CachedTokens,
+		Events: e.Events,
+	}
+	r.thinking, r.replyTokens = nil, player.Usage{}
 	if !slices.Equal(withoutEcho(events), withoutEcho(e.Events)) {
 		return fmt.Errorf("decision %d: the replay diverged from the trace (engine or data changed since the trace?)", e.Decision)
 	}
