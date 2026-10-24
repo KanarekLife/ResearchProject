@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { boardLink, byNumber } from "../../runs";
 import type { Row } from "../games";
-import { compact, duration } from "../format";
+import { compact, duration, thousands } from "../format";
 import { Meter } from "../marks";
 import { outcomeOf } from "../outcomes";
 
@@ -37,7 +37,11 @@ const COLS: Col[] = [
   { label: "Hero HP", sort: (r) => r.criteria.hero_hp ?? 0, cell: (r) => frac(r, "hero_hp", "hero_max_hp"), num: true },
   { label: "Threat", sort: (r) => r.stats?.main_threat ?? 0, cell: (r) => frac(r, "main_threat", "main_target"), num: true },
   { label: "Invalid", sort: (r) => r.invalid, cell: (r) => r.invalid, num: true },
-  { label: "Tokens", sort: (r) => r.tokens_in, cell: (r) => compact(r.tokens_in), num: true },
+  { label: "Tokens", sort: (r) => r.tokens_in + r.tokens_out, cell: (r) => (
+    <span title={`${thousands(r.tokens_in)} in · ${thousands(r.tokens_out)} out${r.tokens_cached ? ` · ${compact(r.tokens_cached)} cached` : ""}`}>
+      {compact(r.tokens_in + r.tokens_out)}
+    </span>
+  ), num: true },
   { label: "Time", sort: (r) => r.ms, cell: (r) => duration(r.ms), num: true },
 ];
 

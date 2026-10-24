@@ -73,7 +73,7 @@ export function Stats() {
                 <div className="panel section empty-state">No game matches these filters.</div>
               ) : (
                 <>
-                  <Kpis total={total} runs={new Set(rows.map((r) => r.run)).size} />
+                  <Kpis total={total} runs={new Set(rows.map((r) => r.run)).size} rows={rows} />
                   <Section
                     title="Leaderboard"
                     sub="Mean score with its standard error, how often each wins and how its games ended."

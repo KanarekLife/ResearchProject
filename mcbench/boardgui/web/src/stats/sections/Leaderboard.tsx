@@ -86,7 +86,18 @@ export function Leaderboard({ groups, showScenario }: { groups: Group[]; showSce
             </span>
             <Stack parts={outcomeParts(g)} tip={tip} />
             <span className="num">{fixed(1)(g.roundsToWin)}</span>
-            <span className="num">{compact(g.tokensIn / g.games.length)}</span>
+            <span
+              {...tip(() => (
+                <>
+                  <b>{compact(g.tokensIn / g.games.length)}</b> in tokens per game{" "}
+                  <span className="dim">
+                    · {compact(g.tokensOut / g.games.length)} out · {compact(g.tokensCached / g.games.length)} cached per game · {compact(g.tokensIn + g.tokensOut)} total
+                  </span>
+                </>
+              ))}
+            >
+              <span className="num">{compact(g.tokensIn / g.games.length)}</span>
+            </span>
           </div>
           {open === g.key && (
             <div className="lb-games">

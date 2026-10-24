@@ -38,8 +38,10 @@ export interface Game {
   decisions: number;
   invalid: number;
   stats: Record<string, number>;
+  requests?: number;
   tokens_in: number;
   tokens_out: number;
+  tokens_cached?: number;
   ms: number;
   behaviour: Behaviour;
 }

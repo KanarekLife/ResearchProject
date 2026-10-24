@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Chosen, Result, Step } from "./types";
 
+// thousands and secs format token usage and trace times; the board only
+// formats them here.
+const thousands = (x: number) => Math.round(x).toLocaleString("en-US");
+const secs = (ms?: number) => (!ms || ms <= 0 ? undefined : ms < 10000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms / 1000)}s`);
+
 // Side is the decision panel, a fixed box whose content scrolls. One tab shows
 // the current decision: the prompt, the options with the chosen one marked,
 // the player's reasoning, what followed and, at the end, the result. The other
@@ -76,6 +81,12 @@ function DecisionView({ s, i, last, end }: { s: Step; i: number; last: boolean; 
         </>
       )}
       {end && (!s.decision || last) && <ResultTable e={end} />}
+      {(s.choice?.tokens_in != null || s.choice?.tokens_out != null || s.choice?.tokens_cached != null) && (
+        <div className="tok">
+          in {thousands(s.choice.tokens_in ?? 0)} · out {thousands(s.choice.tokens_out ?? 0)}
+          {s.choice.tokens_cached ? ` · cached ${thousands(s.choice.tokens_cached)}` : ""}
+        </div>
+      )}
     </>
   );
 }
@@ -100,6 +111,16 @@ function ResultTable({ e }: { e: Result }) {
   const rows: [string, string | number][] = [["status", e.status], ["rounds", e.rounds], ["score", e.score.toFixed(3)]];
   for (const [k, v] of Object.entries(e.criteria ?? {})) rows.push([k, v.toFixed(3)]);
   if (e.error) rows.push(["error", e.error]);
+  const u = e.usage;
+  const out = u?.output_tokens ?? 0;
+  if (u) {
+    if (u.requests) rows.push(["requests", u.requests]);
+    if (u.input_tokens) rows.push(["tokens in", thousands(u.input_tokens)]);
+    if (out) rows.push(["tokens out", thousands(out)]);
+    if (u.cached_tokens) rows.push(["cached", thousands(u.cached_tokens)]);
+  }
+  if (e.ms && out) rows.push(["tok/s", Math.round(out / (e.ms / 1000))]);
+  if (e.ms) rows.push(["time", secs(e.ms) ?? ""]);
   return (
     <div className="result">
       <h2>Result</h2>

@@ -35,6 +35,8 @@ export interface Group {
   invalid: number;
   tokensIn: number;
   tokensOut: number;
+  tokensCached: number;
+  requests: number;
   ms: number;
   b: Behaviour;
 }
@@ -42,7 +44,7 @@ export interface Group {
 function keyOf(
   r: Row,
   by: GroupBy,
-): Omit<Group, "games" | "graded" | "score" | "criteria" | "status" | "roundsToWin" | "decisions" | "invalid" | "tokensIn" | "tokensOut" | "ms" | "b"> {
+): Omit<Group, "games" | "graded" | "score" | "criteria" | "status" | "roundsToWin" | "decisions" | "invalid" | "tokensIn" | "tokensOut" | "tokensCached" | "requests" | "ms" | "b"> {
   const none = { player: "", instr: "", version: "", run: "", scenario: r.scenario };
   const g =
     by === "config"
@@ -111,6 +113,8 @@ export function summarize(games: Row[]): Omit<Group, keyof ReturnType<typeof key
     invalid: sum((g) => g.invalid),
     tokensIn: sum((g) => g.tokens_in),
     tokensOut: sum((g) => g.tokens_out),
+    tokensCached: sum((g) => g.tokens_cached ?? 0),
+    requests: sum((g) => g.requests ?? 0),
     ms: sum((g) => g.ms),
     b,
   };
@@ -128,3 +132,13 @@ export function group(rows: Row[], by: GroupBy): Group[] {
 }
 
 export const ratio = (n: number, d: number) => (d ? n / d : NaN);
+
+// days buckets the rows by their date in date order, each summarized the way
+// the KPI total is; the KPI sparklines draw one value per day from it.
+export function days(rows: Row[]): { date: string; s: ReturnType<typeof summarize> }[] {
+  const by = new Map<string, Row[]>();
+  for (const r of rows) if (r.date) by.set(r.date, [...(by.get(r.date) ?? []), r]);
+  return [...by]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, rs]) => ({ date, s: summarize(rs) }));
+}
