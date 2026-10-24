@@ -1,0 +1,55 @@
+{
+  "runner": "Stanislaw Nieradko (run.json reconstructed 2026-10-24 from status.log and RESUME.md)",
+  "started": "2026-10-18T08:36:19Z",
+  "finished": "2026-10-18T08:43:46.652796Z",
+  "commit": "2ae34c1f67711af578558a782bd4fd5ef2f791dc",
+  "dirty": false,
+  "machine": {
+    "hostname": "workstation",
+    "os": "Fedora Linux 44.20261017.0 (Kinoite)",
+    "kernel": "7.2.11-200.fc44.x86_64",
+    "arch": "amd64",
+    "cpu": "AMD Ryzen 7 7700X 8-Core Processor",
+    "cores": 16,
+    "memory_mb": 31153,
+    "gpus": [
+      "Advanced Micro Devices, Inc. [AMD/ATI] Navi 31 [Radeon RX 7900 XT/7900 XTX/7900 GRE/7900M] (rev c8)",
+      "Advanced Micro Devices, Inc. [AMD/ATI] Raphael [Radeon 610M] (rev c3)"
+    ],
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "model": "lfm2.5-24b-a2b-q4_k_xl",
+    "api": "openai",
+    "server": "http://127.0.0.1:8081/v1",
+    "temperature": -1,
+    "max_tokens": 32768,
+    "retries": 3,
+    "reasoning_effort": "medium",
+    "reasoning_budget": 2048,
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench",
+      "strategy"
+    ],
+    "seeds": 1,
+    "samples": 1,
+    "parallel": 1,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "spider-man-vs-rhino"
+  ],
+  "planned_games": 1,
+  "statuses": {
+    "lost": 1
+  }
+}
