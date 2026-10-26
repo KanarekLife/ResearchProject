@@ -1,0 +1,152 @@
+# Leadership aspect cards of the Captain Marvel starter deck, from the Core
+# Set. Stats follow the printed cards; text is our own paraphrase.
+cards:
+  - code: "01066"
+    name: Hawkeye
+    type: ally
+    unique: true
+    aspect: Leadership
+    cost: 3
+    resources: [energy]
+    hp: 3
+    atk: 1
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    uses: 4
+    text: "Enters play with 4 arrow counters. Response: after a minion enters play, you may remove an arrow counter from Hawkeye to deal 2 damage to that minion."
+    abilities:
+      - trigger: response
+        on: minion_enters
+        when: [counters_positive, target_in_play]
+        key: "use:Hawkeye"
+        text: "Use Hawkeye: remove an arrow counter to deal 2 damage to the minion that entered play"
+        effects:
+          - {verb: counter, n: -1}
+          - {verb: damage_enemy, amount: 2, target: event_target}
+
+  - code: "01067"
+    name: Maria Hill
+    type: ally
+    unique: true
+    aspect: Leadership
+    cost: 2
+    resources: [mental]
+    hp: 2
+    atk: 1
+    atk_cons: 1
+    thw: 2
+    thw_cons: 1
+    text: "Response: after Maria Hill enters play, you may draw 1 card."
+    abilities:
+      - trigger: response
+        on: enters_play
+        when: [target_self]
+        key: "use:Maria Hill"
+        text: "Use Maria Hill: draw 1 card"
+        effects:
+          - {verb: draw, n: 1}
+
+  - code: "01068"
+    name: Vision
+    type: ally
+    unique: true
+    aspect: Leadership
+    cost: 4
+    resources: [physical]
+    hp: 3
+    atk: 2
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    text: "Action (once per round): spend an energy resource to give Vision +2 ATK or +2 THW until the end of the phase."
+    abilities:
+      - trigger: action
+        once_per_round: true
+        key: "use:Vision"
+        text: "Use Vision: +2 ATK or +2 THW until the end of the phase (spend an energy resource; once per round)"
+        paid: {count: 1, resources: [energy]}
+        effects:
+          - verb: choose
+            prompt: "Vision: choose the power that gets +2 until the end of the phase."
+            options:
+              - text: "+2 ATK"
+                key: "effect:Vision>atk"
+                effects:
+                  - {verb: temp_boost, stat: atk, amount: 2, target: self}
+              - text: "+2 THW"
+                key: "effect:Vision>thw"
+                effects:
+                  - {verb: temp_boost, stat: thw, amount: 2, target: self}
+
+  - code: "01069"
+    name: Get Ready
+    type: event
+    aspect: Leadership
+    cost: 0
+    resources: [physical]
+    text: "Action: ready an ally."
+    abilities:
+      - trigger: play
+        target: ally
+        effects:
+          - {verb: ready, target: chosen}
+
+  - code: "01070"
+    name: Lead from the Front
+    type: event
+    aspect: Leadership
+    cost: 2
+    resources: [energy]
+    text: "Hero Action: your hero and each of your allies get +1 ATK and +1 THW until the end of the phase."
+    abilities:
+      - trigger: play
+        when: [hero]
+        effects:
+          - {verb: temp_boost, stat: atk, amount: 1, target: friendly}
+          - {verb: temp_boost, stat: thw, amount: 1, target: friendly}
+
+  - code: "01071"
+    name: Make the Call
+    type: event
+    aspect: Leadership
+    cost: 0
+    resources: [mental]
+    cost_from_target: true
+    text: "Action: pay the printed cost of an ally in your discard pile to put it into play."
+    abilities:
+      - trigger: play
+        target: discard_ally
+        effects:
+          - {verb: put_into_play}
+
+  - code: "01072"
+    name: The Power of Leadership
+    type: resource
+    aspect: Leadership
+    resources: [wild]
+    double_for: Leadership
+    text: "Generates 2 wild resources when paying for a Leadership card."
+
+  - code: "01073"
+    name: The Triskelion
+    type: support
+    unique: true
+    aspect: Leadership
+    cost: 1
+    resources: [energy]
+    ally_limit: 1
+    text: "You may control 1 more ally (4 instead of 3)."
+
+  - code: "01074"
+    name: Inspired
+    type: upgrade
+    aspect: Leadership
+    cost: 1
+    resources: [physical]
+    attach_atk: 1
+    attach_thw: 1
+    text: "Attach to an ally (max 1 per ally). That ally gets +1 ATK and +1 THW."
+    abilities:
+      - trigger: play
+        target: ally_without_this

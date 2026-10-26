@@ -1,0 +1,8 @@
+id: captain-marvel-vs-klaw
+title: Captain Marvel (Leadership) vs Klaw - Standard, Masters of Evil
+deck: captain-marvel-leadership
+villain: klaw
+encounter_sets: [standard, masters-of-evil]
+seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+max_rounds: 20
+max_decisions: 1000

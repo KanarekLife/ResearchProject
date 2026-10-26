@@ -21,10 +21,11 @@ func newFlagSet(name string, args []string) (*flag.FlagSet, config, error) {
 	return fs, cfg, err
 }
 
-// scenarioFlags defines the shared scenario selection flag. The scenarios
-// themselves are embedded (package data).
-func scenarioFlags(fs *flag.FlagSet) loader {
-	return loader{only: fs.String("only", "", "comma-separated scenario ids (default: all)")}
+// scenarioFlags defines the shared scenario selection flag; ids is its
+// default (run.scenarios for the commands that play, nil for all). The
+// scenarios themselves are embedded (package data).
+func scenarioFlags(fs *flag.FlagSet, ids []string) loader {
+	return loader{only: fs.String("only", strings.Join(ids, ","), "comma-separated scenario ids (default: run.scenarios in the config, empty for all)")}
 }
 
 func (l loader) load() ([]*scenario.Scenario, error) {

@@ -10,10 +10,12 @@ cards:
     thw: 1
     def: 3
     hand_size: 5
-    text: "Spider-Sense - when the villain attacks you, draw 1 card (applied automatically)."
+    text: "Spider-Sense - Interrupt: when the villain initiates an attack against you, you may draw 1 card."
     abilities:
-      - trigger: forced
+      - trigger: interrupt
         on: villain_attacks
+        key: "use:Spider-Man"
+        text: "Spider-Sense: draw 1 card"
         effects:
           - {verb: draw, n: 1}
     back:
@@ -210,9 +212,13 @@ cards:
     atk_cons: 1
     thw: 1
     thw_cons: 1
-    text: "When she enters play, stun an enemy."
+    text: "Response: after Mockingbird enters play, you may stun an enemy."
     abilities:
-      - trigger: play
+      - trigger: response
+        on: enters_play
+        when: [target_self]
+        key: "use:Mockingbird"
+        text: "Use Mockingbird: stun an enemy"
         effects:
           - {verb: stun_chosen}
 

@@ -47,6 +47,22 @@ var predicates = map[string]func(g *e.Game, c *e.Card, ev *e.Event) bool{
 	},
 	constants.PredUpgradesSupports: func(g *e.Game, c *e.Card, ev *e.Event) bool { return len(controlledUpgradesSupports(g)) > 0 },
 	constants.PredAmountPositive:   func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Amount > 0 },
+	constants.PredAerial:           func(g *e.Game, c *e.Card, ev *e.Event) bool { return g.HeroHasTrait(constants.TraitAerial) },
+	constants.PredNotAerial:        func(g *e.Game, c *e.Card, ev *e.Event) bool { return !g.HeroHasTrait(constants.TraitAerial) },
+	constants.PredDefeated:         func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Defeated },
+	constants.PredSourceHero:       func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Source == g.S.Hero },
+	constants.PredTargetMinion: func(g *e.Game, c *e.Card, ev *e.Event) bool {
+		return ev != nil && ev.Target != nil && ev.Target.Face().Type == e.TypeMinion
+	},
+	constants.PredTargetSelf: func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Target == c },
+	constants.PredTargetHero: func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Target == g.S.Hero },
+	constants.PredUndefended: func(g *e.Game, c *e.Card, ev *e.Event) bool { return ev != nil && ev.Attack && ev.Target == nil },
+	constants.PredDrones:     func(g *e.Game, c *e.Card, ev *e.Event) bool { return len(drones(g)) > 0 },
+	constants.PredTargetInPlay: func(g *e.Game, c *e.Card, ev *e.Event) bool {
+		return ev != nil && ev.Target != nil && g.IsInPlay(ev.Target)
+	},
+	constants.PredHandNotEmpty: func(g *e.Game, c *e.Card, ev *e.Event) bool { return len(g.S.Hand) > 0 },
+	constants.PredUpgrades:     func(g *e.Game, c *e.Card, ev *e.Event) bool { return len(controlledUpgrades(g)) > 0 },
 }
 
 func predicate(p string) func(g *e.Game, c *e.Card, ev *e.Event) bool {
@@ -61,7 +77,18 @@ func predicate(p string) func(g *e.Game, c *e.Card, ev *e.Event) bool {
 		res := resource(r)
 		return func(g *e.Game, _ *e.Card, _ *e.Event) bool { return !paidWith(g, res) }
 	}
+	if r, ok := strings.CutPrefix(p, constants.PredMilledPrefix); ok {
+		res := resource(r)
+		return func(g *e.Game, _ *e.Card, _ *e.Event) bool { return milledWith(g, res) }
+	}
 	return nil
+}
+
+// milledWith reports whether the last milled card has a printed res (or
+// wild) resource.
+func milledWith(g *e.Game, res e.Resource) bool {
+	m := g.LastMilled
+	return m != nil && (slices.Contains(m.Def.Resources, res) || slices.Contains(m.Def.Resources, e.Wild))
 }
 
 // paidWith reports whether the last payment included res. A wild resource
@@ -100,7 +127,8 @@ func effectTarget(g *e.Game, c *e.Card, ev *e.Event, target *e.Card, eff *Effect
 	return c
 }
 
-func selectTargets(g *e.Game, sel string) []*e.Card {
+// selectTargets lists the cards a selector picks for card c.
+func selectTargets(g *e.Game, c *e.Card, sel string) []*e.Card {
 	switch sel {
 	case constants.SelEnemy:
 		return g.Enemies()
@@ -116,6 +144,39 @@ func selectTargets(g *e.Game, sel string) []*e.Card {
 		return enemiesWithoutWebbedUp(g)
 	case constants.SelDamagedCharacter:
 		return damagedCharacters(g)
+	case constants.SelAlly:
+		return allies(g)
+	case constants.SelAllyWithoutThis:
+		return slices.DeleteFunc(allies(g), func(a *e.Card) bool { return findCode(a.Attached, c.Def.Code) != nil })
+	case constants.SelDiscardAlly:
+		return discardAllies(g)
+	case constants.SelUpgrade:
+		return controlledUpgrades(g)
+	case constants.SelSideSchemes:
+		return append([]*e.Card(nil), g.S.SideSchemes...)
+	case constants.SelFriendly:
+		return friendly(g)
 	}
-	return nil
+	panic("cards: unknown selector " + sel)
+}
+
+// discardAllies lists the allies in your discard pile that could enter
+// play (a unique one only if no copy is in play).
+func discardAllies(g *e.Game) []*e.Card {
+	var out []*e.Card
+	for _, d := range g.S.Discard {
+		if d.Def.Type == e.TypeAlly && !(d.Def.Unique && inPlayNamed(g, d.Def.Name)) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+func inPlayNamed(g *e.Game, name string) bool {
+	for _, c := range append(g.S.Play, g.S.Hero) {
+		if c.Name() == name {
+			return true
+		}
+	}
+	return false
 }

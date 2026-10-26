@@ -43,7 +43,7 @@ func TestNewFlagSetReadsConfigBeforeFlags(t *testing.T) {
 
 func TestLoaderOnly(t *testing.T) {
 	fs, _, _ := newFlagSet("x", nil)
-	l := scenarioFlags(fs)
+	l := scenarioFlags(fs, nil)
 	fs.Parse([]string{"-only", "spider-man-vs-rhino"})
 	if scs, err := l.load(); err != nil || len(scs) != 1 {
 		t.Errorf("only existing id: %d scenarios, err=%v", len(scs), err)

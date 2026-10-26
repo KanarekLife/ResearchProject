@@ -47,8 +47,9 @@ export function Board({ v }: { v: View }) {
       <Zone area="scheme" side="encounter" title="Main scheme">
         <CardView c={ms} wide size="big" stats={ms.threat_per_round ? `+${ms.threat_per_round} threat per round` : ""} />
       </Zone>
-      <Zone area="sides" side="encounter" title="Side schemes">
+      <Zone area="sides" side="encounter" title={v.environment?.length ? "Side schemes · environment" : "Side schemes"}>
         {v.side_schemes.map((s, i) => <CardView key={i} c={s} wide />)}
+        {(v.environment ?? []).map((e, i) => <CardView key={"env" + i} c={{ ...e, type: "environment" }} />)}
       </Zone>
       <Zone area="encounter" side="encounter" title="Encounter" piles>
         <Pile label="deck" value={v.encounter_deck_size} />
@@ -60,7 +61,7 @@ export function Board({ v }: { v: View }) {
         {v.minions.map((m, i) => <CardView key={i} c={m} stats={stat([["ATK", m.atk], ["SCH", m.sch]])} />)}
       </Zone>
       <Zone area="hero" side="player" title={isHero ? "Hero" : "Alter-ego"}>
-        <CardView c={{ ...hero, type: hero.form, text: hero.ability }} size="big" stats={heroStats} back={heroBack} />
+        <CardView c={{ ...hero, type: hero.form, text: hero.ability, keywords: hero.traits }} size="big" stats={heroStats} back={heroBack} />
       </Zone>
       <Zone area="allies" side="player" title="Allies">
         {v.in_play.filter((c) => c.type === "ally").map((c, i) => <CardView key={i} c={c} stats={allyStats(c)} />)}
@@ -150,10 +151,14 @@ export function chipsOf(c: AnyCard): string[] {
   return chips;
 }
 
-// Face is the card's MarvelCDB image, or its text when it has no code or image.
+// Face is the card's MarvelCDB image, a card back for a facedown card (a
+// Drone), or its text when it has no code or image.
 export function Face({ c, stage }: { c: AnyCard; stage?: number }) {
   const code = codeOf(useContext(CodesContext), c.name, stage);
   const [broken, setBroken] = useState("");
+  if (code && !isPrinted(code)) {
+    return <div className="face facedown"><b>{c.name}</b></div>;
+  }
   if (!code || broken === code) {
     return (
       <div className="face">
@@ -171,6 +176,12 @@ export function Face({ c, stage }: { c: AnyCard; stage?: number }) {
       <img src={IMAGE_URL + code + ".png"} alt={c.name} loading="lazy" onError={() => setBroken(code)} />
     </div>
   );
+}
+
+// isPrinted tells a MarvelCDB code ("01143") from the code of a face that is
+// not a printed card, such as a facedown Drone ("drone").
+export function isPrinted(code: string): boolean {
+  return /^\d/.test(code);
 }
 
 // codeOf picks the card's code; only villain stages share a name.

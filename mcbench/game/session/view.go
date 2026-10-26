@@ -14,21 +14,22 @@ type View struct {
 	Round int    `json:"round"`
 	Phase string `json:"phase"`
 
-	Hero                Hero     `json:"hero"`
-	Hand                []Card   `json:"hand"`
-	InPlay              []Card   `json:"in_play"`
-	DeckSize            int      `json:"deck_size"`
-	Discard             []string `json:"discard"`
-	FaceDownEncounters  int      `json:"face_down_encounter_cards"`
-	Villain             Enemy    `json:"villain"`
-	NextStages          []Enemy  `json:"next_villain_stages"`
-	MainScheme          Scheme   `json:"main_scheme"`
-	SideSchemes         []Scheme `json:"side_schemes"`
-	Minions             []Enemy  `json:"minions"`
-	EncounterDeckSize   int      `json:"encounter_deck_size"`
-	EncounterDiscard    []string `json:"encounter_discard"`
-	AccelerationTokens  int      `json:"acceleration_tokens"`
-	NextCardCostReduced int      `json:"next_card_cost_reduction,omitempty"`
+	Hero                Hero          `json:"hero"`
+	Hand                []Card        `json:"hand"`
+	InPlay              []Card        `json:"in_play"`
+	DeckSize            int           `json:"deck_size"`
+	Discard             []string      `json:"discard"`
+	FaceDownEncounters  int           `json:"face_down_encounter_cards"`
+	Villain             Enemy         `json:"villain"`
+	NextStages          []Enemy       `json:"next_villain_stages"`
+	MainScheme          Scheme        `json:"main_scheme"`
+	SideSchemes         []Scheme      `json:"side_schemes"`
+	Minions             []Enemy       `json:"minions"`
+	Environment         []Environment `json:"environment,omitempty"`
+	EncounterDeckSize   int           `json:"encounter_deck_size"`
+	EncounterDiscard    []string      `json:"encounter_discard"`
+	AccelerationTokens  int           `json:"acceleration_tokens"`
+	NextCardCostReduced int           `json:"next_card_cost_reduction,omitempty"`
 }
 
 // Hero is the identity and its current form.
@@ -42,6 +43,7 @@ type Hero struct {
 	DEF          int      `json:"def,omitempty"`
 	REC          int      `json:"rec,omitempty"`
 	HandSize     int      `json:"hand_size"`
+	Traits       []string `json:"traits,omitempty"`
 	Exhausted    bool     `json:"exhausted,omitempty"`
 	Statuses     []string `json:"statuses,omitempty"`
 	FormChanged  bool     `json:"changed_form_this_turn,omitempty"`
@@ -85,6 +87,13 @@ type Enemy struct {
 	Attachments []Card   `json:"attachments,omitempty"`
 }
 
+// Environment is an encounter card that stays in play and changes the rules.
+type Environment struct {
+	Name        string `json:"name"`
+	Text        string `json:"text,omitempty"`
+	Attachments []Card `json:"attachments,omitempty"`
+}
+
 // Scheme is the main scheme or a side scheme.
 type Scheme struct {
 	Name        string   `json:"name"`
@@ -112,6 +121,7 @@ func buildView(g *engine.Game, totalStages int) View {
 		MainScheme:          scheme(g, s.MainScheme),
 		SideSchemes:         mapCards(s.SideSchemes, func(c *engine.Card) Scheme { return scheme(g, c) }),
 		Minions:             mapCards(s.Minions, func(c *engine.Card) Enemy { return enemy(g, c) }),
+		Environment:         environment(g),
 		EncounterDeckSize:   len(s.EncDeck),
 		EncounterDiscard:    names(s.EncDiscard),
 		AccelerationTokens:  s.AccelTokens,
@@ -133,8 +143,8 @@ func heroView(g *engine.Game) Hero {
 		other = h.Def
 	}
 	hero := Hero{
-		Name: face.Name, Form: constants.TypeHero, HP: h.RemainingHP(), MaxHP: face.HP,
-		HandSize: face.HandSize, Exhausted: h.Exhausted, Statuses: statuses(h),
+		Name: face.Name, Form: constants.TypeHero, HP: g.RemainingHP(h), MaxHP: g.MaxHP(h),
+		HandSize: g.HandSize(), Traits: g.HeroTraits(), Exhausted: h.Exhausted, Statuses: statuses(h),
 		FormChanged: s.FormChanged, Ability: face.Text,
 		OtherForm: other.Name, OtherAbility: other.Text, Attachments: mapCards(h.Attached, playFn(g)),
 	}
@@ -216,7 +226,7 @@ func playCard(g *engine.Game, c *engine.Card) Card {
 	d := c.Face()
 	out := Card{Name: d.Name, Label: labelOf(g, c), Type: string(d.Type), Counters: c.Counters, Exhausted: c.Exhausted, Statuses: statuses(c), Text: d.Text}
 	if d.Type == engine.TypeAlly {
-		out.HP, out.MaxHP, out.ATK, out.THW, out.AtkCons, out.ThwCons = c.RemainingHP(), d.HP, g.AllyATK(c), g.AllyTHW(c), d.AtkCons, d.ThwCons
+		out.HP, out.MaxHP, out.ATK, out.THW, out.AtkCons, out.ThwCons = g.RemainingHP(c), g.MaxHP(c), g.AllyATK(c), g.AllyTHW(c), d.AtkCons, d.ThwCons
 	}
 	return out
 }
@@ -224,7 +234,7 @@ func playCard(g *engine.Game, c *engine.Card) Card {
 func enemy(g *engine.Game, c *engine.Card) Enemy {
 	d := c.Face()
 	e := Enemy{
-		Name: d.Name, Label: labelOf(g, c), HP: c.RemainingHP(), MaxHP: d.HP,
+		Name: d.Name, Label: labelOf(g, c), HP: g.RemainingHP(c), MaxHP: g.MaxHP(c),
 		ATK: g.EnemyATK(c), SCH: g.EnemySCH(c), Statuses: statuses(c),
 		Text: d.Text, Attachments: mapCards(c.Attached, playFn(g)),
 	}
@@ -235,6 +245,16 @@ func enemy(g *engine.Game, c *engine.Card) Enemy {
 		e.Keywords = append(e.Keywords, constants.KeywordQuickstrike)
 	}
 	return e
+}
+
+// environment lists the environment cards in play; nil (left out of the
+// view) when there is none.
+func environment(g *engine.Game) []Environment {
+	var out []Environment
+	for _, c := range g.S.Environment {
+		out = append(out, Environment{Name: c.Name(), Text: c.Face().Text, Attachments: mapCards(c.Attached, playFn(g))})
+	}
+	return out
 }
 
 func scheme(g *engine.Game, c *engine.Card) Scheme {

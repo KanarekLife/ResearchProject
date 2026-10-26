@@ -23,7 +23,7 @@ func cmdBoardGUI(args []string) error {
 		source  = sourceFlag(fs, cfg)
 		runSel  = fs.String("run", "", "run id or prefix (default: newest)")
 		gameSel = fs.String("game", "", "game name or substring (default: last)")
-		ld      = scenarioFlags(fs)
+		ld      = scenarioFlags(fs, nil)
 	)
 	fs.Parse(args)
 	path := fs.Arg(0)

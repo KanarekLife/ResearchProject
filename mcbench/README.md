@@ -131,14 +131,14 @@ Without placeholders the value is the same for the whole run. Any other
 
 ## Current content
 
-Spider-Man with his Justice starter deck (with Eviction Notice and the Vulture
-nemesis set) against Rhino (stages I–II) plus the Standard and Bomb Scare
-encounter sets, over 10 seeds. Decks and scenarios are data under `data/`;
-adding more needs no Go changes.
+The Core Set starter decks of Spider-Man (Justice), Iron Man (Aggression) and
+Captain Marvel (Leadership), each with its obligation and nemesis set, against
+Rhino (with Bomb Scare), Klaw (with Masters of Evil) and Ultron (with Under
+Attack), each villain at stages I–II with the Standard set: nine scenarios
+(`go run ./cmd list`) over 10 seeds each. `run.scenarios` in `config.yaml`
+selects the ones `run` and `play` use. Decks and scenarios are data under
+`data/`; adding more needs no Go changes as long as the cards' rules exist.
 
-Known simplifications:
-
-- Spider-Sense draws automatically.
-- Always-beneficial optional responses (Interrogation Room, Daredevil) trigger
-  automatically.
-- Main schemes have a single stage.
+Card behaviour follows the card text, the Rules Reference and its FAQ
+(Appendix IV); effects on other players (Whirlwind's attack on each other hero)
+do nothing solo.

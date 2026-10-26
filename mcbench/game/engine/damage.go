@@ -1,5 +1,7 @@
 package engine
 
+import "fmt"
+
 // --- statuses ---------------------------------------------------------------
 
 func (g *Game) Stun(c *Card) {
@@ -25,30 +27,64 @@ func (g *Game) GiveTough(c *Card) {
 
 // --- damage and healing -------------------------------------------------------
 
-// DamageEnemy deals damage to the villain or a minion and handles defeat.
-func (g *Game) DamageEnemy(target *Card, amount int) {
+// DamageEnemy deals damage to the villain or a minion and handles defeat. It
+// reports whether the enemy (or the villain's stage) was defeated and the
+// damage beyond its remaining hit points.
+func (g *Game) DamageEnemy(target *Card, amount int) (defeated bool, excess int) {
 	if amount <= 0 {
-		return
+		return false, 0
 	}
 	if target.Tough {
 		target.Tough = false
 		g.Logf("%s's tough status prevents the damage and is discarded.", target.Name())
-		return
+		return false, 0
 	}
 	ev := &Event{Trigger: TrigEnemyWouldTakeDamage, Target: target, Amount: amount}
 	g.fireForced(ev)
 	if ev.Amount <= 0 {
-		return
+		return false, 0
 	}
+	excess = max(0, ev.Amount-g.RemainingHP(target))
 	target.Damage += ev.Amount
-	g.Logf("%s takes %d damage (%d HP left).", target.Name(), ev.Amount, max(0, target.RemainingHP()))
-	if target.RemainingHP() > 0 {
-		return
+	g.Logf("%s takes %d damage (%d HP left).", target.Name(), ev.Amount, max(0, g.RemainingHP(target)))
+	defeated = g.RemainingHP(target) <= 0
+	if defeated {
+		g.defeatEnemy(target)
+	} else {
+		excess = 0
 	}
+	// "After it takes damage" resolves after a defeat, so it reaches the
+	// villain's next stage but not a defeated minion.
+	if !g.result.Over && g.isInPlay(target) {
+		g.fireForced(&Event{Trigger: TrigEnemyDamaged, Target: target, Amount: ev.Amount})
+	}
+	return defeated, excess
+}
+
+func (g *Game) defeatEnemy(target *Card) {
 	if target == g.S.Villain {
 		g.defeatVillainStage()
 	} else {
 		g.defeatMinion(target)
+	}
+}
+
+// checkDefeats defeats each character left with no hit points, for when a
+// hit point modifier ends rather than damage being dealt.
+func (g *Game) checkDefeats() {
+	s := g.S
+	if g.RemainingHP(s.Hero) <= 0 {
+		g.lose(s.Hero.Name() + " was defeated")
+		return
+	}
+	if g.RemainingHP(s.Villain) <= 0 {
+		g.Logf("%s has no hit points left.", s.Villain.Name())
+		g.defeatVillainStage()
+	}
+	for _, m := range append([]*Card(nil), s.Minions...) {
+		if contains(s.Minions, m) && g.RemainingHP(m) <= 0 {
+			g.defeatMinion(m)
+		}
 	}
 }
 
@@ -73,11 +109,20 @@ func (g *Game) defeatVillainStage() {
 }
 
 func (g *Game) defeatMinion(m *Card) {
-	g.fireForced(&Event{Trigger: TrigMinionDefeated, Target: m})
+	ev := &Event{Trigger: TrigMinionDefeated, Target: m}
+	g.fireForced(ev)
 	g.Logf("%s is defeated.", m.Name())
 	g.S.Minions = remove(g.S.Minions, m)
+	drone := m.Drone != nil
 	g.leavePlay(m)
-	g.S.EncDiscard = append(g.S.EncDiscard, m)
+	if drone {
+		// A facedown Drone is its owner's card (Ultron Drones).
+		g.S.Discard = append(g.S.Discard, m)
+		g.Logf("The Drone was %s; it goes to your discard pile.", m.Def.Name)
+	} else {
+		g.S.EncDiscard = append(g.S.EncDiscard, m)
+	}
+	g.Do(func() { g.playerWindow(ev, m.Name()+" was defeated.", func() {}) })
 }
 
 // leavePlay resets a card that moved out of play: it keeps no memory of its
@@ -86,6 +131,7 @@ func (g *Game) leavePlay(c *Card) {
 	g.discardAttachments(c)
 	c.Exhausted, c.Damage, c.Threat, c.Counters = false, 0, 0, 0
 	c.Stunned, c.Confused, c.Tough, c.Facedown = false, false, false, false
+	c.Drone, c.TempATK, c.TempTHW = nil, 0, 0
 }
 
 func (g *Game) discardAttachments(c *Card) {
@@ -100,7 +146,12 @@ func (g *Game) discardAttachments(c *Card) {
 	c.Attached = nil
 }
 
+// Detach discards a card in play (a card that already left play stays
+// where it is).
 func (g *Game) Detach(a *Card) {
+	if !g.isInPlay(a) {
+		return
+	}
 	g.inPlay(func(c *Card) {
 		if contains(c.Attached, a) {
 			c.Attached = remove(c.Attached, a)
@@ -126,11 +177,32 @@ func (g *Game) DamageHero(amount int) int {
 		return 0
 	}
 	h.Damage += amount
-	g.Logf("%s takes %d damage (%d HP left).", h.Name(), amount, max(0, h.RemainingHP()))
-	if h.RemainingHP() <= 0 {
+	g.Logf("%s takes %d damage (%d HP left).", h.Name(), amount, max(0, g.RemainingHP(h)))
+	if g.RemainingHP(h) <= 0 {
 		g.lose(h.Name() + " was defeated")
 	}
 	return amount
+}
+
+// HarmHero deals damage to your hero from something other than an attack,
+// first offering interrupts to it (such as Cosmic Flight). Without any, the
+// damage is dealt at once. after, if set, gets the damage dealt.
+func (g *Game) HarmHero(amount int, after func(dealt int)) {
+	if amount <= 0 {
+		return
+	}
+	done := func(n int) {
+		if after != nil {
+			after(n)
+		}
+	}
+	ev := &Event{Trigger: TrigHeroWouldTakeDamage, Target: g.S.Hero, Amount: amount}
+	prompt := fmt.Sprintf("You are about to take %d damage.", amount)
+	if g.S.Hero.Tough || len(g.windowOptions(ev, prompt, func() {})) == 0 {
+		done(g.DamageHero(amount))
+		return
+	}
+	g.playerWindow(ev, prompt, func() { done(g.DamageHero(ev.Amount)) })
 }
 
 // DamageAlly deals damage to an ally and returns the excess beyond its HP.
@@ -143,13 +215,13 @@ func (g *Game) DamageAlly(a *Card, amount int) (dealt, excess int) {
 		g.Logf("%s's tough status prevents the damage and is discarded.", a.Name())
 		return 0, 0
 	}
-	rem := a.RemainingHP()
+	rem := g.RemainingHP(a)
 	if amount > rem {
 		excess = amount - rem
 	}
 	a.Damage += amount
 	g.Logf("%s takes %d damage.", a.Name(), amount)
-	if a.RemainingHP() <= 0 {
+	if g.RemainingHP(a) <= 0 {
 		g.Logf("%s is defeated.", a.Name())
 		g.S.Play = remove(g.S.Play, a)
 		g.leavePlay(a)
@@ -166,7 +238,7 @@ func (g *Game) HealHero(n int) {
 func (g *Game) Heal(c *Card, n int) {
 	healed := min(n, c.Damage)
 	c.Damage -= healed
-	g.Logf("%s heals %d damage (%d HP left).", g.Label(c), healed, c.RemainingHP())
+	g.Logf("%s heals %d damage (%d HP left).", g.Label(c), healed, g.RemainingHP(c))
 }
 
 func (g *Game) HealVillain(n int) int {

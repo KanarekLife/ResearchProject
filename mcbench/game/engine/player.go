@@ -6,7 +6,7 @@ import (
 	"mcbench/constants"
 )
 
-// MaxAllies is the ally limit per player.
+// MaxAllies is the ally limit per player before modifiers (AllyLimit).
 const MaxAllies = 3
 
 func (g *Game) playerTurn() {
@@ -58,11 +58,32 @@ func (g *Game) playCard(c *Card, target *Card) {
 	default:
 		s.Play = append(s.Play, c)
 	}
+	g.entersPlay(c, target)
+}
+
+// PutIntoPlay puts a card from your discard pile into play (Make the Call).
+func (g *Game) PutIntoPlay(c *Card) {
+	s := g.S
+	s.Discard = remove(s.Discard, c)
+	s.Play = append(s.Play, c)
+	g.Logf("%s enters play from the discard pile.", c.Def.Name)
+	g.entersPlay(c, nil)
+}
+
+// entersPlay resolves a card that just entered play: its counters, the ally
+// limit, then its enters-play abilities.
+func (g *Game) entersPlay(c, target *Card) {
+	d := c.Def
 	c.Counters = d.Uses
 	g.Do(func() { g.enforceAllyLimit(c) }, func() {
 		// A card discarded for the ally limit never resolves its abilities.
 		if d.Script != nil && d.Script.OnPlay != nil && g.isInPlay(c) {
 			d.Script.OnPlay(g, c, target)
+		}
+	}, func() {
+		if g.isInPlay(c) {
+			ev := &Event{Trigger: TrigEntersPlay, Target: c}
+			g.playerWindow(ev, d.Name+" entered play.", func() {})
 		}
 	})
 }
@@ -70,8 +91,8 @@ func (g *Game) playCard(c *Card, target *Card) {
 // enforceAllyLimit makes the player discard allies until they control no
 // more than MaxAllies. It runs before the played card's enters-play abilities.
 func (g *Game) enforceAllyLimit(played *Card) {
-	n := g.allyCount()
-	if n <= MaxAllies {
+	n, limit := g.allyCount(), g.AllyLimit()
+	if n <= limit {
 		return
 	}
 	var opts []Option
@@ -87,7 +108,7 @@ func (g *Game) enforceAllyLimit(played *Card) {
 			g.Do(func() { g.enforceAllyLimit(played) })
 		}))
 	}
-	g.Ask(&Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("Ally limit: you control %d allies but may control only %d. Choose an ally to discard.", n, MaxAllies), Options: opts})
+	g.Ask(&Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("Ally limit: you control %d allies but may control only %d. Choose an ally to discard.", n, limit), Options: opts})
 }
 
 // Draw draws n cards one at a time.
@@ -129,7 +150,7 @@ func (g *Game) endPlayerPhase() {
 // the hand size, the player must discard down to it before being done.
 func (g *Game) askDiscard() {
 	s := g.S
-	handSize := s.Hero.Face().HandSize
+	handSize := g.HandSize()
 	var opts []Option
 	prompt := fmt.Sprintf("End of turn. You must discard down to your hand size of %d (you have %d cards).", handSize, len(s.Hand))
 	if len(s.Hand) <= handSize {
@@ -163,7 +184,7 @@ func (g *Game) askDiscard() {
 func (g *Game) drawAndReady() {
 	s := g.S
 	s.CostReduction = 0
-	if need := s.Hero.Face().HandSize - len(s.Hand); need > 0 {
+	if need := g.HandSize() - len(s.Hand); need > 0 {
 		g.Draw(need)
 	}
 	s.Hero.Exhausted = false

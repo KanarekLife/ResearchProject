@@ -102,7 +102,7 @@ func cmdRun(args []string) error {
 }
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
-	l := scenarioFlags(fs)
+	l := scenarioFlags(fs, cfg.Run.Scenarios)
 	playerName := fs.String("player", cfg.Player.Name, "player: model, systemone (a System One classifier, see -model and -server), heuristic, random, first")
 	modelID := fs.String("model", cfg.Inference.Model, "model id (required for -player model)")
 	api := fs.String("api", cfg.Inference.API, "API protocol: openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent), anthropic (Messages)")

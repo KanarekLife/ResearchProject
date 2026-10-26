@@ -25,10 +25,22 @@ func board(t ui.Theme, v session.View) []string {
 	if len(v.Minions) > 0 {
 		out = append(out, t.Box("Minions", enemyLines(t, v.Minions), ui.Width)...)
 	}
+	if len(v.Environment) > 0 {
+		out = append(out, t.Box("Environment", environmentLines(t, v.Environment), ui.Width)...)
+	}
 	if len(v.InPlay) > 0 {
 		out = append(out, t.Box("In play", cardLines(t, v.InPlay), ui.Width)...)
 	}
 	return append(out, t.Box(fmt.Sprintf("Hand (%d)", len(v.Hand)), cardLines(t, v.Hand), ui.Width)...)
+}
+
+func environmentLines(t ui.Theme, envs []session.Environment) []string {
+	var lines []string
+	for _, e := range envs {
+		lines = append(lines, t.Bold(e.Name), e.Text)
+		lines = append(lines, cardLines(t, e.Attachments)...)
+	}
+	return lines
 }
 
 func pileLine(v session.View) string {

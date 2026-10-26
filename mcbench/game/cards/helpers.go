@@ -151,7 +151,7 @@ func assignDamage(g *e.Game, source string, n int) {
 	assign = func(left int) {
 		var open []*e.Card
 		for _, a := range allies {
-			if assigned[a] < a.RemainingHP() {
+			if assigned[a] < g.RemainingHP(a) {
 				open = append(open, a)
 			}
 		}
@@ -165,7 +165,7 @@ func assignDamage(g *e.Game, source string, n int) {
 		}
 		opts := []e.Option{e.NewAction(constants.PrefixEffect+source+">"+g.S.Hero.Name(), "Assign 1 to "+g.S.Hero.Name(), next(g.S.Hero))}
 		for _, a := range open {
-			opts = append(opts, e.NewAction(constants.PrefixEffect+source+">"+g.Label(a), fmt.Sprintf("Assign 1 to %s (%d HP left)", g.Label(a), a.RemainingHP()-assigned[a]), next(a)))
+			opts = append(opts, e.NewAction(constants.PrefixEffect+source+">"+g.Label(a), fmt.Sprintf("Assign 1 to %s (%d HP left)", g.Label(a), g.RemainingHP(a)-assigned[a]), next(a)))
 		}
 		g.Ask(&e.Decision{Kind: constants.KindChoice, Prompt: fmt.Sprintf("%s: assign 1 damage (%d left to assign).", source, left), Options: opts})
 	}
@@ -174,15 +174,36 @@ func assignDamage(g *e.Game, source string, n int) {
 
 // dealAssigned deals the assigned damage, hero first.
 func dealAssigned(g *e.Game, allies []*e.Card, assigned map[*e.Card]int) {
-	g.DamageHero(assigned[g.S.Hero])
+	g.HarmHero(assigned[g.S.Hero], nil)
 	for _, a := range allies {
 		g.DamageAlly(a, assigned[a])
 	}
 }
 
-func evalBonus(g *e.Game, expr string) int {
-	if expr == constants.BonusSideSchemes {
+// evalCount evaluates a count expression for card c.
+func evalCount(g *e.Game, c *e.Card, expr string) int {
+	switch expr {
+	case constants.CountSideSchemes:
 		return len(g.S.SideSchemes)
+	case constants.CountTechUpgrades:
+		n := 0
+		for _, u := range controlledUpgrades(g) {
+			if u.Def.HasTrait(constants.TraitTech) {
+				n++
+			}
+		}
+		return n
+	case constants.CountAerial:
+		if g.HeroHasTrait(constants.TraitAerial) {
+			return 1
+		}
+		return 0
+	case constants.CountDrones:
+		return len(drones(g))
+	case constants.CountUpgrades:
+		return len(controlledUpgrades(g))
+	case constants.CountCounters:
+		return c.Counters
 	}
-	panic("cards: unknown stat bonus " + expr)
+	panic("cards: unknown count " + expr)
 }

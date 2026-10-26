@@ -2,6 +2,8 @@ package engine
 
 import (
 	"fmt"
+
+	"mcbench/constants"
 )
 
 // drawEncounter takes the top encounter card. The deck is reset as soon as
@@ -17,6 +19,10 @@ func (g *Game) drawEncounter() *Card {
 	g.resetEncounterDeck()
 	return c
 }
+
+// DrawEncounter takes the top encounter card, for effects that discard or
+// search from the encounter deck.
+func (g *Game) DrawEncounter() *Card { return g.drawEncounter() }
 
 // resetEncounterDeck shuffles the encounter discard pile into a new deck
 // (with an acceleration token) as soon as the deck is empty. If the discard
@@ -128,8 +134,23 @@ func (g *Game) revealSteps(c *Card, onReveal func()) []func() {
 		}}
 	case TypeAttachment:
 		return []func(){func() {
-			s.Villain.Attached = append(s.Villain.Attached, c)
-			g.Logf("%s attaches to %s.", d.Name, s.Villain.Name())
+			host := s.Villain
+			if d.AttachTo == constants.AttachEnvironment {
+				if len(s.Environment) == 0 {
+					g.Logf("%s has no environment to attach to and is discarded.", d.Name)
+					s.EncDiscard = append(s.EncDiscard, c)
+					return
+				}
+				host = s.Environment[0]
+			}
+			host.Attached = append(host.Attached, c)
+			g.Logf("%s attaches to %s.", d.Name, host.Name())
+			onReveal()
+		}}
+	case TypeEnvironment:
+		return []func(){func() {
+			s.Environment = append(s.Environment, c)
+			g.Logf("Environment %s enters play.", d.Name)
 			onReveal()
 		}}
 	case TypeObligation:

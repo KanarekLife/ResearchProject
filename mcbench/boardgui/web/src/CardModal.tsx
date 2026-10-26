@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { chipsOf, CodesContext, codeOf, IMAGE_URL, Tokens, type Shown } from "./Board";
+import { chipsOf, CodesContext, codeOf, IMAGE_URL, isPrinted, Tokens, type Shown } from "./Board";
 
 // CardModal shows one card full size: the MarvelCDB image (or its text when
 // there is none) beside our name, text and current counters. A double-sided
@@ -16,7 +16,9 @@ export function CardModal({ s, onClose }: { s: Shown; onClose: () => void }) {
     <div className="modal" onClick={onClose}>
       <div className="modal-box" role="dialog" aria-label={c.name} onClick={(e) => e.stopPropagation()}>
         <button className="close" title="Close (Esc)" onClick={onClose}>✕</button>
-        {code && broken !== code ? (
+        {code && !isPrinted(code) ? (
+          <div className="full facedown"><b>{c.name}</b></div>
+        ) : code && broken !== code ? (
           <img key={code} className="full" src={IMAGE_URL + code + ".png"} alt={c.name} onError={() => setBroken(code)} />
         ) : (
           <div className="full text-full">

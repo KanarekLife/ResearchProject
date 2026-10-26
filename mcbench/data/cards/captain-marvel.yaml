@@ -1,0 +1,282 @@
+# Captain Marvel hero set, obligation and nemesis set (Yon-Rogg), from the
+# Core Set. Stats follow the printed cards for one player; text is our own
+# paraphrase.
+cards:
+  - code: "01010a"
+    name: Captain Marvel
+    type: hero
+    unique: true
+    traits: [Avenger, Soldier]
+    hp: 12
+    atk: 2
+    thw: 2
+    def: 1
+    hand_size: 5
+    text: "Rechannel - Action (once per round): spend an energy resource and heal 1 damage from Captain Marvel to draw 1 card."
+    abilities:
+      - trigger: action
+        when: [hero_damaged]
+        once_per_round: true
+        key: "use:Captain Marvel"
+        text: "Rechannel: heal 1 damage from Captain Marvel and draw 1 card (spend an energy resource; once per round)"
+        paid: {count: 1, resources: [energy]}
+        effects:
+          - {verb: heal_hero, amount: 1}
+          - {verb: draw, n: 1}
+    back:
+      code: "01010b"
+      name: Carol Danvers
+      type: alter-ego
+      unique: true
+      traits: [S.H.I.E.L.D., Soldier]
+      hp: 12
+      rec: 4
+      hand_size: 6
+      text: "Commander - Action (once per round): draw 1 card."
+      abilities:
+        - trigger: action
+          once_per_round: true
+          key: "use:Carol Danvers"
+          text: "Commander: draw 1 card (once per round)"
+          effects:
+            - {verb: draw, n: 1}
+
+  - code: "01011"
+    name: Spider-Woman
+    type: ally
+    unique: true
+    aspect: Hero
+    cost: 3
+    resources: [wild]
+    hp: 2
+    atk: 2
+    atk_cons: 1
+    thw: 2
+    thw_cons: 1
+    text: "Response: after Spider-Woman enters play, you may confuse the villain."
+    abilities:
+      - trigger: response
+        on: enters_play
+        when: [target_self]
+        key: "use:Spider-Woman"
+        text: "Use Spider-Woman: confuse the villain"
+        effects:
+          - {verb: confuse, target: villain}
+
+  - code: "01012"
+    name: Crisis Interdiction
+    type: event
+    aspect: Hero
+    cost: 2
+    resources: [energy]
+    text: "Hero Action (thwart): remove 2 threat from a scheme; then, if you are Aerial, remove 2 threat from a different scheme."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: scheme
+        effects:
+          - verb: thwart
+            amount: 2
+            then:
+              - {verb: remove_threat, amount: 2, choose: true, other: true, when: [aerial]}
+
+  - code: "01013"
+    name: Photonic Blast
+    type: event
+    aspect: Hero
+    cost: 3
+    resources: [physical]
+    text: "Hero Action (attack): deal 5 damage to an enemy. If you paid for it with an energy resource, draw 1 card."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - verb: attack
+            damage: 5
+            then:
+              - {verb: draw, n: 1, when: ["paid:energy"]}
+
+  - code: "01014"
+    name: Energy Absorption
+    type: resource
+    aspect: Hero
+    resources: [energy, energy, energy]
+
+  - code: "01015"
+    name: Alpha Flight Station
+    type: support
+    unique: true
+    aspect: Hero
+    cost: 1
+    resources: [mental]
+    text: "Action: exhaust Alpha Flight Station and discard a card from your hand to draw 1 card (2 cards instead if you are Carol Danvers)."
+    abilities:
+      - trigger: action
+        when: [not_exhausted, hand_not_empty]
+        key: "use:Alpha Flight Station"
+        text: "Use Alpha Flight Station: discard a card from your hand, then draw 1 card (2 as Carol Danvers) (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - verb: discard_hand_choice
+            then:
+              - {verb: draw, n: 1, when: [hero]}
+              - {verb: draw, n: 2, when: [alter_ego]}
+
+  - code: "01016"
+    name: Captain Marvel's Helmet
+    type: upgrade
+    unique: true
+    aspect: Hero
+    traits: [Armor, Tech]
+    cost: 2
+    resources: [physical]
+    hero_def: 1
+    text: "Captain Marvel gets +1 DEF (+2 DEF instead if you are Aerial)."
+    abilities:
+      - trigger: stat
+        stat: hero_def
+        bonus: aerial
+
+  - code: "01017"
+    name: Cosmic Flight
+    type: upgrade
+    aspect: Hero
+    cost: 2
+    resources: [energy]
+    hero_traits: [Aerial]
+    text: "You are Aerial. Hero Interrupt: when Captain Marvel would take damage, you may discard Cosmic Flight to prevent 3 of that damage."
+    abilities:
+      - trigger: interrupt
+        on: hero_would_take_damage
+        when: [hero, amount_positive]
+        key: "use:Cosmic Flight"
+        text: "Use Cosmic Flight: prevent 3 of the damage (discard Cosmic Flight)"
+        effects:
+          - {verb: detach}
+          - {verb: reduce_amount, amount: 3}
+
+  - code: "01018"
+    name: Energy Channel
+    type: upgrade
+    aspect: Hero
+    cost: 0
+    resources: [mental]
+    max_in_play: 1
+    text: "Max 1. Action: spend X energy resources to put X energy counters here. Hero Action (attack): discard Energy Channel to deal 2 damage to an enemy for each energy counter here (maximum 10)."
+    abilities:
+      - trigger: action
+        key: "use:Energy Channel>charge 1"
+        text: "Charge Energy Channel: spend 1 energy resource, +1 counter"
+        paid: {count: 1, resources: [energy]}
+        effects:
+          - {verb: counter, n: 1}
+      - trigger: action
+        key: "use:Energy Channel>charge 2"
+        text: "Charge Energy Channel: spend 2 energy resources, +2 counters"
+        paid: {count: 2, resources: [energy, energy]}
+        effects:
+          - {verb: counter, n: 2}
+      - trigger: action
+        key: "use:Energy Channel>charge 3"
+        text: "Charge Energy Channel: spend 3 energy resources, +3 counters"
+        paid: {count: 3, resources: [energy, energy, energy]}
+        effects:
+          - {verb: counter, n: 3}
+      - trigger: action
+        key: "use:Energy Channel>charge 4"
+        text: "Charge Energy Channel: spend 4 energy resources, +4 counters"
+        paid: {count: 4, resources: [energy, energy, energy, energy]}
+        effects:
+          - {verb: counter, n: 4}
+      - trigger: action
+        key: "use:Energy Channel>charge 5"
+        text: "Charge Energy Channel: spend 5 energy resources, +5 counters"
+        paid: {count: 5, resources: [energy, energy, energy, energy, energy]}
+        effects:
+          - {verb: counter, n: 5}
+      - trigger: action
+        when: [hero, counters_positive]
+        key: "use:Energy Channel>attack"
+        text: "Fire Energy Channel: attack an enemy for 2 per counter, maximum 10 (discard Energy Channel)"
+        effects:
+          - {verb: attack, damage: 2, per: counters, max: 10, choose: true}
+          - {verb: detach}
+
+  # --- Obligation and nemesis set ---------------------------------------------
+  - code: "01175"
+    name: Family Emergency
+    type: obligation
+    boost: 2
+    text: "Choose: exhaust Carol Danvers (flipping to alter-ego if needed) to remove this card from the game, or be stunned and discard this card; it surges."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Family Emergency (obligation): choose how to resolve it."
+            options:
+              - text: "Exhaust Carol Danvers: remove Family Emergency from the game"
+                key: "effect:Family Emergency>exhaust"
+                when: [hero_ready]
+                effects:
+                  - {verb: flip_alter_ego}
+                  - {verb: exhaust, target: hero}
+                  - {verb: remove_from_game, target: self}
+              - text: "You are stunned; Family Emergency surges"
+                key: "effect:Family Emergency>stun"
+                effects:
+                  - {verb: stun, target: hero}
+                  - {verb: to_encounter_discard}
+                  - {verb: surge}
+
+  - code: "01176"
+    name: The Psyche-Magnitron
+    type: side_scheme
+    boost: 3
+    starting_threat: 4
+    hazard: 1
+    text: "Hazard: deal 1 extra encounter card each villain phase."
+
+  - code: "01177"
+    name: Yon-Rogg
+    type: minion
+    unique: true
+    traits: [Elite, Kree]
+    hp: 5
+    atk: 3
+    sch: 2
+    boost: 2
+    text: "After Yon-Rogg attacks, place 1 threat on The Psyche-Magnitron (if it is in play)."
+    abilities:
+      - trigger: forced
+        on: attack_ended
+        when: [source_self]
+        effects:
+          - {verb: place_threat, amount: 1, code: "01176"}
+
+  - code: "01178"
+    name: Kree Manipulator
+    type: treachery
+    surge: true
+    text: "Surge. Place 1 threat on the main scheme. Boost: if the villain's attack is undefended, place 1 threat on the main scheme."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: place_threat, amount: 1}
+      - trigger: boost_flip
+        when: [undefended]
+        effects:
+          - {verb: place_threat, amount: 1}
+
+  - code: "01179"
+    name: Yon-Rogg's Treason
+    type: treachery
+    boost: 1
+    text: "Discard each card with a printed energy resource from your hand. If none was discarded, surge."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: discard_hand_resource
+            resource: energy
+            if_zero:
+              - {verb: surge}

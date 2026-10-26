@@ -1,0 +1,46 @@
+id: iron-man-aggression
+name: Iron Man (Aggression starter deck)
+identity: Iron Man
+cards:
+  - Arc Reactor
+  - Mark V Armor
+  - Mark V Helmet
+  - Pepper Potts
+  - Powered Gauntlets
+  - Powered Gauntlets
+  - Repulsor Blast
+  - Repulsor Blast
+  - Repulsor Blast
+  - Rocket Boots
+  - Rocket Boots
+  - Stark Tower
+  - Supersonic Punch
+  - Supersonic Punch
+  - War Machine
+  - Chase Them Down
+  - Chase Them Down
+  - Combat Training
+  - Combat Training
+  - Hulk
+  - Relentless Assault
+  - Relentless Assault
+  - Tac Team
+  - Tac Team
+  - The Power of Aggression
+  - The Power of Aggression
+  - Tigra
+  - Uppercut
+  - Uppercut
+  - Avengers Mansion
+  - Emergency
+  - Energy
+  - First Aid
+  - Haymaker
+  - Genius
+  - Mockingbird
+  - Nick Fury
+  - Helicarrier
+  - Strength
+  - Tenacity
+obligation: Business Problems
+nemesis: [Whiplash, Imminent Overload, Electric Whip Attack, Electric Whip Attack, Electromagnetic Backlash]

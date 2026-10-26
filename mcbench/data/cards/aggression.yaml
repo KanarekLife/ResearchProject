@@ -1,0 +1,125 @@
+# Aggression aspect cards of the Iron Man starter deck, from the Core Set.
+# Stats follow the printed cards; text is our own paraphrase.
+cards:
+  - code: "01050"
+    name: Hulk
+    type: ally
+    unique: true
+    aspect: Aggression
+    cost: 2
+    resources: [energy]
+    hp: 5
+    atk: 3
+    atk_cons: 1
+    no_thwart: true
+    text: "Hulk cannot thwart. After Hulk attacks, discard the top card of your deck. If its printed resource is physical: deal 2 damage to an enemy; energy: deal 1 damage to each character (your hero, your allies and every enemy); mental: discard Hulk; wild: all of the above."
+    abilities:
+      - trigger: forced
+        on: attacked
+        when: [source_self]
+        effects:
+          - {verb: mill, n: 1}
+          - {verb: damage_enemy, amount: 2, choose: true, when: ["milled:physical"]}
+          - {verb: damage_all_characters, amount: 1, when: ["milled:energy"]}
+          - {verb: detach, when: ["milled:mental"]}
+
+  - code: "01051"
+    name: Tigra
+    type: ally
+    unique: true
+    aspect: Aggression
+    cost: 3
+    resources: [mental]
+    hp: 3
+    atk: 2
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    text: "Response: after Tigra attacks and defeats a minion, you may heal 1 damage from her."
+    abilities:
+      - trigger: response
+        on: attacked
+        when: [source_self, defeated, target_minion]
+        key: "use:Tigra"
+        text: "Use Tigra: heal 1 damage from her"
+        effects:
+          - {verb: heal, amount: 1, target: self}
+
+  - code: "01052"
+    name: Chase Them Down
+    type: event
+    aspect: Aggression
+    cost: 0
+    resources: [mental]
+    text: "Response (thwart): after your hero attacks and defeats an enemy, remove 2 threat from a scheme."
+    abilities:
+      - trigger: response
+        on: attacked
+        when: [source_hero, defeated, schemes]
+        effects:
+          - {verb: thwart, amount: 2, choose: true}
+
+  - code: "01053"
+    name: Relentless Assault
+    type: event
+    aspect: Aggression
+    cost: 2
+    resources: [energy]
+    text: "Hero Action (attack): deal 5 damage to a minion. If you paid for it with a physical resource, the attack has overkill (excess damage goes to the villain)."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: minion
+        effects:
+          - {verb: attack, damage: 5, when: ["not_paid:physical"]}
+          - {verb: attack, damage: 5, overkill: true, when: ["paid:physical"]}
+
+  - code: "01054"
+    name: Uppercut
+    type: event
+    aspect: Aggression
+    cost: 3
+    resources: [physical]
+    text: "Hero Action (attack): deal 5 damage to an enemy."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - {verb: attack, damage: 5}
+
+  - code: "01055"
+    name: The Power of Aggression
+    type: resource
+    aspect: Aggression
+    resources: [wild]
+    double_for: Aggression
+    text: "Generates 2 wild resources when paying for an Aggression card."
+
+  - code: "01056"
+    name: Tac Team
+    type: support
+    aspect: Aggression
+    cost: 3
+    resources: [energy]
+    uses: 3
+    text: "Uses 3 counters. Action: exhaust and remove a counter to deal 2 damage to an enemy; discard when empty."
+    abilities:
+      - trigger: action
+        when: [not_exhausted]
+        key: "use:Tac Team"
+        text: "Use Tac Team: deal 2 damage to an enemy (exhaust, remove a counter)"
+        effects:
+          - {verb: exhaust}
+          - {verb: counter, n: -1, detach_when_empty: true}
+          - {verb: damage_enemy, amount: 2, choose: true}
+
+  - code: "01057"
+    name: Combat Training
+    type: upgrade
+    aspect: Aggression
+    cost: 2
+    resources: [physical]
+    max_in_play: 1
+    hero_atk: 1
+    text: "Max 1. Your hero gets +1 ATK."

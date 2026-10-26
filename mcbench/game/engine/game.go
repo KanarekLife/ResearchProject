@@ -24,6 +24,9 @@ type Game struct {
 	// LastPaid holds the resources spent on the most recent payment, for
 	// cards that check "if you paid with a [mental] resource".
 	LastPaid []Resource
+	// LastMilled is the last card discarded from the top of your deck by an
+	// effect, for cards that check its printed resource (Hulk).
+	LastMilled *Card
 
 	// Log is the game record shown to the player. Logger, if set, also
 	// receives every line at info level.
@@ -74,6 +77,7 @@ func (g *Game) Run() {
 	for !g.result.Over && !g.halted {
 		g.ResetEmptyDeck()
 		g.resetEncounterDeck()
+		g.checkDefeats()
 		if g.result.Over || g.pending != nil || len(g.stack) == 0 {
 			return
 		}
@@ -173,12 +177,15 @@ func (g *Game) inPlay(f func(*Card)) {
 	visit(s.Hero)
 	visit(s.Villain)
 	visit(s.MainScheme)
-	for _, zone := range [][]*Card{s.Play, s.SideSchemes, s.Minions} {
+	for _, zone := range [][]*Card{s.Play, s.SideSchemes, s.Minions, s.Environment} {
 		for _, c := range zone {
 			visit(c)
 		}
 	}
 }
+
+// IsInPlay reports whether the card is in play.
+func (g *Game) IsInPlay(c *Card) bool { return g.isInPlay(c) }
 
 func (g *Game) isInPlay(c *Card) (found bool) {
 	g.inPlay(func(x *Card) { found = found || x == c })

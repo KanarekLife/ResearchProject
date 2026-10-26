@@ -1,0 +1,291 @@
+# Klaw scenario and the Masters of Evil modular set, from the Core Set.
+# Stats follow the printed cards for one player; text is our own paraphrase.
+cards:
+  - code: "01113"
+    name: Klaw
+    type: villain
+    unique: true
+    traits: [Masters of Evil]
+    hp: 12
+    atk: 0
+    sch: 2
+    extra_boost: 1
+    text: "When Klaw attacks, he gets 1 additional boost card."
+
+  - code: "01114"
+    name: Klaw
+    type: villain
+    unique: true
+    traits: [Masters of Evil]
+    hp: 18
+    atk: 1
+    sch: 2
+    extra_boost: 1
+    text: "When revealed: find The \"Immortal\" Klaw in the encounter deck or discard and reveal it; shuffle the encounter deck. When Klaw attacks, he gets 1 additional boost card."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: find_and_reveal, code: "01127"}
+
+  - code: "01115"
+    name: Klaw
+    type: villain
+    unique: true
+    traits: [Masters of Evil]
+    hp: 22
+    atk: 2
+    sch: 3
+    toughness: true
+    extra_boost: 1
+    text: "Toughness. When Klaw attacks, he gets 1 additional boost card."
+
+  - code: "01116"
+    name: Underground Distribution
+    type: main_scheme
+    target_threat: 6
+    escalation: 1
+    text: "Stage 1 of 2. Setup: Defense Network enters play. When revealed: discard encounter cards until a minion is discarded; it enters play engaged with you. Reaching the threshold advances the scheme to Secret Rendezvous (you do not lose yet)."
+    abilities:
+      - trigger: setup
+        effects:
+          - {verb: find_and_reveal, code: "01125"}
+      - trigger: reveal
+        effects:
+          - {verb: discard_until_minion}
+
+  - code: "01117"
+    name: Secret Rendezvous
+    type: main_scheme
+    target_threat: 8
+    escalation: 1
+    text: "Stage 2 of 2. When revealed: discard encounter cards until a minion is discarded; it enters play engaged with you. If threat reaches the threshold, you lose."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: discard_until_minion}
+
+  - code: "01118"
+    name: Sonic Converter
+    type: attachment
+    unique: true
+    boost: 3
+    attach_atk: 1
+    text: "Klaw gets +1 ATK. After Klaw attacks and damages a character, stun that character. Hero Action: spend an energy, a mental and a physical resource to discard this card."
+    abilities:
+      - trigger: forced
+        on: attack_damaged
+        when: [host_is_source]
+        effects:
+          - {verb: stun, target: event_target}
+      - trigger: action
+        when: [hero]
+        key: "use:Sonic Converter"
+        text: "Discard Sonic Converter by spending an energy, a mental and a physical resource"
+        paid: {count: 3, resources: [energy, mental, physical]}
+        effects:
+          - {verb: detach}
+
+  - code: "01119"
+    name: Solid-Sound Body
+    type: attachment
+    boost: 3
+    retaliate: 1
+    text: "Klaw has retaliate 1 (after he is attacked, he deals 1 damage to the attacker). Hero Action: spend an energy, a mental and a physical resource to discard this card."
+    abilities:
+      - trigger: action
+        when: [hero]
+        key: "use:Solid-Sound Body"
+        text: "Discard Solid-Sound Body by spending an energy, a mental and a physical resource"
+        paid: {count: 3, resources: [energy, mental, physical]}
+        effects:
+          - {verb: detach}
+
+  - code: "01120"
+    name: Armored Guard
+    type: minion
+    hp: 3
+    atk: 1
+    sch: 0
+    boost: 1
+    guard: true
+    toughness: true
+    text: "Guard (while engaged with you, you cannot attack the villain). Toughness."
+
+  - code: "01121"
+    name: Weapons Runner
+    type: minion
+    hp: 2
+    atk: 1
+    sch: 1
+    surge: true
+    text: "Surge. Boost: Weapons Runner enters play engaged with you."
+    abilities:
+      - trigger: boost_flip
+        effects:
+          - {verb: engage_self}
+
+  - code: "01122"
+    name: Klaw's Vengeance
+    type: treachery
+    boost: 1
+    text: "Alter-ego: discard a random card from your hand. Hero: Klaw attacks you; if the attack deals damage, place 1 threat on the main scheme."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [alter_ego], verb: discard_random}
+          - {when: [hero], verb: villain_attack, result: threat}
+
+  - code: "01123"
+    name: Sonic Boom
+    type: treachery
+    text: "Choose: spend an energy, a mental and a physical resource, or exhaust your hero and each of your allies. Boost: if the attack damages your hero, exhaust your hero."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Sonic Boom: spend an energy, a mental and a physical resource, or exhaust your hero and allies?"
+            options:
+              - text: "Spend an energy, a mental and a physical resource"
+                key: "effect:Sonic Boom>spend"
+                paid: {count: 3, resources: [energy, mental, physical]}
+              - text: "Exhaust your hero and each of your allies"
+                key: "effect:Sonic Boom>exhaust"
+                effects:
+                  - {verb: exhaust_characters}
+      - trigger: boost
+        when: [target_hero]
+        effects:
+          - {verb: exhaust, target: hero}
+
+  - code: "01124"
+    name: Sound Manipulation
+    type: treachery
+    boost: 2
+    text: "Alter-ego: Klaw heals 4 damage; if nothing was healed, surge. Hero: take 2 damage and Klaw heals 2 damage."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: heal_villain
+            when: [alter_ego]
+            amount: 4
+            if_zero:
+              - {verb: surge}
+          - {when: [hero], verb: damage_hero, amount: 2}
+          - {when: [hero], verb: heal_villain, amount: 2}
+
+  - code: "01125"
+    name: Defense Network
+    type: side_scheme
+    boost: 2
+    starting_threat: 3
+    crisis: true
+    text: "Crisis: you cannot remove threat from the main scheme."
+
+  - code: "01126"
+    name: Illegal Arms Factory
+    type: side_scheme
+    boost: 2
+    starting_threat: 4
+    hazard: 1
+    text: "Hazard: deal 1 extra encounter card each villain phase."
+
+  - code: "01127"
+    name: The "Immortal" Klaw
+    type: side_scheme
+    starting_threat: 3
+    acceleration: 1
+    villain_hp: 10
+    text: "Acceleration. Klaw gets +10 hit points; he loses them when this scheme is defeated."
+
+  # --- Masters of Evil (modular) ----------------------------------------------
+  - code: "01128"
+    name: The Masters of Evil
+    type: side_scheme
+    boost: 2
+    starting_threat: 3
+    acceleration: 1
+    text: "Acceleration. When revealed: discard encounter cards until a Masters of Evil minion is discarded; it enters play engaged with you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: discard_until_minion, trait: Masters of Evil}
+
+  - code: "01129"
+    name: Radioactive Man
+    type: minion
+    unique: true
+    traits: [Elite, Masters of Evil]
+    hp: 7
+    atk: 1
+    sch: 1
+    text: "Masters of Evil. After Radioactive Man attacks you, discard a random card from your hand. Boost: discard a random card from your hand."
+    abilities:
+      - trigger: forced
+        on: attack_ended
+        when: [source_self]
+        effects:
+          - {verb: discard_random}
+      - trigger: boost_flip
+        effects:
+          - {verb: discard_random}
+
+  - code: "01130"
+    name: Whirlwind
+    type: minion
+    unique: true
+    traits: [Masters of Evil]
+    hp: 6
+    atk: 2
+    sch: 1
+    text: "Masters of Evil. (His attack also hits each other hero; solo, there is none.) Boost: deal 1 damage to your hero."
+    abilities:
+      - trigger: boost_flip
+        effects:
+          - {verb: damage_hero, amount: 1}
+
+  - code: "01131"
+    name: Tiger Shark
+    type: minion
+    unique: true
+    traits: [Masters of Evil]
+    hp: 6
+    atk: 3
+    sch: 1
+    text: "Masters of Evil. After Tiger Shark attacks, he gains a tough status. Boost: the villain gains a tough status."
+    abilities:
+      - trigger: forced
+        on: attack_ended
+        when: [source_self]
+        effects:
+          - {verb: give_tough, target: self}
+      - trigger: boost_flip
+        effects:
+          - {verb: give_tough, target: villain}
+
+  - code: "01132"
+    name: Melter
+    type: minion
+    unique: true
+    traits: [Masters of Evil]
+    hp: 5
+    atk: 3
+    sch: 1
+    ally_must_defend: true
+    text: "Masters of Evil. You must defend Melter's attacks with a ready ally if you have one. Boost: exhaust each of your allies."
+    abilities:
+      - trigger: boost_flip
+        effects:
+          - {verb: exhaust_allies}
+
+  - code: "01133"
+    name: Masters of Mayhem
+    type: treachery
+    boost: 2
+    text: "Each Masters of Evil minion engaged with you attacks you. If none attacked, choose a Masters of Evil minion in the encounter deck or discard pile: it enters play engaged with you, and the encounter deck is shuffled."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: minions_attack
+            trait: Masters of Evil
+            if_zero:
+              - {verb: search_minion, trait: Masters of Evil}

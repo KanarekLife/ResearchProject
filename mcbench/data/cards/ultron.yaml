@@ -1,0 +1,400 @@
+# Ultron scenario and the Under Attack modular set, from the Core Set.
+# Stats follow the printed cards for one player; text is our own paraphrase.
+cards:
+  - code: "01134"
+    name: Ultron
+    type: villain
+    unique: true
+    traits: [Android]
+    hp: 17
+    atk: 2
+    sch: 1
+    text: "After Ultron attacks you, choose: place 1 threat on the main scheme, or put the top card of your deck into play facedown as a Drone minion engaged with you."
+    abilities:
+      - trigger: forced
+        on: attack_ended
+        when: [source_self]
+        effects:
+          - verb: choose
+            prompt: "Ultron attacked you: place 1 threat on the main scheme, or put the top card of your deck into play as a Drone?"
+            options:
+              - text: "Place 1 threat on the main scheme"
+                key: "effect:Ultron>threat"
+                effects:
+                  - {verb: place_threat, amount: 1}
+              - text: "Put the top card of your deck into play as a Drone"
+                key: "effect:Ultron>drone"
+                effects:
+                  - {verb: drone, n: 1}
+
+  - code: "01135"
+    name: Ultron
+    type: villain
+    unique: true
+    traits: [Android]
+    hp: 22
+    atk: 2
+    sch: 2
+    text: "When Ultron attacks you, first put the top card of your deck into play facedown as a Drone minion engaged with you. Ultron gets +1 ATK for each Drone minion engaged with you (included in his ATK)."
+    abilities:
+      - trigger: forced
+        on: villain_attacks
+        effects:
+          - {verb: drone, n: 1}
+      - trigger: stat
+        stat: atk
+        bonus: drones
+
+  - code: "01136"
+    name: Ultron
+    type: villain
+    unique: true
+    traits: [Android]
+    hp: 27
+    atk: 4
+    sch: 2
+    drone_atk: 1
+    drone_hp: 1
+    text: "Each facedown Drone gets +1 ATK and +1 hit point. Ultron cannot take damage while a Drone minion is engaged with you. When revealed: find Ultron's Imperative in the encounter deck or discard and reveal it; shuffle the encounter deck."
+    abilities:
+      - trigger: forced
+        on: enemy_would_take_damage
+        when: [target_self, drones]
+        effects:
+          - {verb: prevent_damage}
+      - trigger: reveal
+        effects:
+          - {verb: find_and_reveal, code: "01150"}
+
+  - code: "01137"
+    name: The Crimson Cowl
+    type: main_scheme
+    target_threat: 3
+    escalation: 1
+    text: "Stage 1 of 3. Setup: Ultron Drones enters play. When revealed: put the top card of your deck into play facedown as a Drone minion engaged with you. Reaching the threshold advances the scheme to Assault on NORAD (you do not lose yet)."
+    abilities:
+      - trigger: setup
+        effects:
+          - {verb: find_and_reveal, code: "01140"}
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+
+  - code: "01138"
+    name: Assault on NORAD
+    type: main_scheme
+    target_threat: 10
+    escalation: 1
+    text: "Stage 2 of 3. When revealed: put the top card of your deck into play as a Drone. After threat is placed here in step one of the villain phase, choose: place 2 more threat here, or put the top card of your deck into play as a Drone. Reaching the threshold advances the scheme to Countdown to Oblivion (you do not lose yet)."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+      - trigger: forced
+        on: step_one_threat
+        effects:
+          - verb: choose
+            prompt: "Assault on NORAD: place 2 threat on it, or put the top card of your deck into play as a Drone?"
+            options:
+              - text: "Place 2 threat on Assault on NORAD"
+                key: "effect:Assault on NORAD>threat"
+                effects:
+                  - {verb: place_threat, amount: 2}
+              - text: "Put the top card of your deck into play as a Drone"
+                key: "effect:Assault on NORAD>drone"
+                effects:
+                  - {verb: drone, n: 1}
+
+  - code: "01139"
+    name: Countdown to Oblivion
+    type: main_scheme
+    target_threat: 5
+    escalation: 1
+    no_threat_removal: true
+    text: "Stage 3 of 3. When revealed: put the top card of your deck into play as a Drone. Threat cannot be removed from this scheme. If threat reaches the threshold, you lose."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+
+  - code: "01140"
+    name: Ultron Drones
+    type: environment
+    text: "Facedown Drone minions have base 1 SCH, 1 ATK and 1 hit point. When one is defeated, its card goes to your discard pile."
+
+  # Not a printed card: the face a card of your deck shows while it is in
+  # play facedown as a Drone minion, with the base stats Ultron Drones gives.
+  - code: "drone"
+    name: Drone
+    type: minion
+    traits: [Drone]
+    hp: 1
+    atk: 1
+    sch: 1
+    text: "A card from your deck, in play facedown as a Drone minion (Ultron Drones). When defeated, the card goes to your discard pile."
+
+  - code: "01141"
+    name: Program Transmitter
+    type: attachment
+    boost: 1
+    attach_sch: 1
+    text: "Ultron gets +1 SCH. After Ultron schemes, place 1 threat on each side scheme. Hero Action: exhaust your hero and spend 2 mental resources to discard this card."
+    abilities:
+      - trigger: forced
+        on: villain_schemed
+        when: [host_is_source]
+        effects:
+          - {verb: place_threat, amount: 1, target: side_schemes}
+      - trigger: action
+        when: [hero, hero_ready]
+        key: "use:Program Transmitter"
+        text: "Discard Program Transmitter by exhausting your hero and spending 2 mental resources"
+        paid: {count: 2, resources: [mental, mental]}
+        effects:
+          - {verb: exhaust, target: hero}
+          - {verb: detach}
+
+  - code: "01142"
+    name: Upgraded Drones
+    type: attachment
+    attach_to: environment
+    drone_atk: 1
+    drone_hp: 1
+    text: "Attaches to Ultron Drones. Each facedown Drone gets +1 ATK and +1 hit point. Hero Action: spend an energy, a mental and a physical resource to discard this card."
+    abilities:
+      - trigger: action
+        when: [hero]
+        key: "use:Upgraded Drones"
+        text: "Discard Upgraded Drones by spending an energy, a mental and a physical resource"
+        paid: {count: 3, resources: [energy, mental, physical]}
+        effects:
+          - {verb: detach}
+
+  - code: "01143"
+    name: Advanced Ultron Drone
+    type: minion
+    traits: [Drone]
+    hp: 4
+    atk: 1
+    sch: 1
+    boost: 2
+    guard: true
+    text: "Drone. Guard. When it is defeated, put the top card of your deck into play facedown as a Drone minion engaged with you."
+    abilities:
+      - trigger: forced
+        on: minion_defeated
+        when: [target_self]
+        effects:
+          - {verb: drone, n: 1}
+
+  - code: "01144a"
+    name: Android Efficiency
+    type: treachery
+    text: "Put the top card of your deck into play facedown as a Drone minion engaged with you. Boost: spend an energy resource, or put the top card of your deck into play as a Drone."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+      - trigger: boost_flip
+        effects:
+          - verb: choose
+            prompt: "Android Efficiency (boost): spend an energy resource, or put the top card of your deck into play as a Drone?"
+            options:
+              - text: "Spend an energy resource"
+                key: "effect:Android Efficiency>spend"
+                paid: {count: 1, resources: [energy]}
+              - text: "Put the top card of your deck into play as a Drone"
+                key: "effect:Android Efficiency>drone"
+                effects:
+                  - {verb: drone, n: 1}
+
+  - code: "01144b"
+    name: Android Efficiency
+    type: treachery
+    text: "Put the top card of your deck into play facedown as a Drone minion engaged with you. Boost: spend a mental resource, or put the top card of your deck into play as a Drone."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+      - trigger: boost_flip
+        effects:
+          - verb: choose
+            prompt: "Android Efficiency (boost): spend a mental resource, or put the top card of your deck into play as a Drone?"
+            options:
+              - text: "Spend a mental resource"
+                key: "effect:Android Efficiency>spend"
+                paid: {count: 1, resources: [mental]}
+              - text: "Put the top card of your deck into play as a Drone"
+                key: "effect:Android Efficiency>drone"
+                effects:
+                  - {verb: drone, n: 1}
+
+  - code: "01144c"
+    name: Android Efficiency
+    type: treachery
+    text: "Put the top card of your deck into play facedown as a Drone minion engaged with you. Boost: spend a physical resource, or put the top card of your deck into play as a Drone."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+      - trigger: boost_flip
+        effects:
+          - verb: choose
+            prompt: "Android Efficiency (boost): spend a physical resource, or put the top card of your deck into play as a Drone?"
+            options:
+              - text: "Spend a physical resource"
+                key: "effect:Android Efficiency>spend"
+                paid: {count: 1, resources: [physical]}
+              - text: "Put the top card of your deck into play as a Drone"
+                key: "effect:Android Efficiency>drone"
+                effects:
+                  - {verb: drone, n: 1}
+
+  - code: "01145"
+    name: Rage of Ultron
+    type: treachery
+    boost: 2
+    text: "Alter-ego: Ultron schemes; discard the top card of your deck for each threat placed. Hero: Ultron attacks you; discard the top card of your deck for each damage dealt."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {when: [alter_ego], verb: scheme, result: mill}
+          - {when: [hero], verb: villain_attack, result: mill}
+
+  - code: "01146"
+    name: Repair Sequence
+    type: treachery
+    boost: 1
+    text: "Ultron heals 2 damage for each Drone minion engaged with you; if nothing was healed, surge. Boost: Ultron heals 1 damage for each Drone minion engaged with you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: heal_villain
+            amount: 2
+            per: drones
+            if_zero:
+              - {verb: surge}
+      - trigger: boost_flip
+        effects:
+          - {verb: heal_villain, amount: 1, per: drones}
+
+  - code: "01147"
+    name: Swarm Attack
+    type: treachery
+    boost: 1
+    text: "Each Drone minion engaged with you attacks you. If none attacked, put the top card of your deck into play facedown as a Drone minion engaged with you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: minions_attack
+            trait: Drone
+            if_zero:
+              - {verb: drone, n: 1}
+
+  - code: "01148"
+    name: Drone Factory
+    type: side_scheme
+    boost: 2
+    starting_threat: 4
+    acceleration: 1
+    text: "Acceleration. When revealed: put the top card of your deck into play as a Drone, then place 1 threat here for each Drone minion engaged with you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 1}
+          - {verb: place_threat, amount: 1, per: drones, target: self}
+
+  - code: "01149"
+    name: Invasive AI
+    type: side_scheme
+    boost: 3
+    starting_threat: 3
+    hazard: 1
+    text: "Hazard. When revealed: discard the top 3 cards of your deck."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: mill, n: 3}
+
+  - code: "01150"
+    name: Ultron's Imperative
+    type: side_scheme
+    boost: 3
+    starting_threat: 2
+    hazard: 1
+    text: "Hazard. When revealed: put the top 2 cards of your deck into play facedown as Drone minions engaged with you."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: drone, n: 2}
+
+  # --- Under Attack (modular) -------------------------------------------------
+  - code: "01151"
+    name: Under Attack
+    type: side_scheme
+    boost: 3
+    starting_threat: 3
+    crisis: true
+    text: "Crisis: you cannot remove threat from the main scheme. When revealed: choose to place 2 threat here or take 3 damage."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Under Attack: place 2 threat on it, or take 3 damage?"
+            options:
+              - text: "Place 2 threat on Under Attack"
+                key: "effect:Under Attack>threat"
+                effects:
+                  - {verb: place_threat, amount: 2, target: self}
+              - text: "Take 3 damage"
+                key: "effect:Under Attack>damage"
+                effects:
+                  - {verb: damage_hero, amount: 3}
+
+  - code: "01152"
+    name: Vibranium Armor
+    type: attachment
+    boost: 1
+    text: "After the villain takes damage, it gains a tough status (its next stage, if the damage defeated a stage). Hero Action: exhaust your hero and spend 2 physical resources to discard this card."
+    abilities:
+      - trigger: forced
+        on: enemy_damaged
+        when: [host_is_target]
+        effects:
+          - {verb: give_tough, target: event_target}
+      - trigger: action
+        when: [hero, hero_ready]
+        key: "use:Vibranium Armor"
+        text: "Discard Vibranium Armor by exhausting your hero and spending 2 physical resources"
+        paid: {count: 2, resources: [physical, physical]}
+        effects:
+          - {verb: exhaust, target: hero}
+          - {verb: detach}
+
+  - code: "01153"
+    name: Concussion Blasters
+    type: attachment
+    boost: 1
+    retaliate: 1
+    text: "The villain has retaliate 1 (after it is attacked, it deals 1 damage to the attacker). Hero Action: exhaust your hero and spend 2 energy resources to discard this card."
+    abilities:
+      - trigger: action
+        when: [hero, hero_ready]
+        key: "use:Concussion Blasters"
+        text: "Discard Concussion Blasters by exhausting your hero and spending 2 energy resources"
+        paid: {count: 2, resources: [energy, energy]}
+        effects:
+          - {verb: exhaust, target: hero}
+          - {verb: detach}
+
+  - code: "01154"
+    name: Concussive Blast
+    type: treachery
+    text: "Deal 1 damage to your hero and each of your allies. Boost: deal 1 damage to your hero and each of your allies."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: damage_friendly, amount: 1}
+      - trigger: boost_flip
+        effects:
+          - {verb: damage_friendly, amount: 1}

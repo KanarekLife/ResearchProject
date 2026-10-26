@@ -35,7 +35,7 @@ func checkEffects(effects []Effect) error {
 		if err := checkPredicates(eff.When); err != nil {
 			return err
 		}
-		for _, branch := range [][]Effect{eff.IfZero, eff.IfAlready, eff.IfEmpty} {
+		for _, branch := range [][]Effect{eff.IfZero, eff.IfAlready, eff.IfEmpty, eff.Then} {
 			if err := checkEffects(branch); err != nil {
 				return err
 			}

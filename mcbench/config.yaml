@@ -17,6 +17,7 @@ player:
   instructions: [rules_agent, mcbench]
 
 run:
+  scenarios: [spider-man-vs-rhino] # scenario ids to run and play; empty for all
   seeds: 10
   samples: 1
   parallel: 1

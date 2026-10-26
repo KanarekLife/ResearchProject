@@ -69,6 +69,7 @@ button:disabled { opacity: .4; cursor: default; }
 .card.exhausted .face { margin: calc((var(--card-w) - var(--card-h)) / 2) calc((var(--card-h) - var(--card-w)) / 2); transform: rotate(90deg); opacity: .85; }
 .card .name { margin-top: 3px; font-size: 12px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .stats { font-size: 11px; text-align: center; color: var(--dim); white-space: nowrap; }
+.card .face.facedown, .modal .facedown { display: flex; align-items: center; justify-content: center; background: repeating-linear-gradient(45deg, #4a2f6e 0 6px, #3a2457 6px 12px); color: #e8dcf5; }
 .text-card { padding: 6px; height: 100%; display: flex; flex-direction: column; gap: 4px; font-size: 10px; overflow: hidden; }
 .text-card b { font-size: 12px; }
 .text-card .type { color: var(--dim); text-transform: capitalize; }
@@ -120,6 +121,7 @@ button:disabled { opacity: .4; cursor: default; }
 .modal { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: #000b; }
 .modal-box { position: relative; display: flex; gap: 20px; align-items: flex-start; max-width: 90vw; max-height: 90vh; overflow: auto; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
 .modal .full { flex: none; max-height: calc(90vh - 40px); max-width: 60vw; border-radius: 10px; }
+.modal .facedown { width: 300px; height: 420px; }
 .modal .text-full { width: 300px; height: 420px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--panel-2); white-space: pre-wrap; }
 .modal .details { width: 280px; display: flex; flex-direction: column; gap: 8px; }
 .modal .details h3 { margin: 0; padding-right: 30px; }

@@ -37,7 +37,7 @@ func TestCriteria(t *testing.T) {
 			stats: map[string]float64{
 				constants.MetricWon: 1, constants.MetricRound: 1,
 				constants.MetricHeroHP: 5, constants.MetricHeroMaxHP: 10,
-				constants.MetricMainThreat: 0, constants.MetricMainTarget: 10,
+				constants.MetricSchemeProgress: 0, constants.MetricSchemeTotal: 10,
 			},
 			want: map[string]float64{
 				constants.CriterionWin: 1, constants.CriterionVillainDamage: 1,
@@ -50,7 +50,7 @@ func TestCriteria(t *testing.T) {
 			stats: map[string]float64{
 				constants.MetricRound:         7,
 				constants.MetricVillainDamage: 6, constants.MetricVillainTotalHP: 24,
-				constants.MetricMainThreat: 8, constants.MetricMainTarget: 10,
+				constants.MetricSchemeProgress: 8, constants.MetricSchemeTotal: 10,
 			},
 			want: map[string]float64{
 				constants.CriterionWin: 0, constants.CriterionVillainDamage: 0.25,
@@ -59,9 +59,16 @@ func TestCriteria(t *testing.T) {
 			},
 		},
 		{
+			name: "a completed stage counts its whole threshold",
+			stats: map[string]float64{
+				constants.MetricSchemeProgress: 6 + 2, constants.MetricSchemeTotal: 6 + 8,
+			},
+			want: map[string]float64{constants.CriterionThreat: 1 - 8.0/14},
+		},
+		{
 			name: "threat past the target clamps to zero, not negative",
 			stats: map[string]float64{
-				constants.MetricMainThreat: 15, constants.MetricMainTarget: 10,
+				constants.MetricSchemeProgress: 15, constants.MetricSchemeTotal: 10,
 			},
 			want: map[string]float64{constants.CriterionThreat: 0},
 		},

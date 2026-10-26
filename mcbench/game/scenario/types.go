@@ -36,13 +36,14 @@ type Deck struct {
 	Nemesis    []string `yaml:"nemesis"`
 }
 
-// Villain is a villain's stages (I, II, ...), main scheme and encounter set.
+// Villain is a villain's stages (I, II, ...), main scheme stages (1, 2, ...)
+// and encounter set.
 type Villain struct {
-	ID         string   `yaml:"id"`
-	Name       string   `yaml:"name"`
-	Stages     []string `yaml:"stages"`
-	MainScheme string   `yaml:"main_scheme"`
-	Cards      []string `yaml:"cards"`
+	ID          string   `yaml:"id"`
+	Name        string   `yaml:"name"`
+	Stages      []string `yaml:"stages"`
+	MainSchemes []string `yaml:"main_schemes"`
+	Cards       []string `yaml:"cards"`
 }
 
 // EncounterSet is a standard or modular encounter set.

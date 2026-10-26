@@ -205,7 +205,7 @@ func (s *Session) choice(d *Decision, id int, reasoning string, auto bool) Choic
 	}
 	return Choice{
 		Round: st.Round, Kind: d.Kind, Key: d.Options[id-1].Key, Reasoning: reasoning, Auto: auto,
-		Form: form, HP: st.Hero.RemainingHP(), Threat: st.MainScheme.Threat, Offered: offered,
+		Form: form, HP: s.g.RemainingHP(st.Hero), Threat: st.MainScheme.Threat, Offered: offered,
 	}
 }
 
