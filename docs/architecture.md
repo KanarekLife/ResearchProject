@@ -55,11 +55,17 @@ Game.Do       push steps so steps[0] runs first
   `payment` decision when there are several). Illegal moves are impossible.
 - All randomness comes from one generator seeded at setup. **The same seed and
   the same choices always give the same game.**
-- `StartGame` shuffles, starts in alter-ego form, draws, offers a mulligan, then
-  begins round 1.
+- `StartGame` shuffles, resolves the main scheme's setup, starts in alter-ego
+  form, draws, offers a mulligan, then begins round 1.
 - A game ends when the villain's last stage is defeated (win), the hero is
-  defeated or the main scheme reaches its threshold (loss), or the round or
-  decision limit is reached.
+  defeated or the main scheme's last stage reaches its threshold (loss), or the
+  round or decision limit is reached. An earlier stage advances instead.
+- Hit points, hand size and stats are computed from the cards in play
+  (`stats.go`), and a character left with no hit points when a modifier ends is
+  defeated before the next step.
+- Optional abilities (interrupts and responses, from hand or on cards in play)
+  are offered in a `window` decision at their trigger with a "Do not respond"
+  option; only forced abilities resolve on their own.
 
 The package is split by concern: `game.go` is the step machine and `setup.go`
 starts a game; `damage.go` handles statuses, damage and healing; `threat.go`
@@ -78,7 +84,7 @@ the game. Both live in `player/model`: `tools.go` declares the schemas,
 
 | Tool            | Arguments                         | Returns                                                                                                                                                   |
 | --------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_state`     | none                              | The public state, compacted from `session.View`: hero, hand, cards in play, pile sizes (not the discard lists), villain, schemes, minions; no later villain stages (see `get_card`); empty, zero and false fields left out. Never deck order or face-down cards. |
+| `get_state`     | none                              | The public state, compacted from `session.View`: hero, hand, cards in play, pile sizes (not the discard lists), villain, schemes, minions, environment; your hero's traits; no later villain stages (see `get_card`); empty, zero and false fields left out. Never deck order or face-down cards. |
 | `get_decision`  | none                              | `{"status", "decision": {"kind", "prompt", "options": ["1) text", ...]}}`. The decision is absent once the game is over.                                |
 | `choose_option` | `option_id`, optional `reasoning` | `{"status", "events": [...], "decision": {...}}`: what happened, then the next decision.                                                                  |
 | `get_log`       | optional `last` (default 20)      | The last lines of the game log.                                                                                                                           |
@@ -214,7 +220,8 @@ caller builds; it reads no files and no environment variables. It:
   The event reader is shared (`inference.PostSSE`).
 
 `config.yaml` (loaded by `cmd`, flags override) holds the endpoint, sampling,
-run size and scoring weights.
+run size, the scenarios `run` and `play` use (`run.scenarios`, the default of
+`-only`; empty for all) and scoring weights.
 
 ## Cards are data
 
@@ -241,13 +248,20 @@ When a game ends, `benchmark` scores its final state (`benchmark/score.go`).
 | `win`            | 1 if the villain was defeated                        | 0.40           |
 | `villain_damage` | share of the villain's total HP (all stages) removed | 0.25           |
 | `hero_hp`        | share of the hero's HP left                          | 0.10           |
-| `threat`         | 1 − main-scheme threat / threshold                   | 0.10           |
+| `threat`         | 1 − main-scheme threat / threshold, over all stages  | 0.10           |
 | `speed`          | for wins: 1 − (rounds − 1) / max rounds              | 0.15           |
 
 The score is the weighted mean. The weights are the benchmark definition and
 can be set in `config.yaml` under `scoring`; the defaults above are used when
 none are given. **Never change the weights between runs you intend to
-compare.** Reports show every criterion and the score (mean ± standard error),
+compare.**
+
+For `threat`, a completed main scheme stage counts its whole threshold: the
+share is (thresholds of completed stages + threat on the current stage) / (sum
+of every stage's threshold), which for a single-stage scheme is plain threat /
+threshold.
+
+Reports show every criterion and the score (mean ± standard error),
 plus rounds to win, decisions, invalid choices and tokens.
 
 ## Records and live status

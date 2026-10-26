@@ -290,7 +290,9 @@ func TestCardsDealtWhileRevealingAreRevealed(t *testing.T) {
 		s.EncDeck = []*e.Card{mk("Assault"), mk("Advance")}
 	})
 	choose(t, g, "end_turn")
-	finishRound(t, g) // Assault's attack draws (Spider-Sense) and empties the deck
+	choose(t, g, "discard:done")
+	choose(t, g, "use:Spider-Man") // Assault's attack: Spider-Sense draws and empties the deck
+	finishRound(t, g)
 	if len(g.S.Dealt) != 0 || !slices.Contains(g.Log, "Encounter card revealed: Advance (treachery).") {
 		t.Fatalf("dealt %d; the card dealt while revealing must be revealed in the same phase", len(g.S.Dealt))
 	}
@@ -335,6 +337,7 @@ func TestConsequentialDamageAfterResponses(t *testing.T) {
 		s.Play = append(s.Play, dd)
 	})
 	choose(t, g, "thwart:Daredevil>The Break-In!")
+	choose(t, g, "use:Daredevil")
 	choose(t, g, "effect:Daredevil>Rhino")
 	if g.S.Villain.Damage != 1 || len(g.S.Play) != 0 {
 		t.Fatalf("villain damage %d allies %d; want Daredevil's response, then his defeat", g.S.Villain.Damage, len(g.S.Play))
@@ -350,6 +353,7 @@ func TestAllyLimitDiscardsBeforeEntering(t *testing.T) {
 		t.Fatalf("want a choice of the 4 allies to discard, got %v", keys(g))
 	}
 	choose(t, g, "effect:Mockingbird>Daredevil")
+	choose(t, g, "use:Mockingbird")
 	if !hasKey(g, "effect:Mockingbird>Rhino") {
 		t.Fatalf("Mockingbird's stun should follow the ally-limit discard: %v", keys(g))
 	}
@@ -404,6 +408,7 @@ func TestBoostDealtBeforeDefender(t *testing.T) {
 		s.EncDeck = []*e.Card{mk("Advance"), mk("False Alarm"), mk("Assault")}
 	})
 	choose(t, g, "end_turn")
+	choose(t, g, "pass") // Spider-Sense
 	if g.Pending().Kind != "defend" {
 		t.Fatalf("want the defend decision, got %v", keys(g))
 	}
@@ -515,6 +520,7 @@ func TestSweepingSwoopBoostStunsDamagedCharacter(t *testing.T) {
 			s.EncDeck = []*e.Card{mk("Sweeping Swoop"), mk(filler), mk(filler)}
 		})
 		choose(t, g, "end_turn")
+		choose(t, g, "pass") // Spider-Sense
 		choose(t, g, "defend:none")
 		if g.S.Hero.Stunned == tough {
 			t.Fatalf("tough %v: hero stunned %v; the boost should stun only a damaged hero", tough, g.S.Hero.Stunned)

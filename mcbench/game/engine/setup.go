@@ -10,6 +10,7 @@ import (
 // one player) and runs until the first decision:
 //   - the villain's stage I and the main scheme are in play (built by the caller),
 //   - the encounter deck (with your obligation) and your deck are shuffled,
+//   - the main scheme's Setup and When Revealed abilities resolve,
 //   - you start in alter-ego form and draw up to your hand size,
 //   - you may mulligan (discard any cards, then draw back up),
 //   - round 1 begins with the player phase.
@@ -28,15 +29,42 @@ func (g *Game) StartGame() {
 	g.shuffle(s.Deck)
 	g.shuffle(s.EncDeck)
 	g.Logf("Setup: %s vs %s (%s).", s.Hero.Def.Name, s.Villain.Name(), s.MainScheme.Name())
-	g.Draw(s.Hero.Face().HandSize)
-	g.Do(g.askMulligan, g.playerTurn)
+	g.Do(g.schemeSetup, func() { g.Draw(g.HandSize()) }, g.askMulligan, g.playerTurn)
 	g.Run()
+}
+
+// schemeSetup resolves the main scheme's Setup ability (side 1A), then its
+// When Revealed ability (side 1B).
+func (g *Game) schemeSetup() {
+	main := g.S.MainScheme
+	sc := main.Face().Script
+	if sc == nil {
+		return
+	}
+	var steps []func()
+	if sc.OnSetup != nil {
+		steps = append(steps, func() { sc.OnSetup(g, main) })
+	}
+	if sc.OnReveal != nil {
+		steps = append(steps, func() { sc.OnReveal(g, main) })
+	}
+	g.Do(steps...)
+}
+
+// MainSchemeTotal is the sum of every main scheme stage's threshold, the
+// completed ones included.
+func (g *Game) MainSchemeTotal() int {
+	n := g.S.MainCompleted + g.S.MainScheme.Face().TargetThreat
+	for _, st := range g.S.MainStages {
+		n += st.TargetThreat
+	}
+	return n
 }
 
 func (g *Game) askMulligan() {
 	s := g.S
 	opts := []Option{{Key: constants.KeyMulliganKeep, Text: "Keep this hand", do: func() {
-		if need := s.Hero.Face().HandSize - len(s.Hand); need > 0 {
+		if need := g.HandSize() - len(s.Hand); need > 0 {
 			g.Draw(need)
 		}
 	}}}
@@ -57,21 +85,46 @@ func (g *Game) askMulligan() {
 			},
 		})
 	}
-	g.Ask(&Decision{Kind: constants.KindMulligan, Prompt: fmt.Sprintf("Opening hand. Discard any cards you do not want; when you keep, you draw back up to %d.", s.Hero.Face().HandSize), Options: opts})
+	g.Ask(&Decision{Kind: constants.KindMulligan, Prompt: fmt.Sprintf("Opening hand. Discard any cards you do not want; when you keep, you draw back up to %d.", g.HandSize()), Options: opts})
 }
 
 // EngageMinion puts a minion into play engaged with you. Quickstrike
-// minions attack immediately if you are in hero form.
+// minions attack immediately if you are in hero form; then responses to the
+// minion entering play are offered.
 func (g *Game) EngageMinion(c *Card) {
 	s := g.S
+	d := c.Face()
 	s.Minions = append(s.Minions, c)
-	g.Logf("%s engages %s.", c.Def.Name, s.Hero.Name())
-	if c.Def.Toughness {
+	g.Logf("%s engages %s.", d.Name, s.Hero.Name())
+	if d.Toughness {
 		g.GiveTough(c)
 	}
-	if c.Def.Quickstrike && g.IsHero() {
-		g.Do(func() { g.EnemyAttack(c, false, nil) })
+	var steps []func()
+	if d.Quickstrike && g.IsHero() {
+		steps = append(steps, func() { g.EnemyAttack(c, false, nil) })
 	}
+	steps = append(steps, func() {
+		ev := &Event{Trigger: TrigMinionEnters, Target: c}
+		g.fireForced(ev)
+		g.playerWindow(ev, g.Label(c)+" entered play engaged with you.", func() {})
+	})
+	g.Do(steps...)
+}
+
+// PutDrone puts the top card of your deck into play facedown, engaged with
+// you as a Drone minion with the given face.
+func (g *Game) PutDrone(face *CardDef) {
+	s := g.S
+	g.ResetEmptyDeck()
+	if len(s.Deck) == 0 {
+		return
+	}
+	c := s.Deck[0]
+	s.Deck = s.Deck[1:]
+	c.Drone = face
+	g.Logf("The top card of your deck enters play facedown as a Drone.")
+	g.EngageMinion(c)
+	g.ResetEmptyDeck()
 }
 
 // RandomHandCard picks a random card from hand (seeded), or nil.

@@ -12,16 +12,18 @@ func (g *Game) Metrics() map[string]float64 {
 	return map[string]float64{
 		constants.MetricVillainDamage:  float64(max(0, s.VillainTotalHP-villainHP)),
 		constants.MetricVillainTotalHP: float64(s.VillainTotalHP),
-		constants.MetricHeroMaxHP:      float64(s.Hero.Face().HP),
+		constants.MetricHeroMaxHP:      float64(g.MaxHP(s.Hero)),
 		constants.MetricMainTarget:     float64(s.MainScheme.Face().TargetThreat),
 		constants.MetricWon:            boolFloat(g.result.Over && g.result.Won),
 		constants.MetricLost:           boolFloat(g.result.Over && !g.result.Won),
 		constants.MetricOver:           boolFloat(g.result.Over),
 		constants.MetricRound:          float64(s.Round),
-		constants.MetricHeroHP:         float64(max(0, s.Hero.RemainingHP())),
+		constants.MetricHeroHP:         float64(max(0, g.RemainingHP(s.Hero))),
 		constants.MetricVillainHPTotal: float64(max(0, villainHP)),
-		constants.MetricVillainHP:      float64(max(0, s.Villain.RemainingHP())),
+		constants.MetricVillainHP:      float64(max(0, g.RemainingHP(s.Villain))),
 		constants.MetricMainThreat:     float64(s.MainScheme.Threat),
+		constants.MetricSchemeProgress: float64(s.MainCompleted + s.MainScheme.Threat),
+		constants.MetricSchemeTotal:    float64(g.MainSchemeTotal()),
 		constants.MetricSideSchemes:    float64(len(s.SideSchemes)),
 		constants.MetricSideThreat:     float64(sumThreat(s.SideSchemes)),
 		constants.MetricMinions:        float64(len(s.Minions)),
@@ -33,7 +35,7 @@ func (g *Game) Metrics() map[string]float64 {
 
 // villainHP is the villain's remaining HP over all stages.
 func (g *Game) villainHP() int {
-	hp := g.S.Villain.RemainingHP()
+	hp := g.RemainingHP(g.S.Villain)
 	for _, st := range g.S.VillainStages {
 		hp += st.HP
 	}
@@ -47,9 +49,9 @@ func boolFloat(v bool) float64 {
 	return 0
 }
 
-func minionHP(cs []*Card) (n int) {
+func (g *Game) minionHP(cs []*Card) (n int) {
 	for _, c := range cs {
-		n += max(0, c.RemainingHP())
+		n += max(0, g.RemainingHP(c))
 	}
 	return
 }

@@ -12,11 +12,13 @@ cards:
     atk_cons: 1
     thw: 2
     thw_cons: 1
-    text: "After Daredevil thwarts, deal 1 damage to an enemy."
+    text: "Response: after Daredevil thwarts, you may deal 1 damage to an enemy."
     abilities:
-      - trigger: forced
+      - trigger: response
         on: thwarted
         when: [source_self]
+        key: "use:Daredevil"
+        text: "Use Daredevil: deal 1 damage to an enemy"
         effects:
           - {verb: damage_enemy, amount: 1, choose: true}
 
@@ -67,11 +69,13 @@ cards:
     cost: 1
     resources: [energy]
     max_in_play: 1
-    text: "Max 1. After a minion is defeated, exhaust Interrogation Room to remove 1 threat from a scheme (used automatically)."
+    text: "Max 1. Response: after a minion is defeated, you may exhaust Interrogation Room to remove 1 threat from a scheme."
     abilities:
-      - trigger: forced
+      - trigger: response
         on: minion_defeated
         when: [not_exhausted, schemes]
+        key: "use:Interrogation Room"
+        text: "Use Interrogation Room: remove 1 threat from a scheme (exhaust)"
         effects:
           - {verb: exhaust}
           - {verb: remove_threat, amount: 1, choose: true}

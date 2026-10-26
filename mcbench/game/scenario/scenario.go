@@ -137,15 +137,15 @@ func (s *Scenario) NewGame(seed uint64) (*engine.Game, error) {
 
 func (s *Scenario) buildState() (*engine.State, error) {
 	v := s.villain
-	if len(v.Stages) == 0 {
-		return nil, fmt.Errorf("%s: villain %s has no stages", s.ID, v.ID)
+	if len(v.Stages) == 0 || len(v.MainSchemes) == 0 {
+		return nil, fmt.Errorf("%s: villain %s needs villain and main scheme stages", s.ID, v.ID)
 	}
 	m := &cardMaker{scenario: s.ID}
 	st := &engine.State{
 		Hero:       m.one(s.deck.Identity),
 		Deck:       m.many(s.deck.Cards),
 		Villain:    m.one(v.Stages[0]),
-		MainScheme: m.one(v.MainScheme),
+		MainScheme: m.one(v.MainSchemes[0]),
 		EncDeck:    m.many(v.Cards),
 		Nemesis:    m.many(s.deck.Nemesis),
 	}
@@ -155,6 +155,13 @@ func (s *Scenario) buildState() (*engine.State, error) {
 			return nil, fmt.Errorf("%s: %w", s.ID, err)
 		}
 		st.VillainStages = append(st.VillainStages, d)
+	}
+	for _, ref := range v.MainSchemes[1:] {
+		d, err := cards.Get(ref)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", s.ID, err)
+		}
+		st.MainStages = append(st.MainStages, d)
 	}
 	for _, es := range s.sets {
 		st.EncDeck = append(st.EncDeck, m.many(es.Cards)...)

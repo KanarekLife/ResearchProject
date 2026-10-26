@@ -16,11 +16,16 @@ const (
 	MetricVillainHPTotal = "villain_hp_total"
 	MetricMainThreat     = "main_threat"
 	MetricMainTarget     = "main_target"
-	MetricSideSchemes    = "side_schemes"
-	MetricSideThreat     = "side_threat"
-	MetricMinions        = "minions"
-	MetricHand           = "hand"
-	MetricAllies         = "allies"
+	// MetricSchemeProgress is the threat over every main scheme stage: the
+	// thresholds of the completed stages plus the current stage's threat.
+	MetricSchemeProgress = "scheme_progress"
+	// MetricSchemeTotal is the sum of every main scheme stage's threshold.
+	MetricSchemeTotal = "scheme_total"
+	MetricSideSchemes = "side_schemes"
+	MetricSideThreat  = "side_threat"
+	MetricMinions     = "minions"
+	MetricHand        = "hand"
+	MetricAllies      = "allies"
 )
 
 // Criteria are the scored, normalized measurements derived from the metrics.

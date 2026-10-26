@@ -16,7 +16,13 @@ const (
 	TypeTreachery  = "treachery"
 	TypeAttachment = "attachment"
 	TypeObligation = "obligation"
+	// TypeEnvironment is an encounter card that stays in play and changes
+	// the rules (Ultron Drones).
+	TypeEnvironment = "environment"
 )
+
+// AttachEnvironment is an attachment's attach_to value for the environment.
+const AttachEnvironment = "environment"
 
 // Resources (the names used in card YAML).
 const (
@@ -39,6 +45,14 @@ const (
 	TrigThwarted              = "thwarted"
 	TrigRoundEnd              = "round_end"
 	TrigAttackEnded           = "attack_ended"
+	TrigAttacked              = "attacked"
+	TrigAttackDamaged         = "attack_damaged"
+	TrigMinionEnters          = "minion_enters"
+	TrigEntersPlay            = "enters_play"
+	TrigEnemyDamaged          = "enemy_damaged"
+	TrigVillainSchemed        = "villain_schemed"
+	TrigStepOneThreat         = "step_one_threat"
+	TrigHeroWouldTakeDamage   = "hero_would_take_damage"
 )
 
 // Ability triggers (the value of Ability.Trigger).
@@ -52,6 +66,22 @@ const (
 	AbilityResource  = "resource"
 	AbilityStat      = "stat"
 	AbilityBoost     = "boost"
+	AbilitySetup     = "setup"
+	AbilityResponse  = "response"
+	// AbilityBoostFlip is a "Boost" ability that resolves as the boost card
+	// is flipped; AbilityBoost runs for each character the activation damages.
+	AbilityBoostFlip = "boost_flip"
+)
+
+// Stats a stat ability may modify. The hero_* stats are bonuses a card you
+// control gives your hero.
+const (
+	StatATK      = "atk"
+	StatTHW      = "thw"
+	StatHandSize = "hand_size"
+	StatHeroATK  = "hero_atk"
+	StatHeroTHW  = "hero_thw"
+	StatHeroDEF  = "hero_def"
 )
 
 // Effect verbs (the value of Effect.Verb).
@@ -99,6 +129,29 @@ const (
 	VerbNemesis            = "nemesis"
 	VerbChoose             = "choose"
 	VerbDiscardChosen      = "discard_chosen"
+	VerbThwartEach         = "thwart_each"
+	VerbAttackMill         = "attack_mill"
+	VerbDamageHeroMill     = "damage_hero_mill"
+	VerbDamageAlly         = "damage_ally"
+	VerbDamageAllEnemies   = "damage_all_enemies"
+	VerbDamageAllChars     = "damage_all_characters"
+	VerbDamageFriendly     = "damage_friendly"
+	VerbTempBoost          = "temp_boost"
+	VerbGainTrait          = "gain_trait"
+	VerbExhaustUpgrades    = "exhaust_upgrades"
+	VerbExhaustAllies      = "exhaust_allies"
+	VerbExhaustCharacters  = "exhaust_characters"
+	VerbMill               = "mill"
+	VerbDrone              = "drone"
+	VerbLookKeep           = "look_keep"
+	VerbReturnFromDiscard  = "return_from_discard"
+	VerbDiscardHandChoice  = "discard_hand_choice"
+	VerbDiscardHandRes     = "discard_hand_resource"
+	VerbPutIntoPlay        = "put_into_play"
+	VerbDiscardUntilMinion = "discard_until_minion"
+	VerbSearchMinion       = "search_minion"
+	VerbEngageSelf         = "engage_self"
+	VerbMinionsAttack      = "minions_attack"
 )
 
 // Effect predicates (the values of Effect.When and Ability.When).
@@ -123,6 +176,19 @@ const (
 	PredVulture          = "vulture"
 	PredUpgradesSupports = "upgrades_supports"
 	PredAmountPositive   = "amount_positive"
+	PredAerial           = "aerial"
+	PredNotAerial        = "not_aerial"
+	PredDefeated         = "defeated"
+	PredSourceHero       = "source_hero"
+	PredTargetMinion     = "target_minion"
+	PredTargetSelf       = "target_self"
+	PredTargetHero       = "target_hero"
+	PredUndefended       = "undefended"
+	PredHandNotEmpty     = "hand_not_empty"
+	PredDrones           = "drones"
+	PredTargetInPlay     = "target_in_play"
+	PredUpgrades         = "upgrades"
+	PredMilledPrefix     = "milled:"
 	PredPaidPrefix       = "paid:"
 	PredNotPaidPrefix    = "not_paid:"
 )
@@ -142,19 +208,46 @@ const (
 	SelHero               = "hero"
 	SelVillain            = "villain"
 	SelSelf               = "self"
+	SelAlly               = "ally"
+	SelAllyWithoutThis    = "ally_without_this"
+	SelDiscardAlly        = "discard_ally"
+	SelUpgrade            = "upgrade"
+	SelSideSchemes        = "side_schemes"
+	SelFriendly           = "friendly"
 )
 
 // Effect result markers.
 const (
 	ResultStun        = "stun"
 	ResultEventAmount = "event_amount"
+	// ResultThreat places 1 threat on the main scheme if the attack damages.
+	ResultThreat = "threat"
+	// ResultMill discards the top card of your deck per damage dealt or
+	// threat placed.
+	ResultMill = "mill"
 )
 
-// Stat bonus expressions.
-const BonusSideSchemes = "side_schemes"
+// Count expressions, for stat bonuses and an effect's per.
+const (
+	CountSideSchemes  = "side_schemes"
+	CountTechUpgrades = "tech_upgrades"
+	CountAerial       = "aerial"
+	CountDrones       = "drones"
+	CountUpgrades     = "upgrades"
+	CountCounters     = "counters"
+)
+
+// Traits the rules refer to.
+const (
+	TraitAerial = "Aerial"
+	TraitTech   = "Tech"
+	TraitDrone  = "Drone"
+)
 
 // Well-known card codes.
 const (
+	// CodeDrone is the face a facedown Drone minion shows (not a printed card).
+	CodeDrone           = "drone"
 	CodeBombScare       = "01109"
 	CodeBreakinAndTakin = "01107"
 	CodeVulture         = "01167"

@@ -32,8 +32,8 @@ func TestSearchListsAmbiguousAndRejectsUnknownNames(t *testing.T) {
 	if ds := Search(Search("rhino")[1].Code); len(ds) != 1 {
 		t.Errorf("a code must pick one stage, got %v", names(ds))
 	}
-	if ds := Search("Spider-Woman"); len(ds) != 0 {
-		t.Errorf("Search(Spider-Woman) = %v, want nothing", names(ds))
+	if ds := Search("Iron Fist"); len(ds) != 0 {
+		t.Errorf("Search(Iron Fist) = %v, want nothing", names(ds))
 	}
 }
 

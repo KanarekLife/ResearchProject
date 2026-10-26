@@ -15,7 +15,7 @@ func controlledUpgradesSupports(g *e.Game) []*e.Card {
 			out = append(out, c)
 		}
 	}
-	for _, host := range append(g.AllEnemies(), g.S.Hero) {
+	for _, host := range append(append(g.AllEnemies(), g.S.Hero), allies(g)...) {
 		for _, a := range host.Attached {
 			if isUS(a) {
 				out = append(out, a)
@@ -24,6 +24,47 @@ func controlledUpgradesSupports(g *e.Game) []*e.Card {
 	}
 	return out
 }
+
+// controlledUpgrades lists the upgrades you control.
+func controlledUpgrades(g *e.Game) []*e.Card {
+	var out []*e.Card
+	for _, c := range controlledUpgradesSupports(g) {
+		if c.Def.Type == e.TypeUpgrade {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// allies lists the allies you control.
+func allies(g *e.Game) []*e.Card {
+	var out []*e.Card
+	for _, c := range g.S.Play {
+		if c.Def.Type == e.TypeAlly {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// drones lists the Drone minions engaged with you, facedown or not.
+func drones(g *e.Game) []*e.Card {
+	return minionsWithTrait(g, constants.TraitDrone)
+}
+
+// minionsWithTrait lists the engaged minions with the trait.
+func minionsWithTrait(g *e.Game, trait string) []*e.Card {
+	var out []*e.Card
+	for _, m := range g.S.Minions {
+		if m.Face().HasTrait(trait) {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// friendly lists your hero and allies.
+func friendly(g *e.Game) []*e.Card { return append([]*e.Card{g.S.Hero}, allies(g)...) }
 
 func enemiesWithoutWebbedUp(g *e.Game) []*e.Card {
 	var out []*e.Card

@@ -59,6 +59,10 @@ Marvel Champions terms, as used in this project's code, data and reports.
   alongside the villain.
 - **Treachery**: a one-time encounter effect. **Attachment**: an encounter card
   attached to the villain.
+- **Environment**: an encounter card that stays in play and changes the rules
+  (Ultron Drones).
+- **Main scheme stage**: some main schemes have several stages; reaching a
+  stage's threshold advances to the next, and only the last stage loses.
 - **Side scheme**: an extra scheme. It is defeated when its threat reaches 0.
   Icons: **acceleration** (+1 threat each round), **hazard** (+1 encounter card
   each round), **crisis** (player cards cannot remove main-scheme threat).
@@ -77,7 +81,15 @@ Marvel Champions terms, as used in this project's code, data and reports.
 - **Toughness / tough**: a tough status prevents the next damage.
 - **Stunned**: the next attack is replaced by discarding the stun. **Confused**:
   the next thwart or scheme is replaced by discarding the confuse.
-- **Overkill**: excess damage to an ally carries over to the hero.
+- **Overkill**: excess damage to an ally carries over to the hero (to the
+  villain, for a player attack on a minion).
+- **Retaliate X**: after the character is attacked, it deals X damage to the
+  attacker.
+- **Aerial**: a hero trait some cards check (Cosmic Flight gives it; Rocket
+  Boots until the end of the phase).
+- **Drone**: a minion trait. Ultron puts the top card of your deck into play
+  facedown as a Drone minion; when it is defeated the card goes to your
+  discard pile.
   **Quickstrike**: a minion attacks as soon as it engages you.
 
 ## Benchmark terms

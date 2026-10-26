@@ -80,6 +80,7 @@ export interface View {
   main_scheme: Scheme;
   side_schemes: Scheme[];
   minions: Enemy[];
+  environment?: Environment[];
   encounter_deck_size: number;
   encounter_discard: string[];
   acceleration_tokens: number;
@@ -96,6 +97,7 @@ export interface Hero {
   def?: number;
   rec?: number;
   hand_size: number;
+  traits?: string[];
   exhausted?: boolean;
   statuses?: string[];
   changed_form_this_turn?: boolean;
@@ -133,6 +135,13 @@ export interface Enemy {
   sch: number;
   keywords?: string[];
   statuses?: string[];
+  text?: string;
+  attachments?: Card[];
+}
+
+// An encounter card that stays in play and changes the rules (Ultron Drones).
+export interface Environment {
+  name: string;
   text?: string;
   attachments?: Card[];
 }

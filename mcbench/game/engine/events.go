@@ -28,6 +28,24 @@ const (
 	TrigRoundEnd Trigger = constants.TrigRoundEnd
 	// An enemy attack finished resolving (Source is the enemy).
 	TrigAttackEnded Trigger = constants.TrigAttackEnded
+	// A player character attacked (Source) an enemy (Target); Defeated tells
+	// whether the attack defeated it.
+	TrigAttacked Trigger = constants.TrigAttacked
+	// An enemy attack (Source) damaged a character (Target) by Amount.
+	TrigAttackDamaged Trigger = constants.TrigAttackDamaged
+	// A player card (Target) entered play under your control.
+	TrigEntersPlay Trigger = constants.TrigEntersPlay
+	// A minion (Target) entered play engaged with you.
+	TrigMinionEnters Trigger = constants.TrigMinionEnters
+	// An enemy (Target) took damage and survived.
+	TrigEnemyDamaged Trigger = constants.TrigEnemyDamaged
+	// The villain (Source) finished scheming.
+	TrigVillainSchemed Trigger = constants.TrigVillainSchemed
+	// Threat was placed on the main scheme in step one of the villain phase.
+	TrigStepOneThreat Trigger = constants.TrigStepOneThreat
+	// Your hero would take damage (from any source). Amount may be reduced.
+	// Abilities for it are also offered when the damage comes from an attack.
+	TrigHeroWouldTakeDamage Trigger = constants.TrigHeroWouldTakeDamage
 )
 
 // Event carries the details of a trigger.
@@ -37,6 +55,13 @@ type Event struct {
 	Target    *Card // e.g. the damaged card
 	Amount    int
 	Cancelled bool
+	Defeated  bool // TrigAttacked: the attack defeated its target
+	Attack    bool // OnBoost: the boost card is for an attack, not a scheme
+}
+
+// matches reports whether an ability waiting for trigger t answers ev.
+func (ev *Event) matches(t Trigger) bool {
+	return t == ev.Trigger || (t == TrigHeroWouldTakeDamage && ev.Trigger == TrigWouldTakeAttackDamage)
 }
 
 // fireForced runs forced abilities of every card in play for this event.
@@ -58,14 +83,26 @@ func (g *Game) fireForced(ev *Event) {
 	}
 }
 
-// playerWindow offers interrupt/response events from hand for the trigger,
-// then continues with next. At most one card is played per window.
+// playerWindow offers interrupt/response events from hand and abilities of
+// cards in play for the trigger, then continues with next. At most one card
+// or ability is used per window.
 func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
+	opts := g.windowOptions(ev, prompt, next)
+	if len(opts) == 0 {
+		g.Do(next)
+		return
+	}
+	opts = append(opts, Option{Key: constants.KeyPass, Text: "Do not respond", do: func() { g.Do(next) }})
+	g.Ask(&Decision{Kind: constants.KindWindow, Prompt: prompt, Options: opts})
+}
+
+// windowOptions lists what may be used in the window, without the pass option.
+func (g *Game) windowOptions(ev *Event, prompt string, next func()) []Option {
 	var opts []Option
 	seen := map[string]bool{}
 	for _, c := range g.S.Hand {
 		sc := c.Def.Script
-		if sc == nil || sc.PlayWindow != ev.Trigger || sc.OnPlayEvent == nil {
+		if sc == nil || !ev.matches(sc.PlayWindow) || sc.OnPlayEvent == nil {
 			continue
 		}
 		if sc.PlayIf != nil && !sc.PlayIf(g, c, ev) {
@@ -81,9 +118,10 @@ func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
 			g.S.CostReduction = 0
 			g.moveFromHand(card)
 			g.Logf("Played %s.", card.Name())
+			// next is scheduled first so steps the event schedules run before it.
+			g.Do(next)
 			card.Def.Script.OnPlayEvent(g, card, ev)
 			g.S.Discard = append(g.S.Discard, card)
-			g.Do(next)
 		}
 		// Cancelling a payment offers the same window again.
 		back := func() { g.playerWindow(ev, prompt, next) }
@@ -94,10 +132,21 @@ func (g *Game) playerWindow(ev *Event, prompt string, next func()) {
 		seen[o.FullKey()] = true
 		opts = append(opts, o)
 	}
-	if len(opts) == 0 {
-		g.Do(next)
-		return
-	}
-	opts = append(opts, Option{Key: constants.KeyPass, Text: "Do not respond", do: func() { g.Do(next) }})
-	g.Ask(&Decision{Kind: constants.KindWindow, Prompt: prompt, Options: opts})
+	g.inPlay(func(c *Card) {
+		sc := c.Face().Script
+		if sc == nil {
+			return
+		}
+		for _, w := range sc.Windows {
+			if !ev.matches(w.Trigger) || (w.If != nil && !w.If(g, c, ev)) {
+				continue
+			}
+			card, w := c, w
+			opts = append(opts, Option{Key: w.Key, Text: w.Text, do: func() {
+				g.Do(next)
+				w.Do(g, card, ev)
+			}})
+		}
+	})
+	return opts
 }

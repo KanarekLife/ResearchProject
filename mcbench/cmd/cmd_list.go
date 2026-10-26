@@ -9,7 +9,7 @@ func cmdList(args []string) error {
 	if err != nil {
 		return err
 	}
-	l := scenarioFlags(fs)
+	l := scenarioFlags(fs, nil)
 	fs.Parse(args)
 	scs, err := l.load()
 	if err != nil {

@@ -1,0 +1,24 @@
+id: ultron
+name: Ultron
+stages: ["01134", "01135"]
+main_schemes: [The Crimson Cowl, Assault on NORAD, Countdown to Oblivion]
+cards:
+  - Ultron Drones
+  - Program Transmitter
+  - Upgraded Drones
+  - Upgraded Drones
+  - Advanced Ultron Drone
+  - Advanced Ultron Drone
+  - Advanced Ultron Drone
+  - "01144a"
+  - "01144b"
+  - "01144c"
+  - Rage of Ultron
+  - Rage of Ultron
+  - Repair Sequence
+  - Repair Sequence
+  - Swarm Attack
+  - Swarm Attack
+  - Drone Factory
+  - Invasive AI
+  - Ultron's Imperative

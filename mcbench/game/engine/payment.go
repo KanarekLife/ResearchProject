@@ -141,8 +141,19 @@ func (g *Game) paySources(exclude *Card, paying *CardDef) []paySource {
 		if sc == nil || sc.ResourceAbility == nil {
 			return
 		}
-		if sc.ResourceAbility.Usable == nil || sc.ResourceAbility.Usable(g, c) {
-			out = append(out, paySource{card: c, gives: []Resource{sc.ResourceAbility.Gives}})
+		ra := sc.ResourceAbility
+		if ra.Usable != nil && !ra.Usable(g, c) {
+			return
+		}
+		gives := []Resource{ra.Gives}
+		if ra.FromDiscard {
+			if len(g.S.Discard) == 0 {
+				return
+			}
+			gives = g.S.Discard[len(g.S.Discard)-1].Def.Resources
+		}
+		if len(gives) > 0 {
+			out = append(out, paySource{card: c, gives: gives})
 		}
 	})
 	return out

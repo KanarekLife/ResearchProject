@@ -1,0 +1,8 @@
+id: captain-marvel-vs-rhino
+title: Captain Marvel (Leadership) vs Rhino - Standard, Bomb Scare
+deck: captain-marvel-leadership
+villain: rhino
+encounter_sets: [standard, bomb-scare]
+seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+max_rounds: 20
+max_decisions: 1000

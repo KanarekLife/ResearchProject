@@ -1,7 +1,7 @@
 id: rhino
 name: Rhino
 stages: ["01094", "01095"]
-main_scheme: The Break-In!
+main_schemes: [The Break-In!]
 cards:
   - Armored Rhino Suit
   - Charge

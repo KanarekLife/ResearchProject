@@ -25,7 +25,11 @@ type State struct {
 	Villain       *Card
 	VillainStages []*CardDef // stages after the current one, in order
 	MainScheme    *Card
+	MainStages    []*CardDef // main scheme stages after the current one
+	// MainCompleted sums the thresholds of the completed main scheme stages.
+	MainCompleted int
 	SideSchemes   []*Card
+	Environment   []*Card
 	Minions       []*Card // engaged with the hero
 	EncDeck       []*Card // index 0 is the top
 	EncDiscard    []*Card
@@ -45,6 +49,8 @@ type State struct {
 	// Per-turn / per-round bookkeeping.
 	FormChanged  bool
 	OncePerRound map[string]bool
+	// PhaseTraits are traits your hero has until the end of the phase.
+	PhaseTraits []string
 	// CostReduction lowers the cost of the next card played this phase.
 	CostReduction int
 }

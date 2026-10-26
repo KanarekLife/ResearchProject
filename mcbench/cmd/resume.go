@@ -54,6 +54,7 @@ func (rs *resumeState) overlay(cfg config) config {
 	cfg.Inference.ReasoningEffort, cfg.Inference.ReasoningBudget, cfg.Inference.Stream = s.ReasoningEffort, s.ReasoningBudget, s.Stream
 	cfg.Player.Name, cfg.Player.MaxFailures, cfg.Player.Instructions = s.Player, s.MaxFailures, s.Instructions
 	cfg.Run.Seeds, cfg.Run.Samples, cfg.Run.Parallel = s.Seeds, s.Samples, s.Parallel
+	cfg.Run.Scenarios = rs.info.Scenarios
 	return cfg
 }
 

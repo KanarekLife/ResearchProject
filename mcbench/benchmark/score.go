@@ -7,7 +7,8 @@ import "mcbench/constants"
 //	win             1 if the villain was defeated, else 0
 //	villain_damage  share of the villain's total HP (all stages) removed
 //	hero_hp         share of the hero's HP left at the end (0 if defeated)
-//	threat          1 - main-scheme threat / threshold at the end
+//	threat          1 - main-scheme threat / threshold at the end, over every
+//	                stage: completed stages count their full threshold
 //	speed           for wins: 1 - (rounds - 1) / max_rounds; 0 otherwise
 //
 // The game score is their weighted mean. The weights are the benchmark
@@ -42,7 +43,7 @@ func Criteria(stats map[string]float64, maxRounds int) map[string]float64 {
 		constants.CriterionHeroHP: clamp01(ratio(
 			stats[constants.MetricHeroHP], stats[constants.MetricHeroMaxHP])),
 		constants.CriterionThreat: clamp01(1 - ratio(
-			stats[constants.MetricMainThreat], stats[constants.MetricMainTarget])),
+			stats[constants.MetricSchemeProgress], stats[constants.MetricSchemeTotal])),
 	}
 	if won {
 		c[constants.CriterionSpeed] = clamp01(1 - (stats[constants.MetricRound]-1)/float64(maxRounds))

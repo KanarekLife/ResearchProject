@@ -47,8 +47,8 @@ const (
 	// "a" does not match every card.
 	minPartial = 4
 	// charsPerTypo allows one typo per this many characters of the query:
-	// "swingin web kick" finds Swinging Web Kick, "Spider-Woman" does not
-	// find Spider-Man.
+	// "swingin web kick" finds Swinging Web Kick, "Iron Fist" does not
+	// find Iron Man.
 	charsPerTypo = 8
 )
 

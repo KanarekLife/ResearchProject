@@ -132,6 +132,9 @@ func (g *Game) allyAttackOptions(ally *Card) []Option {
 }
 
 func (g *Game) allyThwartOptions(ally *Card) []Option {
+	if ally.Def.NoThwart {
+		return nil
+	}
 	var opts []Option
 	for _, scheme := range g.thwartTargets(ally) {
 		opts = append(opts, g.strikeOption(strike{constants.PrefixThwart, ally, g.Label(ally), scheme,
@@ -187,6 +190,13 @@ func NewAction(key, text string, do func()) Option {
 // none when it cannot be paid. The turn continues automatically after it
 // resolves or is cancelled.
 func (g *Game) NewActionPaid(src *Card, key, text string, cost int, need []Resource, do func()) []Option {
+	return g.NewChoicePaid(src, key, text, cost, need, do, nil)
+}
+
+// NewChoicePaid builds the option of a choice whose cost must be paid, or
+// none when it cannot be. cancel (may be nil) runs when the payment is
+// cancelled, e.g. to ask the choice again.
+func (g *Game) NewChoicePaid(src *Card, key, text string, cost int, need []Resource, do, cancel func()) []Option {
 	pays := g.paymentsFor(src, nil, cost, need)
 	if len(pays) == 0 {
 		return nil
@@ -194,7 +204,7 @@ func (g *Game) NewActionPaid(src *Card, key, text string, cost int, need []Resou
 	return []Option{g.payOption(key, text, pays, func(p Payment) {
 		p.Spend(g)
 		do()
-	}, nil)}
+	}, cancel)}
 }
 
 func (g *Game) playOptions(c *Card) []Option {
@@ -234,11 +244,18 @@ func (g *Game) playOptions(c *Card) []Option {
 func (g *Game) payToPlay(c *Card, d *CardDef, target *Card) []Option {
 	key := constants.PrefixPlay + d.Name
 	text := "Play " + d.Name
+	cost, paying := d.Cost, d
 	if target != nil {
 		key += constants.SepTarget + g.Label(target)
 		text += " targeting " + g.Label(target)
+		if d.CostFromTarget {
+			// The target's printed cost is paid as the target's own: a The
+			// Power of [Aspect] doubles for its aspect (Rules Reference FAQ).
+			cost, paying = cost+target.Def.Cost, target.Def
+			text += fmt.Sprintf(" (paying its cost of %d)", target.Def.Cost)
+		}
 	}
-	pays := g.paymentsFor(c, d, max(0, d.Cost-g.S.CostReduction), nil)
+	pays := g.paymentsFor(c, paying, max(0, cost-g.S.CostReduction), nil)
 	if len(pays) == 0 {
 		return nil
 	}

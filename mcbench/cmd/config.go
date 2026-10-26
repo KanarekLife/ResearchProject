@@ -43,10 +43,12 @@ type playerConfig struct {
 }
 
 type runConfig struct {
-	Seeds    int    `yaml:"seeds"`
-	Samples  int    `yaml:"samples"`
-	Parallel int    `yaml:"parallel"`
-	Out      string `yaml:"out"`
+	// Scenarios are the scenario ids run and play use; empty means all.
+	Scenarios []string `yaml:"scenarios"`
+	Seeds     int      `yaml:"seeds"`
+	Samples   int      `yaml:"samples"`
+	Parallel  int      `yaml:"parallel"`
+	Out       string   `yaml:"out"`
 }
 
 type onlineConfig struct {

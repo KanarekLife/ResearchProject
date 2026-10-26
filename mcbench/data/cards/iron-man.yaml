@@ -1,0 +1,295 @@
+# Iron Man hero set, obligation and nemesis set (Whiplash), from the Core Set.
+# Stats follow the printed cards for one player; text is our own paraphrase.
+cards:
+  - code: "01029a"
+    name: Iron Man
+    type: hero
+    unique: true
+    traits: [Avenger]
+    hp: 9
+    atk: 1
+    thw: 2
+    def: 1
+    hand_size: 1
+    text: "Your hand size is 1, +1 for each Tech upgrade you control (maximum 7)."
+    abilities:
+      - trigger: stat
+        stat: hand_size
+        bonus: tech_upgrades
+        max: 7
+    back:
+      code: "01029b"
+      name: Tony Stark
+      type: alter-ego
+      unique: true
+      traits: [Genius]
+      hp: 9
+      rec: 3
+      hand_size: 6
+      text: "Futurist - Action (once per round): look at the top 3 cards of your deck; add 1 to your hand and discard the others."
+      abilities:
+        - trigger: action
+          once_per_round: true
+          key: "use:Tony Stark"
+          text: "Futurist: look at the top 3 cards of your deck, add 1 to your hand and discard the others (once per round)"
+          effects:
+            - {verb: look_keep, n: 3}
+
+  - code: "01030"
+    name: War Machine
+    type: ally
+    unique: true
+    aspect: Hero
+    cost: 4
+    resources: [wild]
+    hp: 4
+    atk: 2
+    atk_cons: 1
+    thw: 1
+    thw_cons: 1
+    text: "Action: exhaust War Machine and deal 2 damage to him to deal 1 damage to each enemy."
+    abilities:
+      - trigger: action
+        when: [not_exhausted]
+        key: "use:War Machine"
+        text: "Use War Machine: deal 1 damage to each enemy (exhaust War Machine and deal 2 damage to him)"
+        effects:
+          - {verb: exhaust}
+          - {verb: damage_ally, amount: 2, target: self}
+          - {verb: damage_all_enemies, amount: 1}
+
+  - code: "01031"
+    name: Repulsor Blast
+    type: event
+    aspect: Hero
+    cost: 1
+    resources: [physical]
+    text: "Hero Action (attack): discard the top 5 cards of your deck, then deal 1 damage to an enemy, +2 damage for each printed energy resource on the discarded cards."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - {verb: attack_mill, n: 5, resource: energy, damage: 1, amount: 2}
+
+  - code: "01032"
+    name: Supersonic Punch
+    type: event
+    aspect: Hero
+    cost: 2
+    resources: [energy]
+    text: "Hero Action (attack): deal 4 damage to an enemy (8 damage instead if you are Aerial)."
+    abilities:
+      - trigger: play
+        when: [hero]
+        target: enemy
+        effects:
+          - {verb: attack, damage: 4, when: [not_aerial]}
+          - {verb: attack, damage: 8, when: [aerial]}
+
+  - code: "01033"
+    name: Pepper Potts
+    type: support
+    unique: true
+    aspect: Hero
+    cost: 3
+    resources: [physical]
+    text: "Resource: exhaust Pepper Potts to generate the printed resources of the top card of your discard pile."
+    abilities:
+      - trigger: resource
+        from_discard: true
+        usable: [not_exhausted]
+        effects:
+          - {verb: exhaust}
+
+  - code: "01034"
+    name: Stark Tower
+    type: support
+    unique: true
+    aspect: Hero
+    cost: 2
+    resources: [mental]
+    text: "Alter-Ego Action: exhaust Stark Tower to return the topmost Tech upgrade in your discard pile to your hand."
+    abilities:
+      - trigger: action
+        when: [alter_ego, not_exhausted]
+        key: "use:Stark Tower"
+        text: "Use Stark Tower: return the topmost Tech upgrade in your discard pile to your hand (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: return_from_discard, trait: Tech}
+
+  - code: "01035"
+    name: Arc Reactor
+    type: upgrade
+    unique: true
+    aspect: Hero
+    traits: [Item, Tech]
+    cost: 2
+    resources: [energy]
+    text: "Tech. Hero Action: exhaust Arc Reactor to ready Iron Man."
+    abilities:
+      - trigger: action
+        when: [hero, not_exhausted]
+        key: "use:Arc Reactor"
+        text: "Use Arc Reactor: ready Iron Man (exhaust Arc Reactor)"
+        effects:
+          - {verb: exhaust}
+          - {verb: ready, target: hero}
+
+  - code: "01036"
+    name: Mark V Armor
+    type: upgrade
+    unique: true
+    aspect: Hero
+    traits: [Armor, Tech]
+    cost: 3
+    resources: [mental]
+    hero_hp: 6
+    text: "Tech. You get +6 hit points."
+
+  - code: "01037"
+    name: Mark V Helmet
+    type: upgrade
+    unique: true
+    aspect: Hero
+    traits: [Armor, Tech]
+    cost: 1
+    resources: [physical]
+    text: "Tech. Hero Action (thwart): exhaust Mark V Helmet to remove 1 threat from a scheme (from each scheme instead if you are Aerial)."
+    abilities:
+      - trigger: action
+        when: [hero, not_exhausted, schemes, not_aerial]
+        key: "use:Mark V Helmet"
+        text: "Use Mark V Helmet: thwart a scheme for 1 (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: thwart, amount: 1, choose: true}
+      - trigger: action
+        when: [hero, not_exhausted, schemes, aerial]
+        key: "use:Mark V Helmet"
+        text: "Use Mark V Helmet: thwart each scheme for 1 (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: thwart_each, amount: 1}
+
+  - code: "01038"
+    name: Powered Gauntlets
+    type: upgrade
+    aspect: Hero
+    traits: [Armor, Tech]
+    cost: 2
+    resources: [energy]
+    text: "Tech. Hero Action (attack): exhaust Powered Gauntlets to deal 1 damage to an enemy (2 damage instead if you are Aerial)."
+    abilities:
+      - trigger: action
+        when: [hero, not_exhausted, not_aerial]
+        key: "use:Powered Gauntlets"
+        text: "Use Powered Gauntlets: attack an enemy for 1 (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: attack, damage: 1, choose: true}
+      - trigger: action
+        when: [hero, not_exhausted, aerial]
+        key: "use:Powered Gauntlets"
+        text: "Use Powered Gauntlets: attack an enemy for 2 (exhaust)"
+        effects:
+          - {verb: exhaust}
+          - {verb: attack, damage: 2, choose: true}
+
+  - code: "01039"
+    name: Rocket Boots
+    type: upgrade
+    aspect: Hero
+    traits: [Armor, Tech]
+    cost: 1
+    resources: [mental]
+    hero_hp: 1
+    text: "Tech. You get +1 hit point. Hero Action: exhaust Rocket Boots and spend a mental resource to be Aerial until the end of the phase."
+    abilities:
+      - trigger: action
+        when: [hero, not_exhausted]
+        key: "use:Rocket Boots"
+        text: "Use Rocket Boots: become Aerial until the end of the phase (exhaust, spend a mental resource)"
+        paid: {count: 1, resources: [mental]}
+        effects:
+          - {verb: exhaust}
+          - {verb: gain_trait, trait: Aerial}
+
+  # --- Obligation and nemesis set ---------------------------------------------
+  - code: "01170"
+    name: Business Problems
+    type: obligation
+    boost: 2
+    text: "Choose: exhaust Tony Stark (flipping to alter-ego if needed) to remove this card from the game, or exhaust each upgrade you control and discard this card."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Business Problems (obligation): choose how to resolve it."
+            options:
+              - text: "Exhaust Tony Stark: remove Business Problems from the game"
+                key: "effect:Business Problems>exhaust"
+                when: [hero_ready]
+                effects:
+                  - {verb: flip_alter_ego}
+                  - {verb: exhaust, target: hero}
+                  - {verb: remove_from_game, target: self}
+              - text: "Exhaust each upgrade you control; discard Business Problems"
+                key: "effect:Business Problems>upgrades"
+                effects:
+                  - {verb: exhaust_upgrades}
+                  - {verb: to_encounter_discard}
+
+  - code: "01171"
+    name: Imminent Overload
+    type: side_scheme
+    boost: 3
+    starting_threat: 4
+    acceleration: 1
+    text: "Acceleration: +1 threat on the main scheme each villain phase."
+
+  - code: "01172"
+    name: Whiplash
+    type: minion
+    unique: true
+    hp: 4
+    atk: 3
+    sch: 2
+    boost: 2
+    retaliate: 1
+    text: "Retaliate 1 (after Whiplash is attacked, he deals 1 damage to the attacker)."
+
+  - code: "01173"
+    name: Electric Whip Attack
+    type: treachery
+    text: "Choose: take 1 damage for each upgrade you control, or discard an upgrade you control. Boost: if the villain's attack is undefended, discard an upgrade you control."
+    abilities:
+      - trigger: reveal
+        effects:
+          - verb: choose
+            prompt: "Electric Whip Attack: take 1 damage per upgrade you control, or discard an upgrade?"
+            options:
+              - text: "Take 1 damage for each upgrade you control"
+                key: "effect:Electric Whip Attack>damage"
+                effects:
+                  - {verb: damage_hero, amount: 1, per: upgrades}
+              - text: "Discard an upgrade you control"
+                key: "effect:Electric Whip Attack>discard"
+                when: [upgrades]
+                effects:
+                  - {verb: discard_chosen, target: upgrade, prompt: "Electric Whip Attack: choose an upgrade you control to discard."}
+      - trigger: boost_flip
+        when: [undefended]
+        effects:
+          - {verb: discard_chosen, target: upgrade, prompt: "Electric Whip Attack (boost): choose an upgrade you control to discard."}
+
+  - code: "01174"
+    name: Electromagnetic Backlash
+    type: treachery
+    boost: 2
+    text: "Discard the top 5 cards of your deck; take 1 damage for each printed energy resource on them."
+    abilities:
+      - trigger: reveal
+        effects:
+          - {verb: damage_hero_mill, n: 5, resource: energy, amount: 1}
