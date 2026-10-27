@@ -19,6 +19,7 @@ Commands:
   board_gui  show a game trace as a board in the browser, step by step
   site       write the board and the report and analyze tables as a static website
   publish    merge the runs of one player (for example a run and its retries) and publish them as one run
+  jobs       the worker: play the job files queued on the jobs branch and publish their runs
 
 Run "mcbench <command> -h" for flags.
 `
@@ -36,7 +37,7 @@ func main() {
 	cmds := map[string]func([]string) error{
 		cmdNameList: cmdList, cmdNameValidate: cmdValidate,
 		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport, cmdNameAnalyze: cmdAnalyze,
-		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI, cmdNameSite: cmdSite, cmdNamePublish: cmdPublish,
+		cmdNameView: cmdView, cmdNameBoardGUI: cmdBoardGUI, cmdNameSite: cmdSite, cmdNamePublish: cmdPublish, cmdNameJobs: cmdJobs,
 	}
 	cmd, ok := cmds[os.Args[1]]
 	if !ok {

@@ -75,7 +75,13 @@ go generate ./boardgui && go run ./cmd site -out site   # -source as for report;
 ```
 
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,
-`player`, `run`, `online`, `scoring`); flags override it. Key flags:
+`player`, `run`, `online`, `jobs`, `providers`, `scoring`); `MCBENCH_*`
+environment variables override it, and flags override both. A variable is named
+after the key's path, so `MCBENCH_RUN_OUT` sets `run.out` and
+`MCBENCH_PROVIDERS_PROXY_API_KEY_ENV` sets `providers.proxy.api_key_env`. A
+value is YAML unless the key is a string (`[a, b]` for a list,
+`{X-Run: "{run}"}` for a map). A `MCBENCH_` variable that names no key is an
+error. Key flags:
 
 When `mcbench` starts, it automatically loads an optional `.env` file from the
 current directory. Existing environment variables are kept, so shell exports
@@ -120,6 +126,61 @@ go run ./cmd run -model <id> -header "x-opencode-session: {run}_{game}"
 
 Without placeholders the value is the same for the whole run. Any other
 `{...}` in a value is rejected.
+
+`-provider <name>` takes the API protocol, server, key variable, headers, stream
+and retries of a provider in the `providers:` section of `config.yaml`; flags
+still override it.
+
+```yaml
+providers:
+  proxy:
+    api: openai
+    server: http://127.0.0.1:8317/v1
+    api_key_env: PROXY_API_KEY
+    headers: {X-Run: "{run}"}
+    stream: true
+    retries: 3
+```
+
+### Jobs
+
+A job is one run queued for the server. Commit a job file (`.yaml` or `.yml`)
+to `pending/` on the `jobs` branch; the worker (`mcbench jobs -watch 5m`) plays
+it and publishes the run. A field left out keeps the worker's default, and the endpoint is a provider
+defined on the worker, so no key or header is ever on the branch.
+
+The worker runs from the image CI pushes on every change to `main`:
+`ghcr.io/kanareklife/researchproject/mcbench-worker`, tagged with the commit sha
+and `latest`. The worker is configured with `MCBENCH_*` variables (providers
+included) and reads the provider keys from the variables they name. It pushes to GitHub
+with a deploy key that has write access, given in `GITHUB_DEPLOY_KEY`, and
+checks GitHub against the host keys baked into the image.
+
+```yaml
+# pending/gemini-flash-rules.yaml - the job is named after its file
+name: Gemini Flash, agent rules   # optional, shown in the log
+player: model                     # model, systemone, heuristic, random, first
+model:
+  provider: proxy                 # one of the worker's providers
+  id: gemini-3.8-flash-high
+  temperature: -1
+  max_tokens: 32768
+  reasoning_effort: medium
+  reasoning_budget: 2048
+max_failures: 5
+instructions: [rules_agent, mcbench]   # [] for none
+scenarios: [spider-man-vs-rhino]       # [] for all
+seeds: 10
+pick: [1, 2]
+samples: 1
+parallel: 1
+```
+
+A published job moves to `archive/`. A job that fails moves to
+`errors/<job>/` with an `error.txt` that gives the reason and, when it has a run,
+the `run -resume` command to continue it on the worker (`kubectl exec`). Jobs are
+never resumed automatically; once a resumed run is published, its job moves to
+`archive/`.
 
 ## Docs
 

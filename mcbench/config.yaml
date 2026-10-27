@@ -1,10 +1,10 @@
 inference:
-  api: openai # openai (chat completions), responses (OpenAI Responses), google (Gemini generateContent) or anthropic (Messages)
+  api: openai
   server: http://localhost:1234/v1
   api_key_env: OPENAI_API_KEY
   server_env: OPENAI_BASE_URL
   model: ""
-  temperature: -1 # -1: not sent, the provider default applies; 0 or more is sent
+  temperature: -1
   max_tokens: 32768
   retries: 3
   reasoning_effort: medium
@@ -17,18 +17,24 @@ player:
   instructions: [rules_agent, mcbench]
 
 run:
-  scenarios: [spider-man-vs-rhino] # scenario ids to run and play; empty for all
+  scenarios: [spider-man-vs-rhino]
   seeds: 10
   samples: 1
   parallel: 1
   out: results
 
-online: # the git branch every finished run is published to, one directory per run
+online:
   remote: origin
   branch: results
-  dir: online-results # local checkout of the branch
-  publish: true # a run cut short or with an infra_error game is never published
-  source: hybrid # what report, analyze, view and board_gui read: local, online or hybrid
+  dir: online-results
+  publish: true
+  source: hybrid
+
+jobs:
+  branch: jobs
+  dir: online-jobs
+
+providers: {}
 
 scoring:
   win: 0.40

@@ -12,6 +12,7 @@ const (
 	cmdNameBoardGUI = "board_gui"
 	cmdNameSite     = "site"
 	cmdNamePublish  = "publish"
+	cmdNameJobs     = "jobs"
 )
 
 // Player names accepted by -player.
@@ -61,6 +62,8 @@ const (
 	defaultRemote          = "origin"
 	defaultResultsBranch   = "results"
 	defaultOnlineDir       = "online-results"
+	defaultJobsBranch      = "jobs"
+	defaultJobsDir         = "online-jobs"
 	defaultPublish         = true
 )
 

@@ -122,3 +122,7 @@ Marvel Champions terms, as used in this project's code, data and reports.
   [architecture](architecture.md#scoring)).
 - **Round limit**: games still running after `max_rounds` stop and are scored as
   not won.
+- **Job**: one run queued as a file on the `jobs` branch and played by the
+  worker (`cmd jobs`). **Provider**: a named endpoint on the worker (API, server,
+  key, headers) that a job refers to (see
+  [architecture](architecture.md#records-and-live-status)).

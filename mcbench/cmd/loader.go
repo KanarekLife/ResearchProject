@@ -1,6 +1,8 @@
 package main
 
 import (
+	"mcbench/constants"
+
 	"flag"
 	"fmt"
 	"strings"
@@ -25,7 +27,7 @@ func newFlagSet(name string, args []string) (*flag.FlagSet, config, error) {
 // default (run.scenarios for the commands that play, nil for all). The
 // scenarios themselves are embedded (package data).
 func scenarioFlags(fs *flag.FlagSet, ids []string) loader {
-	return loader{only: fs.String("only", strings.Join(ids, ","), "comma-separated scenario ids (default: run.scenarios in the config, empty for all)")}
+	return loader{only: fs.String(constants.FlagOnly, strings.Join(ids, ","), "comma-separated scenario ids (default: run.scenarios in the config, empty for all)")}
 }
 
 func (l loader) load() ([]*scenario.Scenario, error) {

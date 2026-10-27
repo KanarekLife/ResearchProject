@@ -22,6 +22,7 @@ mcbench/integrations/inference/
   openai_compatible/      the HTTP implementation
 mcbench/benchmark/  the harness: play, score, record, report, analyze
 mcbench/cmd/        the CLI and its config.yaml
+mcbench/jobs/       the job schema, the jobs branch layout and the worker (`cmd jobs`)
 mcbench/constants/  string literals shared across packages
 mcbench/ui/         terminal panels and colour, used by `human` and the trace viewer
 mcbench/boardgui/   a trace as a board in the browser (`cmd board_gui`)
@@ -301,6 +302,28 @@ directory), `online` (the branch, fetched first; offline, the last fetched copy)
 or `hybrid` (both, the default). In `hybrid`, a published local run is read
 once, and a different online run whose name is taken is listed as
 `<run>@online-results`.
+
+**Jobs.** `cmd jobs` is a worker that plays the runs queued as job files on the
+`jobs` branch, in name order and one at a time. It claims a job by pushing its
+move from `pending/` to `running/`, so a worker that loses the push race takes
+the next job instead and no job is played twice. A job file is a typed schema
+that the worker turns into `run` flags for the fields it sets, so everything
+else keeps the worker's defaults; `run.json` records the job and the provider.
+A provider (`providers:` in `config.yaml`) holds how a model is reached: the
+API protocol, server, key variable, headers, stream and retries. It stays on the
+worker, and a job only names it. What is measured (model, sampling, reasoning,
+instructions, scenarios, seeds) is in the job. The worker always publishes, and
+a published job moves to `archive/`. Any other ending (an error, a cut-short or
+`infra_error` run, or a failed push) moves the job to `errors/<job>/` with an
+`error.txt` that holds the reason, the run directory, its statuses and the
+`run -resume` command. Nothing is resumed automatically. A manual resume that
+publishes the run moves the job to `archive/`. On start, the worker settles the
+jobs it left in `running/` (their runs are on its volume): archived when
+published, otherwise moved to `errors/`. The worker image has no repository, so
+the commit it was built from is compiled in (`main.buildCommit`), and it pushes
+from a clone on its volume (`online.repo`). The clone authenticates with a
+GitHub deploy key, and GitHub's published SSH host keys are fetched when the
+image is built, so the host is verified on every push.
 
 `cmd report` summarizes `games.jsonl` files, or every one under the directories
 it is given (all of `-source` by default): an overview per scenario, then a
