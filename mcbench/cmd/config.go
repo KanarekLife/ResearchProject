@@ -15,7 +15,28 @@ type config struct {
 	Player    playerConfig       `yaml:"player"`
 	Run       runConfig          `yaml:"run"`
 	Online    onlineConfig       `yaml:"online"`
+	Jobs      jobsConfig         `yaml:"jobs"`
 	Scoring   map[string]float64 `yaml:"scoring"`
+	// Providers are the endpoints a job or `run -provider` names, kept on the
+	// worker so that keys and headers never reach a jobs branch.
+	Providers map[string]providerConfig `yaml:"providers"`
+}
+
+// providerConfig is how to reach a model, not what is measured. A field left
+// out keeps the inference default.
+type providerConfig struct {
+	API       string            `yaml:"api"`
+	Server    string            `yaml:"server"` // empty: the protocol's own URL
+	APIKeyEnv string            `yaml:"api_key_env"`
+	Headers   map[string]string `yaml:"headers"`
+	Stream    *bool             `yaml:"stream"`
+	Retries   *int              `yaml:"retries"`
+}
+
+// jobsConfig is the branch of job files on online.remote and its checkout.
+type jobsConfig struct {
+	Branch string `yaml:"branch"`
+	Dir    string `yaml:"dir"`
 }
 
 type inferenceConfig struct {
@@ -33,6 +54,8 @@ type inferenceConfig struct {
 	ReasoningBudget int    `yaml:"reasoning_budget"`
 	// Stream asks for streamed replies, whichever protocol is used.
 	Stream bool `yaml:"stream"`
+	// Headers come only from a provider.
+	Headers map[string]string `yaml:"-"`
 }
 
 type playerConfig struct {
@@ -52,6 +75,9 @@ type runConfig struct {
 }
 
 type onlineConfig struct {
+	// Repo is the repository the branches are pushed from; empty: the current
+	// directory's. The worker image has none of its own.
+	Repo    string `yaml:"repo"`
 	Remote  string `yaml:"remote"`
 	Branch  string `yaml:"branch"`
 	Dir     string `yaml:"dir"`
@@ -75,22 +101,53 @@ func defaultConfig() config {
 			Remote: defaultRemote, Branch: defaultResultsBranch, Dir: defaultOnlineDir,
 			Publish: defaultPublish, Source: sourceHybrid,
 		},
+		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir},
 		Scoring: map[string]float64{},
 	}
 }
 
-// loadConfig reads path over the built-in defaults. A missing file is fine.
+// loadConfig reads path over the built-in defaults, then the MCBENCH_*
+// variables over both. A missing file is fine.
 func loadConfig(path string) (config, error) {
 	cfg := defaultConfig()
 	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return cfg, nil
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return cfg, err
 	}
-	if err := yaml.UnmarshalWithOptions(data, &cfg, yaml.Strict()); err != nil {
-		return cfg, fmt.Errorf("config %s: %w", path, err)
+	if err == nil {
+		if err := yaml.UnmarshalWithOptions(data, &cfg, yaml.Strict()); err != nil {
+			return cfg, fmt.Errorf("config %s: %w", path, err)
+		}
+	}
+	return cfg, applyEnv(&cfg, os.Environ())
+}
+
+// withProvider makes a provider's endpoint settings the inference defaults.
+// Its server is used as given: server_env no longer overrides it.
+func (cfg config) withProvider(name string) (config, error) {
+	p, ok := cfg.Providers[name]
+	if !ok {
+		return cfg, fmt.Errorf("provider %q is not in the config's providers", name)
+	}
+	in := &cfg.Inference
+	in.Server, in.ServerEnv = p.Server, ""
+	if p.API != "" {
+		in.API = p.API
+	}
+	if p.APIKeyEnv != "" {
+		in.APIKeyEnv = p.APIKeyEnv
+	}
+	if p.Stream != nil {
+		in.Stream = *p.Stream
+	}
+	if p.Retries != nil {
+		in.Retries = *p.Retries
+	}
+	in.Headers = headerFlag{}
+	for k, v := range p.Headers {
+		if err := headerFlag(in.Headers).Set(k + ": " + v); err != nil {
+			return cfg, fmt.Errorf("provider %q: %w", name, err)
+		}
 	}
 	return cfg, nil
 }

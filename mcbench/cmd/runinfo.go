@@ -30,6 +30,8 @@ type runInfo struct {
 	Statuses  map[string]int `json:"statuses"`
 	// Resumed lists each time the run was continued after being cut short.
 	Resumed []resumeInfo `json:"resumed,omitempty"`
+	// Job is the job file the run plays (mcbench jobs), empty for a run by hand.
+	Job string `json:"job,omitempty"`
 }
 
 type resumeInfo struct {
@@ -40,6 +42,7 @@ type resumeInfo struct {
 
 type settingsInfo struct {
 	Player          string             `json:"player"`
+	Provider        string             `json:"provider,omitempty"`
 	Model           string             `json:"model,omitempty"`
 	API             string             `json:"api"`
 	Server          string             `json:"server,omitempty"`
@@ -74,17 +77,18 @@ func startInfo(scs []*scenario.Scenario, o runSettings, scoring map[string]float
 	info := runInfo{
 		Runner:  gitLine("config", "user.name"),
 		Started: time.Now().UTC(),
-		Commit:  gitLine("rev-parse", "HEAD"),
+		Commit:  headCommit(),
 		Dirty:   gitLine("status", "--porcelain") != "",
 		Machine: readMachine(),
 		Settings: settingsInfo{
-			Player: o.player, Model: o.modelID, API: o.api, Server: o.server, Temperature: o.temp,
+			Player: o.player, Provider: o.provider, Model: o.modelID, API: o.api, Server: o.server, Temperature: o.temp,
 			MaxTokens: o.maxTokens, Retries: o.retries, ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 			MaxFailures: o.maxFailures, Instructions: o.instr, Seeds: o.seeds, Samples: o.samples,
 			Parallel: o.parallel, Scoring: scoring,
 		},
 		Planned:  planned,
 		Statuses: map[string]int{},
+		Job:      o.job,
 	}
 	for _, sc := range scs {
 		info.Scenarios = append(info.Scenarios, sc.ID)
@@ -182,3 +186,14 @@ func command(name string, args ...string) string {
 }
 
 func gitLine(args ...string) string { return command("git", args...) }
+
+// buildCommit is set at build time (-ldflags "-X main.buildCommit=<sha>") for a
+// binary that runs without its repository, such as the jobs worker image.
+var buildCommit string
+
+func headCommit() string {
+	if buildCommit != "" {
+		return buildCommit
+	}
+	return gitLine("rev-parse", "HEAD")
+}

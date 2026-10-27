@@ -72,7 +72,7 @@ func (rs *resumeState) check(instr instruction.Instructions) error {
 			return fmt.Errorf("-resume: the instruction documents changed since this run (hash %s, was %s)", instr.SHA256, r.Instructions.SHA256)
 		}
 	}
-	if commit := gitLine("rev-parse", "HEAD"); commit != rs.info.Commit {
+	if commit := headCommit(); commit != rs.info.Commit {
 		slog.Warn("resuming on another commit than the run started on", "run", rs.info.Commit, "now", commit)
 	}
 	return nil

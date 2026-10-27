@@ -1,5 +1,5 @@
-// Package online publishes run directories to a git branch and keeps a local
-// checkout of it to read them from.
+// Package online commits to git branches kept apart from the code, such as the
+// published runs and the job files, through a local checkout of each.
 package online
 
 import (
@@ -60,37 +60,48 @@ func (s Store) Sync() error {
 }
 
 // Publish pushes runDir to the branch as a new top-level directory and returns
-// its name there, suffixed -2, -3, ... when taken. A lost push race is retried.
+// its name there, suffixed -2, -3, ... when taken.
 func (s Store) Publish(runDir string) (string, error) {
-	var err error
-	for range publishAttempts {
-		var name string
-		if name, err = s.publishOnce(runDir); err == nil {
-			return name, nil
-		}
-	}
-	return "", err
+	var name string
+	err := s.Commit(func(dir string) (string, error) {
+		name = freeName(dir, filepath.Base(runDir))
+		return "chore(results): add " + name, os.CopyFS(filepath.Join(dir, name), os.DirFS(runDir))
+	})
+	return name, err
 }
 
-func (s Store) publishOnce(runDir string) (string, error) {
-	if err := s.Sync(); err != nil {
-		return "", err
+// Commit runs change on a freshly synced checkout and pushes what it did as one
+// commit with the message it returns; an empty message commits nothing. A lost
+// push race is retried on the new branch tip, an error from change is not.
+func (s Store) Commit(change func(dir string) (msg string, err error)) error {
+	var err error
+	for range publishAttempts {
+		if err = s.Sync(); err != nil {
+			continue
+		}
+		msg, changeErr := change(s.Dir)
+		if changeErr != nil || msg == "" {
+			return changeErr
+		}
+		if err = s.push(msg); err == nil {
+			return nil
+		}
 	}
-	name := freeName(s.Dir, filepath.Base(runDir))
-	if err := os.CopyFS(filepath.Join(s.Dir, name), os.DirFS(runDir)); err != nil {
-		return "", err
-	}
+	return err
+}
+
+func (s Store) push(msg string) error {
 	steps := [][]string{
-		{"add", "--", name},
-		{"commit", "--quiet", "-m", "chore(results): add " + name},
+		{"add", "--all"},
+		{"commit", "--quiet", "-m", msg},
 		{"push", "--quiet", s.Remote, "HEAD:refs/heads/" + s.Branch},
 	}
 	for _, args := range steps {
 		if _, err := git(s.Dir, args...); err != nil {
-			return "", err
+			return err
 		}
 	}
-	return name, nil
+	return nil
 }
 
 func freeName(dir, base string) string {
@@ -140,7 +151,7 @@ func (s Store) emptyRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return git(s.Repo, "commit-tree", tree, "-m", "chore(results): start the results branch")
+	return git(s.Repo, "commit-tree", tree, "-m", "chore("+s.Branch+"): start the "+s.Branch+" branch")
 }
 
 // git returns the trimmed output. Its stdin is empty, which mktree relies on.

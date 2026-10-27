@@ -10,7 +10,7 @@ import (
 )
 
 func store(cfg config) online.Store {
-	return online.Store{Remote: cfg.Online.Remote, Branch: cfg.Online.Branch, Dir: cfg.Online.Dir}
+	return online.Store{Repo: cfg.Online.Repo, Remote: cfg.Online.Remote, Branch: cfg.Online.Branch, Dir: cfg.Online.Dir}
 }
 
 func sourceFlag(fs *flag.FlagSet, cfg config) *string {
