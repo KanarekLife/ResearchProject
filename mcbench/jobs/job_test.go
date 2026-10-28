@@ -29,27 +29,9 @@ func TestJobSetsOnlyItsFields(t *testing.T) {
 // Once a worker claims a job, another finds nothing pending; .yml and .yaml
 // files are both jobs.
 func TestJobClaimedOnce(t *testing.T) {
-	root := t.TempDir()
-	remote := filepath.Join(root, "remote.git")
-	gitT(t, "", "init", "--quiet", "--bare", remote)
-	var branches []Branch
-	for _, name := range []string{"a", "b"} {
-		repo := filepath.Join(root, name)
-		gitT(t, "", "clone", "--quiet", remote, repo)
-		gitT(t, repo, "config", "user.name", "test")
-		gitT(t, repo, "config", "user.email", "test@example.com")
-		branches = append(branches, Branch{Store: online.Store{Repo: repo, Remote: "origin", Branch: "jobs", Dir: filepath.Join(root, name+"-jobs")}})
-	}
-	err := branches[0].Store.Commit(func(dir string) (string, error) {
-		os.MkdirAll(filepath.Join(dir, pendingDir), 0o755)
-		os.WriteFile(filepath.Join(dir, pendingDir, "j.yml"), []byte("seeds: 1\n"), 0o644)
-		return "add jobs", os.WriteFile(filepath.Join(dir, pendingDir, "k.yaml"), []byte("seeds: 1\n"), 0o644)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	branches := pendingJobs(t, 2)
 	for i, want := range []string{"j", "k", ""} {
-		c, err := branches[i%2].Claim("test")
+		c, err := branches[i%2].Claim("test", nil)
 		got := ""
 		if c != nil {
 			got = c.Name
@@ -61,6 +43,51 @@ func TestJobClaimedOnce(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(branches[0].Store.Dir, runningDir, "j.yml")); err != nil {
 		t.Errorf("claimed job not in %s/: %v", runningDir, err)
 	}
+}
+
+// A job its provider has no room for stays pending while a later one is taken.
+func TestClaimSkipsJobsNotReady(t *testing.T) {
+	b := pendingJobs(t, 1)[0]
+	notJ := func(name string, _ []byte) bool { return name != "j" }
+	for _, step := range []struct {
+		ready func(string, []byte) bool
+		want  string
+	}{{notJ, "k"}, {notJ, ""}, {nil, "j"}} {
+		c, err := b.Claim("test", step.ready)
+		got := ""
+		if c != nil {
+			got = c.Name
+		}
+		if err != nil || got != step.want {
+			t.Fatalf("claimed %q (%v), want %q", got, err, step.want)
+		}
+	}
+}
+
+// pendingJobs gives n workers' checkouts of one jobs branch with the pending
+// jobs j (.yml) and k (.yaml).
+func pendingJobs(t *testing.T, n int) []Branch {
+	t.Helper()
+	root := t.TempDir()
+	remote := filepath.Join(root, "remote.git")
+	gitT(t, "", "init", "--quiet", "--bare", remote)
+	var branches []Branch
+	for i := range n {
+		repo := filepath.Join(root, string(rune('a'+i)))
+		gitT(t, "", "clone", "--quiet", remote, repo)
+		gitT(t, repo, "config", "user.name", "test")
+		gitT(t, repo, "config", "user.email", "test@example.com")
+		branches = append(branches, Branch{Store: online.Store{Repo: repo, Remote: "origin", Branch: "jobs", Dir: repo + "-jobs"}})
+	}
+	err := branches[0].Store.Commit(func(dir string) (string, error) {
+		os.MkdirAll(filepath.Join(dir, pendingDir), 0o755)
+		os.WriteFile(filepath.Join(dir, pendingDir, "j.yml"), []byte("seeds: 1\n"), 0o644)
+		return "add jobs", os.WriteFile(filepath.Join(dir, pendingDir, "k.yaml"), []byte("seeds: 1\n"), 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return branches
 }
 
 func gitT(t *testing.T, dir string, args ...string) {

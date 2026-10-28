@@ -33,12 +33,18 @@ type providerConfig struct {
 	Stream        *bool             `yaml:"stream"`
 	Retries       *int              `yaml:"retries"`
 	RateLimitWait *time.Duration    `yaml:"rate_limit_wait"`
+	// Usage names the plan whose usage windows the jobs worker reads before it
+	// takes a job for this provider: opencode or commandcode; empty never waits.
+	Usage string `yaml:"usage"`
 }
 
 // jobsConfig is the branch of job files on online.remote and its checkout.
 type jobsConfig struct {
 	Branch string `yaml:"branch"`
 	Dir    string `yaml:"dir"`
+	// MaxUsage is the percent of a provider's usage window at which the
+	// worker leaves that provider's jobs pending until the window resets.
+	MaxUsage float64 `yaml:"max_usage"`
 }
 
 type inferenceConfig struct {
@@ -105,7 +111,7 @@ func defaultConfig() config {
 			Remote: defaultRemote, Branch: defaultResultsBranch, Dir: defaultOnlineDir,
 			Publish: defaultPublish, Source: sourceHybrid,
 		},
-		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir},
+		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir, MaxUsage: defaultMaxUsage},
 		Scoring: map[string]float64{},
 	}
 }

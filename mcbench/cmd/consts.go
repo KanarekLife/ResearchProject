@@ -68,6 +68,7 @@ const (
 	defaultOnlineDir       = "online-results"
 	defaultJobsBranch      = "jobs"
 	defaultJobsDir         = "online-jobs"
+	defaultMaxUsage        = 90
 	defaultPublish         = true
 )
 
