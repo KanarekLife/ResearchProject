@@ -218,7 +218,12 @@ caller builds; it reads no files and no environment variables. It:
   flag works for every `-api`: chat completions assembles the deltas, Responses
   takes the response in its last event, Messages rebuilds the content blocks
   (thinking keeps its signature), and Gemini joins the chunks of the candidate.
-  The event reader is shared (`inference.PostSSE`).
+  The event reader is shared (`inference.PostSSE`). A stream that receives
+  nothing for two minutes (`inference.StreamIdleTimeout`) is abandoned and
+  retried as a transient failure: a gateway can hold one request for minutes
+  without a byte while a retry answers in seconds. A working stream sends
+  tokens or keep-alives well within that, so a slow reply that is still
+  streaming is kept;
 
 `config.yaml` (loaded by `cmd`, flags override) holds the endpoint, sampling,
 run size, the scenarios `run` and `play` use (`run.scenarios`, the default of
