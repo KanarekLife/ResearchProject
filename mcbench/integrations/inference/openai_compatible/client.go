@@ -74,15 +74,22 @@ func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []
 	if err != nil {
 		return inference.Reply{}, err
 	}
+	var watch *inference.StallWatch
+	if c.cfg.Stream {
+		watch = inference.WatchStall(ctx)
+		defer watch.Stop()
+		ctx = watch.Context()
+	}
 	resp, err := c.post(ctx, data)
 	if err != nil {
-		return inference.Reply{}, err
+		return inference.Reply{}, watch.Err(err)
 	}
 	defer resp.Body.Close()
+	body := watch.Body(resp.Body)
 	if resp.StatusCode == http.StatusOK && c.cfg.Stream {
-		return decodeStream(resp.Body)
+		return decodeStream(body)
 	}
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := io.ReadAll(body)
 	if err != nil {
 		return inference.Reply{}, err
 	}
