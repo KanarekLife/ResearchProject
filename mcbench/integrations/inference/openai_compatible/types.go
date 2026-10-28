@@ -3,7 +3,6 @@ package openaicompatible
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"mcbench/integrations/inference"
@@ -16,8 +15,11 @@ type Config struct {
 	Model       string
 	Temperature float64 // sent when >= 0; a negative value leaves the provider's default
 	MaxTokens   int
-	Retries     int               // extra attempts after a transient failure
-	Headers     map[string]string // extra request headers; they override the defaults
+	Retries     int // extra attempts after a transient failure
+	// RateLimitWait is how long rate limits are waited out in all; 0 retries
+	// them as transient failures.
+	RateLimitWait time.Duration
+	Headers       map[string]string // extra request headers; they override the defaults
 
 	// ReasoningEffort is a named thinking level (e.g. "high") for hosted
 	// models; empty leaves the provider default.
@@ -36,17 +38,6 @@ var errTokenParam = errors.New("provider wants max_completion_tokens")
 
 // errReasoningField means the provider rejected reasoning_content on messages.
 var errReasoningField = errors.New("provider rejects reasoning_content on messages")
-
-// httpError is a non-200 response.
-type httpError struct {
-	status     int
-	retryAfter time.Duration
-	body       string
-}
-
-func (e *httpError) Error() string {
-	return fmt.Sprintf("chat API HTTP %d: %.300s", e.status, e.body)
-}
 
 // replyResponse is the subset of a chat-completions response we read.
 type replyResponse struct {

@@ -198,8 +198,15 @@ speaks the OpenAI chat-completions shape (LM Studio, Ollama, llama.cpp, vLLM or
 a hosted provider). It is a plain HTTP layer configured by a `Config` value the
 caller builds; it reads no files and no environment variables. It:
 
-- retries transient failures (429/5xx/network) with backoff, honoring
-  `Retry-After`;
+- retries transient failures (5xx/network) with backoff, honoring
+  `Retry-After`, up to `-retries` times;
+- waits out rate limits (429) for up to `-rate-limit-wait` per request
+  (`inference.rate_limit_wait`, 6h by default), honoring `Retry-After` in
+  seconds or as a date and otherwise backing off from 30s to 10 minutes. They
+  do not spend `-retries`: a hosted plan's usage window resets after hours, and
+  a request that gives up ends its game as `infra_error` and fails the job, and
+  the next job meets the same limit. The game only waits; scoring counts
+  rounds, not time. With 0 a rate limit is retried like any other failure;
 - sends `max_tokens`, or falls back to `max_completion_tokens` when a provider
   asks for it;
 - sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted
@@ -312,7 +319,14 @@ else keeps the worker's defaults; `run.json` records the job and the provider.
 A provider (`providers:` in `config.yaml`) holds how a model is reached: the
 API protocol, server, key variable, headers, stream and retries. It stays on the
 worker, and a job only names it. What is measured (model, sampling, reasoning,
-instructions, scenarios, seeds) is in the job. The worker always publishes, and
+instructions, scenarios, seeds) is in the job. A provider may also name its
+plan (`usage`); the worker then reads the plan's usage windows before a claim
+(`integrations/usage`: OpenCode Go's `/usage`, Command Code's billing credits)
+and passes over a job whose provider has a window at `jobs.max_usage` or above,
+so a spent plan holds back only its own jobs. A plan that cannot be read holds
+nothing back. The first SIGTERM stops claiming but lets the job being played
+finish and publish, so a rollout waits for it; a second signal stops the job.
+The worker always publishes, and
 a published job moves to `archive/`. Any other ending (an error, a cut-short or
 `infra_error` run, or a failed push) moves the job to `errors/<job>/` with an
 `error.txt` that holds the reason, the run directory, its statuses and the

@@ -25,7 +25,7 @@ func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools [
 	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathMessages
 	headers := map[string]string{headerAPIKey: c.cfg.APIKey, headerVersion: apiVersion}
 	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
-	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+	return inference.Retry(ctx, c.cfg.Retries, c.cfg.RateLimitWait, func() (inference.Reply, error) {
 		if c.cfg.Stream {
 			return stream(ctx, url, headers, body)
 		}

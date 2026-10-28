@@ -20,7 +20,7 @@ const okBody = `{"choices":[{"message":{"role":"assistant","content":"hi"},"fini
 // serve runs handler as the endpoint and returns a client for it.
 func serve(t *testing.T, retries int, handler http.HandlerFunc) *Client {
 	t.Helper()
-	backoffBase = time.Millisecond
+	inference.BackoffBase = time.Millisecond
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	return New(Config{BaseURL: srv.URL, APIKey: "k", Model: "m", MaxTokens: 100, Retries: retries})

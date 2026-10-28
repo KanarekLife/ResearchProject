@@ -1,6 +1,9 @@
 package google
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Config is the endpoint and sampling settings, filled by the caller.
 type Config struct {
@@ -10,7 +13,10 @@ type Config struct {
 	Temperature float64 // sent when >= 0
 	MaxTokens   int
 	Retries     int
-	Headers     map[string]string // extra request headers; they override the defaults
+	// RateLimitWait is how long rate limits are waited out in all; 0 retries
+	// them as transient failures.
+	RateLimitWait time.Duration
+	Headers       map[string]string // extra request headers; they override the defaults
 	// ReasoningEffort is a thinking level ("low", "medium", "high"); ReasoningBudget
 	// a thinking token cap, used only when no level is set. Empty or 0 leaves the
 	// model's default.

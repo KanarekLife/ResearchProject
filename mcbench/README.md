@@ -94,6 +94,7 @@ OPENAI_API_KEY=your-key
 
 The `.env` file is ignored by Git. Do not commit API keys.
 
+- `-rate-limit-wait 6h`: how long one request waits out rate limits (HTTP 429) before its game ends as `infra_error`; it does not spend `-retries`, and a provider can set it as `rate_limit_wait`
 - `-player model|systemone|heuristic|random|first` (`systemone` asks a System One classifier, e.g. `-model openjev-latest`, to pick an option from the board; it gets no instruction documents unless `-instructions` names some, e.g. `rules_short`), `-model`, `-server`, `-retries`, `-stream` (stream the replies of any `-api`, for gateways that cut slow requests),
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
@@ -140,6 +141,8 @@ providers:
     headers: {X-Run: "{run}"}
     stream: true
     retries: 3
+    rate_limit_wait: 6h
+    usage: opencode    # jobs worker: wait while the plan's usage is spent
 ```
 
 ### Jobs
@@ -175,6 +178,13 @@ pick: [1, 2]
 samples: 1
 parallel: 1
 ```
+
+Before it claims a job, the worker reads the usage windows of the job's provider
+when the provider names its plan (`usage: opencode` or `usage: commandcode`). While
+any window is at `jobs.max_usage` (90%) or above, the job stays pending and the
+worker takes the next one; it checks again on the next pass. On SIGTERM (a
+rollout) the worker claims nothing more and exits once the job being played has
+finished and published; a second signal stops that job too.
 
 A published job moves to `archive/`. A job that fails moves to
 `errors/<job>/` with an `error.txt` that gives the reason and, when it has a run,
