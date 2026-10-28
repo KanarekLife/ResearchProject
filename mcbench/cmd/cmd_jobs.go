@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -29,19 +30,36 @@ func cmdJobs(args []string) error {
 	}
 	watch := fs.Duration("watch", 0, "poll the "+cfg.Jobs.Branch+" branch at this interval (0: play the pending jobs once and exit)")
 	fs.Parse(args)
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	drain, play := drainOnSignal()
 	host, _ := os.Hostname()
 	w := jobs.Worker{
 		Branch:    jobsBranch(cfg),
 		Host:      host,
 		Args:      []string{"-config", flagValue(args, "config", defaultConfigFile), "-publish=true"},
-		Play:      cmdRun,
-		Ready:     jobReady(ctx, cfg),
+		Play:      func(args []string) error { return playRun(play, args) },
+		Ready:     jobReady(drain, cfg),
 		LatestRun: func(job string, since time.Time) *jobs.Run { return latestJobRun(cfg.Run.Out, job, since) },
 	}
-	w.Watch(ctx, *watch)
+	w.Watch(drain, *watch)
 	return nil
+}
+
+// drainOnSignal gives the worker's two contexts. The first SIGTERM (how a
+// rollout stops the pod) ends drain only, so no job is claimed and the one
+// being played finishes and publishes; a second signal ends play and stops it.
+func drainOnSignal() (drain, play context.Context) {
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	drain, stopDrain := context.WithCancelCause(context.Background())
+	play, stopPlay := context.WithCancel(context.Background())
+	go func() {
+		s := <-sigs
+		slog.Info("worker draining: the job being played finishes first; signal again to stop it", "signal", s)
+		stopDrain(fmt.Errorf("signal %v", s))
+		<-sigs
+		stopPlay()
+	}()
+	return drain, play
 }
 
 // jobReady takes a job only while every usage window of its provider's plan
