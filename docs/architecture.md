@@ -319,7 +319,14 @@ else keeps the worker's defaults; `run.json` records the job and the provider.
 A provider (`providers:` in `config.yaml`) holds how a model is reached: the
 API protocol, server, key variable, headers, stream and retries. It stays on the
 worker, and a job only names it. What is measured (model, sampling, reasoning,
-instructions, scenarios, seeds) is in the job. The worker always publishes, and
+instructions, scenarios, seeds) is in the job. A provider may also name its
+plan (`usage`); the worker then reads the plan's usage windows before a claim
+(`integrations/usage`: OpenCode Go's `/usage`, Command Code's billing credits)
+and passes over a job whose provider has a window at `jobs.max_usage` or above,
+so a spent plan holds back only its own jobs. A plan that cannot be read holds
+nothing back. The first SIGTERM stops claiming but lets the job being played
+finish and publish, so a rollout waits for it; a second signal stops the job.
+The worker always publishes, and
 a published job moves to `archive/`. Any other ending (an error, a cut-short or
 `infra_error` run, or a failed push) moves the job to `errors/<job>/` with an
 `error.txt` that holds the reason, the run directory, its statuses and the

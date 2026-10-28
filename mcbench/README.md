@@ -142,6 +142,7 @@ providers:
     stream: true
     retries: 3
     rate_limit_wait: 6h
+    usage: opencode    # jobs worker: wait while the plan's usage is spent
 ```
 
 ### Jobs
@@ -177,6 +178,13 @@ pick: [1, 2]
 samples: 1
 parallel: 1
 ```
+
+Before it claims a job, the worker reads the usage windows of the job's provider
+when the provider names its plan (`usage: opencode` or `usage: commandcode`). While
+any window is at `jobs.max_usage` (90%) or above, the job stays pending and the
+worker takes the next one; it checks again on the next pass. On SIGTERM (a
+rollout) the worker claims nothing more and exits once the job being played has
+finished and published; a second signal stops that job too.
 
 A published job moves to `archive/`. A job that fails moves to
 `errors/<job>/` with an `error.txt` that gives the reason and, when it has a run,
