@@ -58,6 +58,13 @@ type runSettings struct {
 }
 
 func cmdRun(args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return playRun(ctx, args)
+}
+
+// playRun is `run` until ctx ends, which stops the games being played.
+func playRun(ctx context.Context, args []string) error {
 	fs, cfg, err := newFlagSet(cmdNameRun, args)
 	if err != nil {
 		return err
@@ -113,7 +120,7 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	return executeRun(scs, p, instr, o, cfg, rs)
+	return executeRun(ctx, scs, p, instr, o, cfg, rs)
 }
 
 func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSettings) {
@@ -173,7 +180,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 }
 
-func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, cfg config, rs *resumeState) error {
+func executeRun(ctx context.Context, scs []*scenario.Scenario, p player.Player, instr instruction.Instructions, o runSettings, cfg config, rs *resumeState) error {
 	var (
 		f      *os.File
 		runCfg benchmark.Config
@@ -191,10 +198,6 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 		return err
 	}
 	defer f.Close()
-
-	// SIGTERM is how k8s stops the jobs worker.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	log := slog.Default()
 	enc := json.NewEncoder(f)
