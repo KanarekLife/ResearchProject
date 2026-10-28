@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"maps"
 	"strings"
+	"time"
 
 	"mcbench/integrations/inference"
 )
@@ -20,7 +21,10 @@ type Config struct {
 	APIKey  string
 	Model   string
 	Retries int
-	Headers map[string]string
+	// RateLimitWait is how long rate limits are waited out in all; 0 retries
+	// them as transient failures.
+	RateLimitWait time.Duration
+	Headers       map[string]string
 }
 
 // Option is one answer the model may pick. Name is the key the API answers
@@ -66,7 +70,7 @@ func (c *Client) Choose(ctx context.Context, state any, instructions string, opt
 	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
 	var ans Answer
 	// Retry is shared with the chat clients; the answer leaves through ans.
-	_, err = inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+	_, err = inference.Retry(ctx, c.cfg.Retries, c.cfg.RateLimitWait, func() (inference.Reply, error) {
 		raw, err := inference.PostJSON(ctx, url, headers, body)
 		if err != nil {
 			return inference.Reply{}, err

@@ -6,7 +6,6 @@ const (
 
 	headerContentType   = "Content-Type"
 	headerAuthorization = "Authorization"
-	headerRetryAfter    = "Retry-After"
 	mimeJSON            = "application/json"
 	bearerPrefix        = "Bearer "
 

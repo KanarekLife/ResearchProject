@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/goccy/go-yaml"
 )
@@ -25,12 +26,13 @@ type config struct {
 // providerConfig is how to reach a model, not what is measured. A field left
 // out keeps the inference default.
 type providerConfig struct {
-	API       string            `yaml:"api"`
-	Server    string            `yaml:"server"` // empty: the protocol's own URL
-	APIKeyEnv string            `yaml:"api_key_env"`
-	Headers   map[string]string `yaml:"headers"`
-	Stream    *bool             `yaml:"stream"`
-	Retries   *int              `yaml:"retries"`
+	API           string            `yaml:"api"`
+	Server        string            `yaml:"server"` // empty: the protocol's own URL
+	APIKeyEnv     string            `yaml:"api_key_env"`
+	Headers       map[string]string `yaml:"headers"`
+	Stream        *bool             `yaml:"stream"`
+	Retries       *int              `yaml:"retries"`
+	RateLimitWait *time.Duration    `yaml:"rate_limit_wait"`
 }
 
 // jobsConfig is the branch of job files on online.remote and its checkout.
@@ -49,6 +51,8 @@ type inferenceConfig struct {
 	Temperature float64 `yaml:"temperature"`
 	MaxTokens   int     `yaml:"max_tokens"`
 	Retries     int     `yaml:"retries"`
+	// RateLimitWait is how long rate limits are waited out per request.
+	RateLimitWait time.Duration `yaml:"rate_limit_wait"`
 	// ReasoningEffort and ReasoningBudget are sent only when set.
 	ReasoningEffort string `yaml:"reasoning_effort"`
 	ReasoningBudget int    `yaml:"reasoning_budget"`
@@ -89,7 +93,7 @@ func defaultConfig() config {
 	return config{
 		Inference: inferenceConfig{
 			API: apiOpenAI, Server: defaultServer, APIKeyEnv: defaultAPIKeyEnv, ServerEnv: defaultServerEnv, Temperature: defaultTemperature,
-			MaxTokens: defaultMaxTokens, Retries: defaultRetries,
+			MaxTokens: defaultMaxTokens, Retries: defaultRetries, RateLimitWait: defaultRateLimitWait,
 			ReasoningEffort: defaultReasoningEffort, ReasoningBudget: defaultReasoningBudget,
 		},
 		Player: playerConfig{
@@ -142,6 +146,9 @@ func (cfg config) withProvider(name string) (config, error) {
 	}
 	if p.Retries != nil {
 		in.Retries = *p.Retries
+	}
+	if p.RateLimitWait != nil {
+		in.RateLimitWait = *p.RateLimitWait
 	}
 	in.Headers = headerFlag{}
 	for k, v := range p.Headers {

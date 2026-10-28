@@ -94,6 +94,7 @@ OPENAI_API_KEY=your-key
 
 The `.env` file is ignored by Git. Do not commit API keys.
 
+- `-rate-limit-wait 6h`: how long one request waits out rate limits (HTTP 429) before its game ends as `infra_error`; it does not spend `-retries`, and a provider can set it as `rate_limit_wait`
 - `-player model|systemone|heuristic|random|first` (`systemone` asks a System One classifier, e.g. `-model openjev-latest`, to pick an option from the board; it gets no instruction documents unless `-instructions` names some, e.g. `rules_short`), `-model`, `-server`, `-retries`, `-stream` (stream the replies of any `-api`, for gateways that cut slow requests),
   `-temperature`, `-max-tokens`, `-max-failures`, `-header "Name: value"` (repeatable; see below)
 - `-instructions rules_agent,mcbench,strategy` and `-instructions-dir data/instructions`
@@ -140,6 +141,7 @@ providers:
     headers: {X-Run: "{run}"}
     stream: true
     retries: 3
+    rate_limit_wait: 6h
 ```
 
 ### Jobs

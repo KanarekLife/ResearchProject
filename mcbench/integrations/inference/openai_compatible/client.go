@@ -34,36 +34,24 @@ func New(cfg Config) *Client { return &Client{cfg: cfg} }
 var httpClient = &http.Client{Timeout: requestTimeout}
 
 // Complete sends the conversation and returns the model's reply, retrying
-// transient failures.
+// transient failures and waiting out rate limits.
 func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools []inference.Tool) (inference.Reply, error) {
 	useMaxCompletion := false
-	attempts := max(1, c.cfg.Retries+1)
-	var last error
-	for attempt := 0; attempt < attempts; attempt++ {
-		if attempt > 0 {
-			c.backoff(ctx, attempt, last)
+	return inference.Retry(ctx, c.cfg.Retries, c.cfg.RateLimitWait, func() (inference.Reply, error) {
+		for {
+			reply, err := c.request(ctx, msgs, tools, useMaxCompletion)
+			// Switching a parameter the provider rejected is not a retry.
+			switch {
+			case errors.Is(err, errTokenParam):
+				useMaxCompletion = true
+			case errors.Is(err, errReasoningField):
+				c.dropReasoning.Store(true)
+			default:
+				return reply, err
+			}
+			slog.Warn("chat request rejected a parameter, resending", "error", err)
 		}
-		reply, err := c.request(ctx, msgs, tools, useMaxCompletion)
-		if err == nil {
-			return reply, nil
-		}
-		last = err
-		slog.Warn("chat request failed", "attempt", attempt+1, "of", attempts, "error", err)
-		if errors.Is(err, errTokenParam) {
-			useMaxCompletion = true
-			attempts++ // the parameter switch is not a retry
-			continue
-		}
-		if errors.Is(err, errReasoningField) {
-			c.dropReasoning.Store(true)
-			attempts++
-			continue
-		}
-		if !retryable(err) {
-			return inference.Reply{}, err
-		}
-	}
-	return inference.Reply{}, fmt.Errorf("chat request failed after %d attempts: %w", attempts, last)
+	})
 }
 
 func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []inference.Tool, useMaxCompletion bool) (inference.Reply, error) {

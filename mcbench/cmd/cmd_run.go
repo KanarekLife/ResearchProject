@@ -28,32 +28,33 @@ import (
 
 // runSettings are the parsed flags of `mcbench run`.
 type runSettings struct {
-	player       string
-	modelID      string
-	api          string
-	server       string
-	temp         float64
-	maxTokens    int
-	retries      int
-	headers      map[string]string
-	effort       string
-	budget       int
-	maxFailures  int
-	instrDir     string
-	instr        []string
-	seeds        int
-	pick         string
-	samples      int
-	parallel     int
-	logLevel     string
-	out          string
-	publish      bool
-	recentEvents int
-	stream       bool
-	resume       string // run directory to continue
-	label        string // the model label of a resumed run
-	job          string // the job file this run plays, if any
-	provider     string // the config provider the endpoint came from, if any
+	player        string
+	modelID       string
+	api           string
+	server        string
+	temp          float64
+	maxTokens     int
+	retries       int
+	rateLimitWait time.Duration
+	headers       map[string]string
+	effort        string
+	budget        int
+	maxFailures   int
+	instrDir      string
+	instr         []string
+	seeds         int
+	pick          string
+	samples       int
+	parallel      int
+	logLevel      string
+	out           string
+	publish       bool
+	recentEvents  int
+	stream        bool
+	resume        string // run directory to continue
+	label         string // the model label of a resumed run
+	job           string // the job file this run plays, if any
+	provider      string // the config provider the endpoint came from, if any
 }
 
 func cmdRun(args []string) error {
@@ -124,7 +125,8 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	temp := fs.Float64(constants.FlagTemperature, cfg.Inference.Temperature, "sampling temperature; negative (default -1): not sent, the provider default applies")
 	maxTokens := fs.Int(constants.FlagMaxTokens, cfg.Inference.MaxTokens, "max completion tokens per request (reasoning models need room)")
 	retries := fs.Int("retries", cfg.Inference.Retries, "retry transient API failures")
-	fs.String(constants.FlagProvider, "", "a provider of the config: its api, server, key, headers, stream and retries become the defaults")
+	rateLimitWait := fs.Duration("rate-limit-wait", cfg.Inference.RateLimitWait, "how long to wait out rate limits (HTTP 429) per request, e.g. 6h; they do not spend -retries (0: retry them like other failures)")
+	fs.String(constants.FlagProvider, "", "a provider of the config: its api, server, key, headers, stream, retries and rate-limit wait become the defaults")
 	headers := headerFlag{}
 	maps.Copy(headers, cfg.Inference.Headers)
 	fs.Var(headers, "header", "extra request header \"Name: value\"; repeatable; {run} and {game} in the value are filled per game")
@@ -165,7 +167,7 @@ func parseRunFlags(fs *flag.FlagSet, args []string, cfg config) (loader, runSett
 	}
 	return l, runSettings{
 		player: *playerName, modelID: *modelID, api: *api, server: *server,
-		temp: *temp, maxTokens: *maxTokens, retries: *retries, headers: headers, effort: *effort, budget: *budget, stream: *stream, maxFailures: *maxFailures,
+		temp: *temp, maxTokens: *maxTokens, retries: *retries, rateLimitWait: *rateLimitWait, headers: headers, effort: *effort, budget: *budget, stream: *stream, maxFailures: *maxFailures,
 		instrDir: *instrDir, instr: instr,
 		seeds: *seeds, pick: *pick, samples: *samples, parallel: *parallel, out: *out, logLevel: *logLevel, publish: *publish, recentEvents: *recentEvents, job: *job,
 	}
