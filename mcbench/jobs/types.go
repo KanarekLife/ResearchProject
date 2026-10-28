@@ -62,6 +62,10 @@ type Worker struct {
 	Args []string
 	// Play runs `run` with these flags.
 	Play func(args []string) error
+	// Ready says whether a pending job can be played now, e.g. while its
+	// provider's plan has usage left; a job it refuses waits for a later pass.
+	// Nil accepts every job.
+	Ready func(name string, data []byte) bool
 	// LatestRun is the newest local run of a job started at since or later.
 	LatestRun func(job string, since time.Time) *Run
 }

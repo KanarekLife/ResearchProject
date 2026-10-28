@@ -1,8 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"mcbench/constants"
+	planusage "mcbench/integrations/usage"
 	"mcbench/jobs"
 	"mcbench/online"
 	"mcbench/trace"
@@ -34,10 +37,41 @@ func cmdJobs(args []string) error {
 		Host:      host,
 		Args:      []string{"-config", flagValue(args, "config", defaultConfigFile), "-publish=true"},
 		Play:      cmdRun,
+		Ready:     jobReady(ctx, cfg),
 		LatestRun: func(job string, since time.Time) *jobs.Run { return latestJobRun(cfg.Run.Out, job, since) },
 	}
 	w.Watch(ctx, *watch)
 	return nil
+}
+
+// jobReady takes a job only while every usage window of its provider's plan
+// is below jobs.max_usage. A plan that cannot be read does not hold a job
+// back: the clients still wait out a rate limit.
+func jobReady(ctx context.Context, cfg config) func(name string, data []byte) bool {
+	return func(name string, data []byte) bool {
+		j, err := jobs.Parse(data)
+		if err != nil {
+			return true // fails when played, with its reason in errors/
+		}
+		p := cfg.Providers[j.Model.Provider]
+		if p.Usage == "" {
+			return true
+		}
+		keyEnv := cmp.Or(p.APIKeyEnv, cfg.Inference.APIKeyEnv)
+		windows, err := planusage.Check(ctx, p.Usage, os.Getenv(keyEnv))
+		if err != nil {
+			slog.Warn("provider usage not read, taking the job", "job", name, "provider", j.Model.Provider, "error", err)
+			return true
+		}
+		for _, w := range windows {
+			if w.Percent >= cfg.Jobs.MaxUsage {
+				slog.Info("job waits for its provider's usage window", "job", name, "provider", j.Model.Provider,
+					"window", w.Name, "percent", w.Percent, "max", cfg.Jobs.MaxUsage, "resets", w.ResetsAt)
+				return false
+			}
+		}
+		return true
+	}
 }
 
 // latestJobRun is the newest run of a job in out started at since or later.

@@ -38,7 +38,7 @@ func (w Worker) Watch(ctx context.Context, interval time.Duration) {
 
 // next claims the first pending job and plays it; false when none was claimed.
 func (w Worker) next() bool {
-	c, err := w.Branch.Claim(w.Host)
+	c, err := w.Branch.Claim(w.Host, w.Ready)
 	if err != nil {
 		slog.Error("jobs branch not read", "error", err)
 		return false

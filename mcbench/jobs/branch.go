@@ -21,23 +21,26 @@ const (
 
 var jobExts = []string{".yaml", ".yml"}
 
-// Claim moves the first pending job by name to running/; a nil job when none
-// is pending. A push lost to another worker retries on the next job.
-func (b Branch) Claim(host string) (*Claimed, error) {
+// Claim moves the first pending job by name that ready accepts to running/; a
+// nil job when there is none. A nil ready accepts every job. A push lost to
+// another worker retries on the next job.
+func (b Branch) Claim(host string, ready func(name string, data []byte) bool) (*Claimed, error) {
 	var c *Claimed
 	err := b.Store.Commit(func(dir string) (string, error) {
 		c = nil
-		names := jobNames(filepath.Join(dir, pendingDir))
-		if len(names) == 0 {
-			return "", nil
+		for _, name := range jobNames(filepath.Join(dir, pendingDir)) {
+			file, _ := findJob(filepath.Join(dir, pendingDir), name)
+			data, err := os.ReadFile(file)
+			if err != nil {
+				return "", err
+			}
+			if ready != nil && !ready(name, data) {
+				continue
+			}
+			c = &Claimed{Name: name, Data: data}
+			return "chore(jobs): start " + c.Name + " on " + host, move(file, filepath.Join(dir, runningDir))
 		}
-		file, _ := findJob(filepath.Join(dir, pendingDir), names[0])
-		data, err := os.ReadFile(file)
-		if err != nil {
-			return "", err
-		}
-		c = &Claimed{Name: names[0], Data: data}
-		return "chore(jobs): start " + c.Name + " on " + host, move(file, filepath.Join(dir, runningDir))
+		return "", nil
 	})
 	return c, err
 }
