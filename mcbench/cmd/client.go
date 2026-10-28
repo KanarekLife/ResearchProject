@@ -20,24 +20,24 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 	case apiOpenAI:
 		return openaicompatible.New(openaicompatible.Config{
 			BaseURL: o.server, APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	case apiGoogle:
 		return google.New(google.Config{
 			BaseURL: orDefault(o.server, google.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	case apiResponses:
 		return openairesponses.New(openairesponses.Config{
 			BaseURL: orDefault(o.server, openairesponses.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers, ReasoningEffort: o.effort, Stream: o.stream,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers, ReasoningEffort: o.effort, Stream: o.stream,
 		}), nil
 	case apiAnthropic:
 		return anthropic.New(anthropic.Config{
 			BaseURL: orDefault(o.server, anthropic.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, Headers: o.headers,
+			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
 	}
@@ -54,7 +54,7 @@ func systemOneClient(o runSettings, apiKey string) *systemone.Client {
 	}
 	return systemone.New(systemone.Config{
 		BaseURL: orDefault(server, systemone.DefaultBaseURL), APIKey: apiKey, Model: o.modelID,
-		Retries: o.retries, Headers: o.headers,
+		Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers,
 	})
 }
 

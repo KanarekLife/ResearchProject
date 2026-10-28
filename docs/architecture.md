@@ -198,8 +198,15 @@ speaks the OpenAI chat-completions shape (LM Studio, Ollama, llama.cpp, vLLM or
 a hosted provider). It is a plain HTTP layer configured by a `Config` value the
 caller builds; it reads no files and no environment variables. It:
 
-- retries transient failures (429/5xx/network) with backoff, honoring
-  `Retry-After`;
+- retries transient failures (5xx/network) with backoff, honoring
+  `Retry-After`, up to `-retries` times;
+- waits out rate limits (429) for up to `-rate-limit-wait` per request
+  (`inference.rate_limit_wait`, 6h by default), honoring `Retry-After` in
+  seconds or as a date and otherwise backing off from 30s to 10 minutes. They
+  do not spend `-retries`: a hosted plan's usage window resets after hours, and
+  a request that gives up ends its game as `infra_error` and fails the job, and
+  the next job meets the same limit. The game only waits; scoring counts
+  rounds, not time. With 0 a rate limit is retried like any other failure;
 - sends `max_tokens`, or falls back to `max_completion_tokens` when a provider
   asks for it;
 - sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted

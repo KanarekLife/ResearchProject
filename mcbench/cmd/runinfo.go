@@ -49,6 +49,7 @@ type settingsInfo struct {
 	Temperature     float64            `json:"temperature"`
 	MaxTokens       int                `json:"max_tokens"`
 	Retries         int                `json:"retries"`
+	RateLimitWait   time.Duration      `json:"rate_limit_wait,omitempty"`
 	ReasoningEffort string             `json:"reasoning_effort,omitempty"`
 	ReasoningBudget int                `json:"reasoning_budget,omitempty"`
 	Stream          bool               `json:"stream,omitempty"`
@@ -82,7 +83,7 @@ func startInfo(scs []*scenario.Scenario, o runSettings, scoring map[string]float
 		Machine: readMachine(),
 		Settings: settingsInfo{
 			Player: o.player, Provider: o.provider, Model: o.modelID, API: o.api, Server: o.server, Temperature: o.temp,
-			MaxTokens: o.maxTokens, Retries: o.retries, ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
+			MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 			MaxFailures: o.maxFailures, Instructions: o.instr, Seeds: o.seeds, Samples: o.samples,
 			Parallel: o.parallel, Scoring: scoring,
 		},

@@ -6,9 +6,7 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -40,11 +38,7 @@ func PostSSE(ctx context.Context, url string, headers map[string]string, body []
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(resp.Body)
-		he := &HTTPError{Status: resp.StatusCode, Body: string(raw)}
-		if secs, err := strconv.Atoi(strings.TrimSpace(resp.Header.Get("Retry-After"))); err == nil {
-			he.RetryAfter = time.Duration(secs) * time.Second
-		}
-		return he
+		return NewHTTPError(resp, raw)
 	}
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(nil, maxEventLine)
