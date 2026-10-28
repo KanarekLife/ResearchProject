@@ -1,0 +1,10 @@
+name: smoke test, opencode glm-5.3-flash low effort
+player: model
+model:
+  provider: opencode
+  id: glm-5.3-flash
+  reasoning_effort: low
+scenarios: [spider-man-vs-rhino]
+seeds: 1
+samples: 1
+parallel: 1
