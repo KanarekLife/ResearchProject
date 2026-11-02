@@ -1,0 +1,19 @@
+name: sweep, opencode mimo-v2.6-flash high, agent rules + play
+player: model
+model:
+  provider: opencode
+  id: mimo-v2.6-flash
+  reasoning_effort: high
+instructions: [rules_agent, mcbench, play]
+scenarios:
+  - spider-man-vs-klaw
+  - spider-man-vs-ultron
+  - iron-man-vs-klaw
+  - iron-man-vs-ultron
+  - iron-man-vs-rhino
+  - captain-marvel-vs-klaw
+  - captain-marvel-vs-ultron
+  - captain-marvel-vs-rhino
+seeds: 10
+samples: 1
+parallel: 2
