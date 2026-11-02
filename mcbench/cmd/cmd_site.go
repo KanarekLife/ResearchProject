@@ -22,10 +22,11 @@ func cmdSite(args []string) error {
 		return err
 	}
 	fs.Usage = func() {
-		fs.Output().Write([]byte("usage: mcbench site [-out DIR] [RESULTS_DIR]...\n"))
+		fs.Output().Write([]byte("usage: mcbench site [-out DIR] [-fallback SITE] [RESULTS_DIR]...\n"))
 		fs.PrintDefaults()
 	}
 	out := fs.String("out", defaultSiteDir, "new directory to write the site to")
+	fallback := fs.String("fallback", "", "a site exported with an earlier engine, for games this engine cannot replay")
 	source := sourceFlag(fs, cfg)
 	fs.Parse(args)
 	dirs := fs.Args()
@@ -38,7 +39,7 @@ func cmdSite(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := boardgui.Export(*out, boardData(dirs, "", scs)); err != nil {
+	if err := boardgui.Export(*out, *fallback, boardData(dirs, "", scs)); err != nil {
 		return err
 	}
 	fmt.Printf("wrote the site to %s\n", *out)
