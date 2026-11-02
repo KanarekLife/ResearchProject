@@ -75,7 +75,11 @@ func choicePanel(e Entry, t ui.Theme) []string {
 	for _, ev := range e.Events {
 		lines = append(lines, "· "+ev)
 	}
-	return t.Box(fmt.Sprintf("Decision %d · round %d · %s", e.Decision, e.Choice.Round, e.Choice.Kind), lines, ui.Width)
+	title := fmt.Sprintf("Decision %d · round %d · %s", e.Decision, e.Choice.Round, e.Choice.Kind)
+	if e.Mock {
+		title = fmt.Sprintf("Mock · round %d · %s", e.Choice.Round, e.Choice.Kind)
+	}
+	return t.Box(title, lines, ui.Width)
 }
 
 func endPanel(e Entry, t ui.Theme) []string {

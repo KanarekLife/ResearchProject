@@ -47,6 +47,9 @@ type Entry struct {
 	Choice session.Choice `json:"choice"`
 	Text   string         `json:"text"`
 	Events []string       `json:"events"`
+	// Mock marks a choice added or reordered when the trace was migrated to a
+	// later engine, not one the player made at this point.
+	Mock bool `json:"mock,omitempty"`
 }
 
 // Message is the conversation message of a model reply. Only the fields a

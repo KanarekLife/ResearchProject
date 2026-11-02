@@ -34,19 +34,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      # Runs played before the scenarios change (#23) replay only on the engine
-      # they were played on, so the last engine before it exports them first.
-      - uses: actions/checkout@v7
-        with:
-          ref: ad7d2478f9bfdbfde3458cc84ade52d48dab99ae
-          path: engine-before-scenarios
-      - name: Export with the engine before the scenarios change
-        working-directory: engine-before-scenarios/mcbench
-        run: |
-          go generate ./boardgui
-          go run ./cmd site -out ../../_site-before-scenarios ../../results-branch
       - run: go generate ./boardgui
-      - run: go run ./cmd site -fallback ../_site-before-scenarios -out ../_site ../results-branch
+      - run: go run ./cmd site -out ../_site ../results-branch
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site

@@ -45,6 +45,9 @@ type Chosen struct {
 	TokensOut    int64    `json:"tokens_out,omitempty"`
 	TokensCached int64    `json:"tokens_cached,omitempty"`
 	Events       []string `json:"events"`
+	// Mock marks a step added or reordered when the trace was migrated to a
+	// later engine, not a choice the player made at this point.
+	Mock bool `json:"mock,omitempty"`
 }
 
 // GameInfo is what the trace's start entry says about the game.
@@ -249,7 +252,7 @@ func (r *replay) choose(e trace.Entry) error {
 		Key: e.Choice.Key, Text: e.Text, Reasoning: e.Choice.Reasoning,
 		Thinking: strings.Join(r.thinking, "\n\n"),
 		TokensIn: r.replyTokens.InputTokens, TokensOut: r.replyTokens.OutputTokens, TokensCached: r.replyTokens.CachedTokens,
-		Events: e.Events,
+		Events: e.Events, Mock: e.Mock,
 	}
 	r.thinking, r.replyTokens = nil, player.Usage{}
 	if !slices.Equal(withoutEcho(events), withoutEcho(e.Events)) {

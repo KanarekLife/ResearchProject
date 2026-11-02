@@ -276,12 +276,13 @@ plus rounds to win, decisions, invalid choices and tokens.
   choices, not boards, so `cmd board_gui` rebuilds each board by replaying the choices
   on the same scenario and seed. A replay needs an engine that offers the same
   option keys; a choice recorded before the `payment` decision
-  (`play:X|pay:Y`) replays as the action and then its payment. The board shows
-  the commit from `run.json` each run was played on. Runs played before the
-  scenarios change (#23) do not replay on later engines, so the `Pages` workflow
-  first exports the site with the last engine before it and passes that to
-  `site -fallback`, which keeps its board for every game the current engine
-  cannot replay.
+  (`play:X|pay:Y`) replays as the action and then its payment. Traces from
+  before #23, whose engine did not open most optional responses, were migrated
+  once on the `results` branch: each window that engine did not open is a
+  choice entry marked `mock`, and where the later engine asks two responses in
+  the other order, the player's choices were reordered and marked `mock` too.
+  The board and `cmd view` label mock steps. The board shows the commit from
+  `run.json` each run was played on.
 - **`games.jsonl`** — one record per finished game: scenario, seed, player and
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log. Each choice also records the hero's form and HP, the main-scheme

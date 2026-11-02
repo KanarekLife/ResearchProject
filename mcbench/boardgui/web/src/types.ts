@@ -64,6 +64,9 @@ export interface Chosen {
   tokens_out?: number;
   tokens_cached?: number;
   events: string[] | null;
+  // A step added or reordered when the trace was migrated to a later engine,
+  // not a choice the player made at this point.
+  mock?: boolean;
 }
 
 export interface View {

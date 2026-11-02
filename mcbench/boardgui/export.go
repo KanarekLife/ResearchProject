@@ -13,10 +13,8 @@ import (
 )
 
 // Export writes the board as a static site in out, a new directory, with every
-// API response precomputed, so it can be hosted without the server. A game the
-// current engine cannot replay keeps its board from the fallback site, an
-// export made with an earlier engine, when that one replayed it.
-func Export(out, fallback string, d Data) error {
+// API response precomputed, so it can be hosted without the server.
+func Export(out string, d Data) error {
 	page, err := fs.Sub(static, "static")
 	if err != nil {
 		return err
@@ -34,10 +32,6 @@ func Export(out, fallback string, d Data) error {
 	if err != nil {
 		return err
 	}
-	earlier, err := readSite(fallback)
-	if err != nil {
-		return err
-	}
 	list := Runs{Static: true}
 	if len(runs) > 0 {
 		list.Run = runs[0].ID
@@ -51,7 +45,6 @@ func Export(out, fallback string, d Data) error {
 			if err != nil {
 				return err
 			}
-			snap = orEarlier(snap, earlier[[2]string{r.ID, g.Name}])
 			snap.Run, snap.Game = r.ID, g.Name
 			if err := writeFile(filepath.Join(out, file), snap); err != nil {
 				return err
@@ -85,46 +78,6 @@ func replayFile(path string, scs []*scenario.Scenario) (Snapshot, error) {
 	r := newReplay(scs)
 	r.apply(entries)
 	return r.snapshot(0), nil
-}
-
-// orEarlier is snap, or the earlier export's replay when only that one
-// replayed the whole trace.
-func orEarlier(snap, earlier Snapshot) Snapshot {
-	if snap.Error != "" && earlier.Total > 0 && earlier.Error == "" {
-		return earlier
-	}
-	return snap
-}
-
-// readSite reads every game's replay from an exported site, by run and game.
-// An empty dir reads nothing.
-func readSite(dir string) (map[[2]string]Snapshot, error) {
-	snaps := map[[2]string]Snapshot{}
-	if dir == "" {
-		return snaps, nil
-	}
-	var list Runs
-	if err := readFile(filepath.Join(dir, "api", "runs"), &list); err != nil {
-		return nil, err
-	}
-	for _, r := range list.Runs {
-		for _, g := range r.Games {
-			var snap Snapshot
-			if err := readFile(filepath.Join(dir, g.Steps), &snap); err != nil {
-				return nil, err
-			}
-			snaps[[2]string{r.ID, g.Name}] = snap
-		}
-	}
-	return snaps, nil
-}
-
-func readFile(path string, v any) error {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, v)
 }
 
 func writeFile(path string, v any) error {
