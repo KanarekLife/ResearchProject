@@ -18,51 +18,42 @@ var StreamIdleTimeout = 2 * time.Minute
 // StreamIdleTimeout. It is retried like a network failure.
 var ErrStalled = errors.New("stream stalled: no data within the idle timeout")
 
-// StallWatch cancels one streamed request once it goes StreamIdleTimeout
-// without data, from the moment it is sent until its body is read. A nil
-// watch watches nothing, for a request that is not streamed.
-type StallWatch struct {
+// stallWatch cancels one streamed request once it goes StreamIdleTimeout
+// without data, from the moment it is sent until its body is read.
+type stallWatch struct {
 	ctx   context.Context
 	stop  context.CancelCauseFunc
 	timer *time.Timer
 }
 
-// WatchStall starts a watch; send the request with its Context and Stop it
+// watchStall starts a watch; send the request with its context and stop it
 // when done.
-func WatchStall(ctx context.Context) *StallWatch {
-	w := &StallWatch{}
+func watchStall(ctx context.Context) *stallWatch {
+	w := &stallWatch{}
 	w.ctx, w.stop = context.WithCancelCause(ctx)
 	w.timer = time.AfterFunc(StreamIdleTimeout, func() { w.stop(ErrStalled) })
 	return w
 }
 
-// Context is the request's context, cancelled when it stalls.
-func (w *StallWatch) Context() context.Context { return w.ctx }
-
-// Stop ends the watch and releases its context.
-func (w *StallWatch) Stop() {
+// end ends the watch and releases its context.
+func (w *stallWatch) end() {
 	w.timer.Stop()
 	w.stop(nil)
 }
 
-// Err is err, or ErrStalled when the watch cancelled the request.
-func (w *StallWatch) Err(err error) error {
-	if w != nil && err != nil && errors.Is(context.Cause(w.ctx), ErrStalled) {
+// err is err, or ErrStalled when the watch cancelled the request.
+func (w *stallWatch) err(err error) error {
+	if err != nil && errors.Is(context.Cause(w.ctx), ErrStalled) {
 		return ErrStalled
 	}
 	return err
 }
 
-// Body counts every read of r as data, restarting the idle timeout.
-func (w *StallWatch) Body(r io.Reader) io.Reader {
-	if w == nil {
-		return r
-	}
-	return stallReader{w, r}
-}
+// body counts every read of r as data, restarting the idle timeout.
+func (w *stallWatch) body(r io.Reader) io.Reader { return stallReader{w, r} }
 
 type stallReader struct {
-	w *StallWatch
+	w *stallWatch
 	r io.Reader
 }
 
@@ -71,5 +62,5 @@ func (s stallReader) Read(p []byte) (int, error) {
 	if n > 0 {
 		s.w.timer.Reset(StreamIdleTimeout)
 	}
-	return n, s.w.Err(err)
+	return n, s.w.err(err)
 }

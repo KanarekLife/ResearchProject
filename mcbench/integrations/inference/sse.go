@@ -25,9 +25,9 @@ const (
 // minutes lets a slow reply through. onEvent may return a stop error, which
 // ends the read and is returned.
 func PostSSE(ctx context.Context, url string, headers map[string]string, body []byte, onEvent func(event string, data []byte) error) error {
-	watch := WatchStall(ctx)
-	defer watch.Stop()
-	req, err := http.NewRequestWithContext(watch.Context(), http.MethodPost, url, bytes.NewReader(body))
+	watch := watchStall(ctx)
+	defer watch.end()
+	req, err := http.NewRequestWithContext(watch.ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func PostSSE(ctx context.Context, url string, headers map[string]string, body []
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return watch.Err(err)
+		return watch.err(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -48,7 +48,7 @@ func PostSSE(ctx context.Context, url string, headers map[string]string, body []
 		}
 		return he
 	}
-	sc := bufio.NewScanner(watch.Body(resp.Body))
+	sc := bufio.NewScanner(watch.body(resp.Body))
 	sc.Buffer(nil, maxEventLine)
 	var event string
 	var data []byte
