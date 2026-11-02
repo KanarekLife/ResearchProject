@@ -3,23 +3,17 @@
 package openaicompatible
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
+	"maps"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"mcbench/integrations/inference"
 )
-
-// requestTimeout bounds one HTTP request. Reasoning models can be slow.
-const requestTimeout = 10 * time.Minute
 
 // Client is an inference.Client backed by an OpenAI-compatible endpoint.
 type Client struct {
@@ -31,39 +25,25 @@ type Client struct {
 
 func New(cfg Config) *Client { return &Client{cfg: cfg} }
 
-var httpClient = &http.Client{Timeout: requestTimeout}
-
 // Complete sends the conversation and returns the model's reply, retrying
-// transient failures.
+// transient failures. A provider that rejects max_tokens or reasoning_content
+// is asked again at once without it; that switch is not a retry.
 func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools []inference.Tool) (inference.Reply, error) {
 	useMaxCompletion := false
-	attempts := max(1, c.cfg.Retries+1)
-	var last error
-	for attempt := 0; attempt < attempts; attempt++ {
-		if attempt > 0 {
-			c.backoff(ctx, attempt, last)
+	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+		for {
+			reply, err := c.request(ctx, msgs, tools, useMaxCompletion)
+			switch {
+			case errors.Is(err, errTokenParam) && !useMaxCompletion:
+				useMaxCompletion = true
+			case errors.Is(err, errReasoningField) && !c.dropReasoning.Load():
+				c.dropReasoning.Store(true)
+			default:
+				return reply, err
+			}
+			slog.Warn("chat request rejected a parameter, asking again", "error", err)
 		}
-		reply, err := c.request(ctx, msgs, tools, useMaxCompletion)
-		if err == nil {
-			return reply, nil
-		}
-		last = err
-		slog.Warn("chat request failed", "attempt", attempt+1, "of", attempts, "error", err)
-		if errors.Is(err, errTokenParam) {
-			useMaxCompletion = true
-			attempts++ // the parameter switch is not a retry
-			continue
-		}
-		if errors.Is(err, errReasoningField) {
-			c.dropReasoning.Store(true)
-			attempts++
-			continue
-		}
-		if !retryable(err) {
-			return inference.Reply{}, err
-		}
-	}
-	return inference.Reply{}, fmt.Errorf("chat request failed after %d attempts: %w", attempts, last)
+	})
 }
 
 func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []inference.Tool, useMaxCompletion bool) (inference.Reply, error) {
@@ -74,25 +54,25 @@ func (c *Client) request(ctx context.Context, msgs []inference.Message, tools []
 	if err != nil {
 		return inference.Reply{}, err
 	}
-	resp, err := c.post(ctx, data)
-	if err != nil {
-		return inference.Reply{}, err
+	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathChatCompletions
+	headers := map[string]string{}
+	if c.cfg.APIKey != "" {
+		headers[headerAuthorization] = bearerPrefix + c.cfg.APIKey
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK && c.cfg.Stream {
-		return decodeStream(resp.Body)
+	maps.Copy(headers, inference.ExpandHeaders(ctx, c.cfg.Headers))
+	var reply inference.Reply
+	if c.cfg.Stream {
+		var s stream
+		if err = inference.PostSSE(ctx, url, headers, data, s.add); err == nil {
+			reply, err = s.reply()
+		}
+	} else {
+		var raw []byte
+		if raw, err = inference.PostJSON(ctx, url, headers, data); err == nil {
+			reply, err = decodeReply(raw)
+		}
 	}
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return inference.Reply{}, err
-	}
-	if resp.StatusCode == http.StatusUnprocessableEntity && hasReasoning(msgs) {
-		return inference.Reply{}, errReasoningField
-	}
-	if resp.StatusCode != http.StatusOK {
-		return inference.Reply{}, statusError(resp, raw, useMaxCompletion)
-	}
-	return decodeReply(raw)
+	return reply, rejected(err, msgs, useMaxCompletion)
 }
 
 func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCompletion bool) map[string]any {
@@ -126,22 +106,6 @@ func (c *Client) body(msgs []inference.Message, tools []inference.Tool, useMaxCo
 		body[fieldTools], body[fieldToolChoice] = fns, toolChoiceAuto
 	}
 	return body
-}
-
-func (c *Client) post(ctx context.Context, data []byte) (*http.Response, error) {
-	url := strings.TrimRight(c.cfg.BaseURL, "/") + pathChatCompletions
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set(headerContentType, mimeJSON)
-	if c.cfg.APIKey != "" {
-		req.Header.Set(headerAuthorization, bearerPrefix+c.cfg.APIKey)
-	}
-	for k, v := range inference.ExpandHeaders(ctx, c.cfg.Headers) {
-		req.Header.Set(k, v)
-	}
-	return httpClient.Do(req)
 }
 
 func decodeReply(raw []byte) (inference.Reply, error) {

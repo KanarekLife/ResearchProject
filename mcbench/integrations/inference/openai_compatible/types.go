@@ -3,8 +3,6 @@ package openaicompatible
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"time"
 
 	"mcbench/integrations/inference"
 )
@@ -36,17 +34,6 @@ var errTokenParam = errors.New("provider wants max_completion_tokens")
 
 // errReasoningField means the provider rejected reasoning_content on messages.
 var errReasoningField = errors.New("provider rejects reasoning_content on messages")
-
-// httpError is a non-200 response.
-type httpError struct {
-	status     int
-	retryAfter time.Duration
-	body       string
-}
-
-func (e *httpError) Error() string {
-	return fmt.Sprintf("chat API HTTP %d: %.300s", e.status, e.body)
-}
 
 // replyResponse is the subset of a chat-completions response we read.
 type replyResponse struct {

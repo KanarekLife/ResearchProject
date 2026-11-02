@@ -20,7 +20,7 @@ const okBody = `{"choices":[{"message":{"role":"assistant","content":"hi"},"fini
 // serve runs handler as the endpoint and returns a client for it.
 func serve(t *testing.T, retries int, handler http.HandlerFunc) *Client {
 	t.Helper()
-	backoffBase = time.Millisecond
+	inference.BackoffBase = time.Millisecond
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	return New(Config{BaseURL: srv.URL, APIKey: "k", Model: "m", MaxTokens: 100, Retries: retries})
@@ -214,5 +214,59 @@ func TestStreamCutOffIsAnError(t *testing.T) {
 	c.cfg.Stream = true
 	if _, err := complete(c); err == nil {
 		t.Error("a stream with no finish reason decoded without error")
+	}
+}
+
+const streamTail = "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+
+func idleTimeout(t *testing.T, d time.Duration) {
+	old := inference.StreamIdleTimeout
+	inference.StreamIdleTimeout = d
+	t.Cleanup(func() { inference.StreamIdleTimeout = old })
+}
+
+// A gateway can hold a request for minutes, before the reply starts or inside
+// it, while a retry answers at once: a silent stream is abandoned and retried.
+func TestStalledStreamIsRetried(t *testing.T) {
+	idleTimeout(t, 50*time.Millisecond)
+	calls := 0
+	c := serve(t, 2, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		io.ReadAll(r.Body) // the server notices the client hanging up only after the body
+		switch calls {
+		case 1: // nothing at all
+		case 2: // the reply starts, then stops
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"par\"}}]}\n\n")
+			w.(http.Flusher).Flush()
+		default:
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n"+streamTail)
+			return
+		}
+		<-r.Context().Done()
+	})
+	c.cfg.Stream = true
+	r, err := complete(c)
+	if err != nil || calls != 3 || r.Message.Content != "hi" {
+		t.Fatalf("err=%v after %d calls, reply %q: want the third call's reply", err, calls, r.Message.Content)
+	}
+}
+
+// A stream that keeps sending is never abandoned, however long it runs.
+func TestSlowStreamThatSendsIsKept(t *testing.T) {
+	idleTimeout(t, 50*time.Millisecond)
+	calls := 0
+	c := serve(t, 0, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		for range 6 {
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"x\"}}]}\n\n")
+			w.(http.Flusher).Flush()
+			time.Sleep(20 * time.Millisecond)
+		}
+		fmt.Fprint(w, streamTail)
+	})
+	c.cfg.Stream = true
+	r, err := complete(c)
+	if err != nil || calls != 1 || r.Message.Content != "xxxxxx" {
+		t.Fatalf("err=%v after %d calls, reply %q", err, calls, r.Message.Content)
 	}
 }

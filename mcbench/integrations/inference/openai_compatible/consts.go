@@ -4,10 +4,7 @@ package openaicompatible
 const (
 	pathChatCompletions = "/chat/completions"
 
-	headerContentType   = "Content-Type"
 	headerAuthorization = "Authorization"
-	headerRetryAfter    = "Retry-After"
-	mimeJSON            = "application/json"
 	bearerPrefix        = "Bearer "
 
 	fieldModel               = "model"
