@@ -1,0 +1,55 @@
+{
+  "runner": "mcbench-worker",
+  "started": "2026-11-02T18:30:12.98888548Z",
+  "finished": "2026-11-02T18:55:06.09569141Z",
+  "commit": "6aa4737fe47751d6b802acebea5035bbca4d94c2",
+  "dirty": false,
+  "machine": {
+    "hostname": "mcbench-worker-0",
+    "os": "Alpine Linux v3.22",
+    "kernel": "6.18.58-talos",
+    "arch": "amd64",
+    "cpu": "Intel(R) N150",
+    "cores": 4,
+    "memory_mb": 11688,
+    "gpus": null,
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash",
+    "api": "openai",
+    "server": "https://opencode.ai/zen/go/v1",
+    "temperature": -1,
+    "max_tokens": 32768,
+    "retries": 3,
+    "rate_limit_wait": 21600000000000,
+    "reasoning_effort": "medium",
+    "reasoning_budget": 2048,
+    "stream": true,
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench"
+    ],
+    "seeds": 2,
+    "samples": 1,
+    "parallel": 2,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "spider-man-vs-rhino"
+  ],
+  "planned_games": 2,
+  "statuses": {
+    "lost": 2
+  },
+  "job": "workertest-opencode-deepseek-flash-2"
+}
