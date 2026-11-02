@@ -72,6 +72,7 @@ same static site from any results directories:
 
 ```bash
 go generate ./boardgui && go run ./cmd site -out site   # -source as for report; or list results directories
+# -fallback SITE: a site exported with an earlier engine, for games this one cannot replay
 ```
 
 Configuration lives in `config.yaml` (grouped into `data`, `inference`,

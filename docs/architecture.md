@@ -277,7 +277,11 @@ plus rounds to win, decisions, invalid choices and tokens.
   on the same scenario and seed. A replay needs an engine that offers the same
   option keys; a choice recorded before the `payment` decision
   (`play:X|pay:Y`) replays as the action and then its payment. The board shows
-  the commit from `run.json` each run was played on.
+  the commit from `run.json` each run was played on. Runs played before the
+  scenarios change (#23) do not replay on later engines, so the `Pages` workflow
+  first exports the site with the last engine before it and passes that to
+  `site -fallback`, which keeps its board for every game the current engine
+  cannot replay.
 - **`games.jsonl`** — one record per finished game: scenario, seed, player and
   instruction hash, status, stats, criteria, score, usage, every choice and the
   full log. Each choice also records the hero's form and HP, the main-scheme

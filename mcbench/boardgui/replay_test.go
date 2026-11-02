@@ -341,3 +341,33 @@ func TestServerFollowsRunToNextGame(t *testing.T) {
 		t.Fatalf("got game %q (end %+v), want the new live game b", snap.Game, snap.End)
 	}
 }
+
+// A game this engine cannot replay keeps its board from a site exported with
+// an earlier engine; the earlier site is not used when this engine replays it.
+func TestExportFallsBackToEarlierSite(t *testing.T) {
+	scs, path, rec := oneTrace(t)
+	good, err := replayFile(path, scs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	site := t.TempDir()
+	list := Runs{Runs: []RunInfo{{ID: testRun, Games: []GameItem{{Name: "g", Steps: "api/steps/0-0.json"}}}}}
+	if err := writeFile(filepath.Join(site, "api", "runs"), list); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFile(filepath.Join(site, list.Runs[0].Games[0].Steps), good); err != nil {
+		t.Fatal(err)
+	}
+	earlier, err := readSite(site)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := earlier[[2]string{testRun, "g"}]
+	checkReplay(t, orEarlier(Snapshot{Error: "diverged"}, old), rec)
+	if snap := orEarlier(good, Snapshot{Error: "x"}); snap.Error != "" {
+		t.Fatalf("a replay that worked was replaced: %q", snap.Error)
+	}
+	if snap := orEarlier(Snapshot{Error: "diverged"}, Snapshot{}); snap.Error == "" {
+		t.Fatal("a game missing from the earlier site lost its error")
+	}
+}
