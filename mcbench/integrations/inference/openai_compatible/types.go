@@ -3,6 +3,7 @@ package openaicompatible
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"mcbench/integrations/inference"
 )
@@ -14,8 +15,11 @@ type Config struct {
 	Model       string
 	Temperature float64 // sent when >= 0; a negative value leaves the provider's default
 	MaxTokens   int
-	Retries     int               // extra attempts after a transient failure
-	Headers     map[string]string // extra request headers; they override the defaults
+	Retries     int // extra attempts after a transient failure
+	// RateLimitWait is how long rate limits are waited out in all; 0 retries
+	// them as transient failures.
+	RateLimitWait time.Duration
+	Headers       map[string]string // extra request headers; they override the defaults
 
 	// ReasoningEffort is a named thinking level (e.g. "high") for hosted
 	// models; empty leaves the provider default.

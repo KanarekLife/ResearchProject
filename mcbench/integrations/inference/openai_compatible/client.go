@@ -26,11 +26,12 @@ type Client struct {
 func New(cfg Config) *Client { return &Client{cfg: cfg} }
 
 // Complete sends the conversation and returns the model's reply, retrying
-// transient failures. A provider that rejects max_tokens or reasoning_content
-// is asked again at once without it; that switch is not a retry.
+// transient failures and waiting out rate limits. A provider that rejects
+// max_tokens or reasoning_content is asked again at once without it; that
+// switch is not a retry.
 func (c *Client) Complete(ctx context.Context, msgs []inference.Message, tools []inference.Tool) (inference.Reply, error) {
 	useMaxCompletion := false
-	return inference.Retry(ctx, c.cfg.Retries, func() (inference.Reply, error) {
+	return inference.Retry(ctx, c.cfg.Retries, c.cfg.RateLimitWait, func() (inference.Reply, error) {
 		for {
 			reply, err := c.request(ctx, msgs, tools, useMaxCompletion)
 			switch {

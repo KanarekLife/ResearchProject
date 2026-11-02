@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"testing"
+	"time"
+
+	"github.com/goccy/go-yaml"
 )
 
 // A provider is the endpoint of a run, not the environment's server, and a
@@ -26,5 +29,20 @@ func TestProviderSetsEndpoint(t *testing.T) {
 	}
 	if _, err := cfg.withProvider("nope"); err == nil {
 		t.Error("an unknown provider was accepted")
+	}
+}
+
+// A duration is written as "6h" in config.yaml and in MCBENCH_* variables;
+// the worker sets a provider's wait only through the environment.
+func TestRateLimitWaitReadsDurations(t *testing.T) {
+	var cfg config
+	if err := yaml.Unmarshal([]byte("inference: {rate_limit_wait: 6h}"), &cfg); err != nil || cfg.Inference.RateLimitWait != 6*time.Hour {
+		t.Fatalf("yaml: %v, err %v", cfg.Inference.RateLimitWait, err)
+	}
+	if err := applyEnv(&cfg, []string{"MCBENCH_PROVIDERS_GO_RATE_LIMIT_WAIT=90m"}); err != nil {
+		t.Fatal(err)
+	}
+	if w := cfg.Providers["go"].RateLimitWait; w == nil || *w != 90*time.Minute {
+		t.Errorf("env: %v", w)
 	}
 }

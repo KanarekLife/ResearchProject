@@ -7,6 +7,7 @@ inference:
   temperature: -1
   max_tokens: 32768
   retries: 3
+  rate_limit_wait: 6h
   reasoning_effort: medium
   reasoning_budget: 2048
 
@@ -33,6 +34,7 @@ online:
 jobs:
   branch: jobs
   dir: online-jobs
+  max_usage: 90
 
 providers: {}
 

@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 // Command names accepted on the command line.
 const (
 	cmdNameList     = "list"
@@ -53,6 +55,8 @@ const (
 	defaultModelMaxFailures = 5
 	defaultMaxTokens        = 32768
 	defaultRetries          = 3
+	// defaultRateLimitWait outlasts a hosted plan's 5-hour usage window.
+	defaultRateLimitWait = 6 * time.Hour
 	// Reasoning defaults: the level and the thinking token cap.
 	defaultReasoningEffort = "medium"
 	defaultReasoningBudget = 2048
@@ -64,6 +68,7 @@ const (
 	defaultOnlineDir       = "online-results"
 	defaultJobsBranch      = "jobs"
 	defaultJobsDir         = "online-jobs"
+	defaultMaxUsage        = 90
 	defaultPublish         = true
 )
 
