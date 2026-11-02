@@ -35,8 +35,9 @@ type providerConfig struct {
 
 // jobsConfig is the branch of job files on online.remote and its checkout.
 type jobsConfig struct {
-	Branch string `yaml:"branch"`
-	Dir    string `yaml:"dir"`
+	Branch     string `yaml:"branch"`
+	Dir        string `yaml:"dir"`
+	Concurrent int    `yaml:"concurrent"` // jobs the worker plays at once
 }
 
 type inferenceConfig struct {
@@ -101,7 +102,7 @@ func defaultConfig() config {
 			Remote: defaultRemote, Branch: defaultResultsBranch, Dir: defaultOnlineDir,
 			Publish: defaultPublish, Source: sourceHybrid,
 		},
-		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir},
+		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir, Concurrent: 1},
 		Scoring: map[string]float64{},
 	}
 }

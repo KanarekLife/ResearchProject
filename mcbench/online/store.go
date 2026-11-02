@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Store is a results branch on a remote and its local checkout.
@@ -25,8 +26,35 @@ const publishAttempts = 5
 // missingRefExit is what `git ls-remote --exit-code` returns for a missing ref.
 const missingRefExit = 2
 
+// checkouts holds a lock per checkout directory. A Store is copied by value,
+// so goroutines of one process (parallel jobs) share its checkout by Dir.
+var checkouts sync.Map
+
+// lock keeps every other use of the checkout in this process out until the
+// returned function is called.
+func (s Store) lock() (unlock func()) {
+	mu, _ := checkouts.LoadOrStore(filepath.Clean(s.Dir), &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	return mu.(*sync.Mutex).Unlock
+}
+
 // Sync brings the checkout to the remote branch, creating both on first use.
 func (s Store) Sync() error {
+	defer s.lock()()
+	return s.sync()
+}
+
+// Read syncs the checkout and runs read on it, before any other use of the
+// checkout can change it.
+func (s Store) Read(read func(dir string) error) error {
+	defer s.lock()()
+	if err := s.sync(); err != nil {
+		return err
+	}
+	return read(s.Dir)
+}
+
+func (s Store) sync() error {
 	exists, err := s.remoteHasBranch()
 	if err != nil {
 		return err
@@ -74,9 +102,10 @@ func (s Store) Publish(runDir string) (string, error) {
 // commit with the message it returns; an empty message commits nothing. A lost
 // push race is retried on the new branch tip, an error from change is not.
 func (s Store) Commit(change func(dir string) (msg string, err error)) error {
+	defer s.lock()()
 	var err error
 	for range publishAttempts {
-		if err = s.Sync(); err != nil {
+		if err = s.sync(); err != nil {
 			continue
 		}
 		msg, changeErr := change(s.Dir)

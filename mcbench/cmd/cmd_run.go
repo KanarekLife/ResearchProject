@@ -194,7 +194,12 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// A worker may play several jobs at once; their lines say whose they are.
 	log := slog.Default()
+	if o.job != "" {
+		log = log.With("job", o.job)
+	}
+	runCfg.Log = log
 	enc := json.NewEncoder(f)
 	total, done := benchmark.Count(scs, runCfg), 0
 	info := startInfo(scs, o, cfg.Scoring, total)
@@ -235,6 +240,9 @@ func executeRun(scs []*scenario.Scenario, p player.Player, instr instruction.Ins
 // publishRun skips a run cut short or with an infra_error game: it is incomplete.
 func publishRun(dir string, info runInfo, st online.Store) bool {
 	log := slog.Default().With("run", filepath.Base(dir))
+	if info.Job != "" {
+		log = log.With("job", info.Job)
+	}
 	finished := 0
 	for _, n := range info.Statuses {
 		finished += n

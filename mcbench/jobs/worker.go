@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"mcbench/constants"
@@ -12,17 +13,31 @@ import (
 
 // Watch settles the jobs this worker left in running/, then plays the pending
 // jobs every interval until ctx ends; with no interval, it plays them once.
+// Each of the Concurrent slots claims and plays jobs on its own, so a long job
+// holds up only its slot.
 func (w Worker) Watch(ctx context.Context, interval time.Duration) {
 	log := slog.With("worker", w.Host, "branch", w.Branch.Store.Branch)
-	log.Info("worker started", "interval", interval)
+	slots := max(w.Concurrent, 1)
+	log.Info("worker started", "interval", interval, "concurrent", slots)
 	w.recover()
+	var wg sync.WaitGroup
+	for slot := range slots {
+		wg.Go(func() { w.slot(ctx, interval, log.With("slot", slot+1)) })
+	}
+	wg.Wait()
+	if ctx.Err() != nil {
+		log.Info("worker stopped", "reason", context.Cause(ctx))
+	}
+}
+
+// slot plays pending jobs one after another, checking again every interval.
+func (w Worker) slot(ctx context.Context, interval time.Duration, log *slog.Logger) {
 	for {
 		played := 0
 		for ctx.Err() == nil && w.next() {
 			played++
 		}
 		if ctx.Err() != nil {
-			log.Info("worker stopped", "reason", context.Cause(ctx))
 			return
 		}
 		log.Info("no job pending", "played", played)

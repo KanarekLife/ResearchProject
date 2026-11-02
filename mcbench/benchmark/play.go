@@ -19,17 +19,17 @@ import (
 // Play plays one game and scores it. With a traceDir it also writes a JSON
 // trace to <dir>/<scenario>_seed<N>_s<K>.jsonl as the game happens.
 func Play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights) Record {
-	return play(ctx, sc, p, instr, seed, sample, traceDir, weights, false)
+	return play(ctx, sc, p, instr, seed, sample, traceDir, weights, false, slog.Default())
 }
 
 // play is Play that, with resume, hands the player the game's earlier trace to
 // continue from. The trace file is written anew: the player replays the old one
-// into it.
-func play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights, resume bool) Record {
+// into it. The game logs to log.
+func play(ctx context.Context, sc *scenario.Scenario, p player.Player, instr instruction.Instructions, seed uint64, sample int, traceDir string, weights Weights, resume bool, log *slog.Logger) Record {
 	start := time.Now()
 	ctx = player.WithGame(ctx, gameName(sc.ID, seed, sample))
 	rec := Record{Scenario: sc.ID, Player: p.Name(), Instructions: instr, Seed: seed, Sample: sample}
-	log := slog.Default().With("scenario", sc.ID, "seed", seed, "sample", sample)
+	log = log.With("scenario", sc.ID, "seed", seed, "sample", sample)
 
 	opts := session.Options{Logger: log, MaxRounds: sc.MaxRounds, MaxDecisions: sc.MaxDecisions}
 	if resume && traceDir != "" {

@@ -33,6 +33,7 @@ online:
 jobs:
   branch: jobs
   dir: online-jobs
+  concurrent: 1 # jobs the worker plays at once
 
 providers: {}
 

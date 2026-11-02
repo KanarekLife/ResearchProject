@@ -1,7 +1,9 @@
 package benchmark
 
 import (
+	"cmp"
 	"context"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -19,6 +21,8 @@ type Config struct {
 	Parallel int      // concurrent games
 	TraceDir string
 	RunName  string // names the run to the player, e.g. for request-header placeholders
+	// Log is where the games log; nil is slog.Default.
+	Log *slog.Logger
 	// Resume continues the games in TraceDir that have a trace instead of
 	// starting them again; Done lists the games already finished, which are
 	// not played.
@@ -71,7 +75,7 @@ func Run(ctx context.Context, scenarios []*scenario.Scenario, p player.Player, i
 		go func() {
 			defer wg.Done()
 			for j := range work {
-				rec := play(ctx, j.sc, p, instr, j.seed, j.sample, cfg.TraceDir, weights, cfg.Resume)
+				rec := play(ctx, j.sc, p, instr, j.seed, j.sample, cfg.TraceDir, weights, cfg.Resume, cmp.Or(cfg.Log, slog.Default()))
 				rec.RunID = runID
 				results <- rec
 			}

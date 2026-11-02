@@ -44,20 +44,20 @@ func (b Branch) Claim(host string) (*Claimed, error) {
 
 // Running syncs the branch and reads the jobs in running/, by name.
 func (b Branch) Running() (map[string][]byte, error) {
-	if err := b.Store.Sync(); err != nil {
-		return nil, err
-	}
-	dir := filepath.Join(b.Store.Dir, runningDir)
 	jobs := map[string][]byte{}
-	for _, name := range jobNames(dir) {
-		file, _ := findJob(dir, name)
-		data, err := os.ReadFile(file)
-		if err != nil {
-			return nil, err
+	err := b.Store.Read(func(root string) error {
+		dir := filepath.Join(root, runningDir)
+		for _, name := range jobNames(dir) {
+			file, _ := findJob(dir, name)
+			data, err := os.ReadFile(file)
+			if err != nil {
+				return err
+			}
+			jobs[name] = data
 		}
-		jobs[name] = data
-	}
-	return jobs, nil
+		return nil
+	})
+	return jobs, err
 }
 
 // Archive moves a played job from running/ to archive/.

@@ -304,9 +304,13 @@ once, and a different online run whose name is taken is listed as
 `<run>@online-results`.
 
 **Jobs.** `cmd jobs` is a worker that plays the runs queued as job files on the
-`jobs` branch, in name order and one at a time. It claims a job by pushing its
-move from `pending/` to `running/`, so a worker that loses the push race takes
-the next job instead and no job is played twice. A job file is a typed schema
+`jobs` branch, in name order. It plays `jobs.concurrent` jobs at once (default
+1): each slot claims and plays its own, so a long job holds up only its slot,
+and the slots share each provider's rate limits. It claims a job by pushing its
+move from `pending/` to `running/`, so a worker or slot that loses the push race
+takes the next job instead and no job is played twice. Slots in one process take
+turns on each branch checkout (`online.Store` locks it by directory), and their
+log lines carry the job name. A job file is a typed schema
 that the worker turns into `run` flags for the fields it sets, so everything
 else keeps the worker's defaults; `run.json` records the job and the provider.
 A provider (`providers:` in `config.yaml`) holds how a model is reached: the

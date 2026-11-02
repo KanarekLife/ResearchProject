@@ -147,7 +147,8 @@ providers:
 A job is one run queued for the server. Commit a job file (`.yaml` or `.yml`)
 to `pending/` on the `jobs` branch; the worker (`mcbench jobs -watch 5m`) plays
 it and publishes the run. A field left out keeps the worker's default, and the endpoint is a provider
-defined on the worker, so no key or header is ever on the branch.
+defined on the worker, so no key or header is ever on the branch. The worker
+plays `jobs.concurrent` jobs at once (default 1; `MCBENCH_JOBS_CONCURRENT`).
 
 The worker runs from the image CI pushes on every change to `main`:
 `ghcr.io/kanareklife/researchproject/mcbench-worker`, tagged with the commit sha

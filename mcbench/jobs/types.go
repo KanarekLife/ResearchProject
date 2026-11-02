@@ -52,12 +52,15 @@ type Run struct {
 	Published bool
 }
 
-// Worker plays the jobs of the jobs branch one at a time. A job is claimed by
-// pushing its move to running/, so two workers never play the same one. A job
-// that fails is never resumed automatically: its error.txt says how.
+// Worker plays the jobs of the jobs branch, Concurrent at a time. A job is
+// claimed by pushing its move to running/, so two workers, or two slots of one,
+// never play the same one. A job that fails is never resumed automatically: its
+// error.txt says how.
 type Worker struct {
 	Branch Branch
 	Host   string
+	// Concurrent is how many jobs play at once; below 1 is 1.
+	Concurrent int
 	// Args start the `run` flags of every job, e.g. its config file.
 	Args []string
 	// Play runs `run` with these flags.

@@ -30,11 +30,12 @@ func cmdJobs(args []string) error {
 	defer stop()
 	host, _ := os.Hostname()
 	w := jobs.Worker{
-		Branch:    jobsBranch(cfg),
-		Host:      host,
-		Args:      []string{"-config", flagValue(args, "config", defaultConfigFile), "-publish=true"},
-		Play:      cmdRun,
-		LatestRun: func(job string, since time.Time) *jobs.Run { return latestJobRun(cfg.Run.Out, job, since) },
+		Branch:     jobsBranch(cfg),
+		Host:       host,
+		Concurrent: cfg.Jobs.Concurrent,
+		Args:       []string{"-config", flagValue(args, "config", defaultConfigFile), "-publish=true"},
+		Play:       cmdRun,
+		LatestRun:  func(job string, since time.Time) *jobs.Run { return latestJobRun(cfg.Run.Out, job, since) },
 	}
 	w.Watch(ctx, *watch)
 	return nil
