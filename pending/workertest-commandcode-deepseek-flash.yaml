@@ -1,0 +1,9 @@
+name: worker test, commandcode deepseek-v4.1-flash
+player: model
+model:
+  provider: commandcode
+  id: deepseek/deepseek-v4.1-flash
+scenarios: [spider-man-vs-rhino]
+seeds: 2
+samples: 1
+parallel: 2

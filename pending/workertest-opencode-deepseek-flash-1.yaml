@@ -1,0 +1,9 @@
+name: worker test 1, opencode deepseek-v4.1-flash
+player: model
+model:
+  provider: opencode
+  id: deepseek-v4.1-flash
+scenarios: [spider-man-vs-rhino]
+seeds: 2
+samples: 1
+parallel: 2
