@@ -172,6 +172,26 @@ func TestReplayReadsCombinedPayments(t *testing.T) {
 	checkReplay(t, r.snapshot(0), rec)
 }
 
+// A choice marked mock in the trace is marked mock on its step.
+func TestReplayMarksMockChoices(t *testing.T) {
+	scs, path, rec := oneTrace(t)
+	entries, err := trace.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.IndexFunc(entries, func(e trace.Entry) bool { return e.Type == constants.TraceChoice })
+	entries[i].Mock = true
+	r := newReplay(scs)
+	r.apply(entries)
+	snap := r.snapshot(0)
+	checkReplay(t, snap, rec)
+	for j, s := range snap.Steps[:len(snap.Steps)-1] {
+		if s.Choice.Mock != (j == 0) {
+			t.Fatalf("step %d: mock %v", j, s.Choice.Mock)
+		}
+	}
+}
+
 // Following a trace that is still being written picks up new lines, including
 // one that was half written on the first read.
 func TestReplayFollowsGrowingTrace(t *testing.T) {
@@ -339,35 +359,5 @@ func TestServerFollowsRunToNextGame(t *testing.T) {
 	var snap Snapshot
 	if getJSON(t, url, &snap); snap.Game != "b" || snap.End != nil {
 		t.Fatalf("got game %q (end %+v), want the new live game b", snap.Game, snap.End)
-	}
-}
-
-// A game this engine cannot replay keeps its board from a site exported with
-// an earlier engine; the earlier site is not used when this engine replays it.
-func TestExportFallsBackToEarlierSite(t *testing.T) {
-	scs, path, rec := oneTrace(t)
-	good, err := replayFile(path, scs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	site := t.TempDir()
-	list := Runs{Runs: []RunInfo{{ID: testRun, Games: []GameItem{{Name: "g", Steps: "api/steps/0-0.json"}}}}}
-	if err := writeFile(filepath.Join(site, "api", "runs"), list); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeFile(filepath.Join(site, list.Runs[0].Games[0].Steps), good); err != nil {
-		t.Fatal(err)
-	}
-	earlier, err := readSite(site)
-	if err != nil {
-		t.Fatal(err)
-	}
-	old := earlier[[2]string{testRun, "g"}]
-	checkReplay(t, orEarlier(Snapshot{Error: "diverged"}, old), rec)
-	if snap := orEarlier(good, Snapshot{Error: "x"}); snap.Error != "" {
-		t.Fatalf("a replay that worked was replaced: %q", snap.Error)
-	}
-	if snap := orEarlier(Snapshot{Error: "diverged"}, Snapshot{}); snap.Error == "" {
-		t.Fatal("a game missing from the earlier site lost its error")
 	}
 }

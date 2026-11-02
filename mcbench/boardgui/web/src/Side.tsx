@@ -34,7 +34,7 @@ export function Side({ steps, cur, go, end }: { steps: Step[]; cur: number; go: 
               t.board.round !== round ? null : (
                 <li key={i} className={i === cur ? "current" : undefined} onClick={() => go(i)}>
                   <div className="dim">{t.decision ? `#${i + 1} · ${t.decision.kind} · ${t.board.phase} phase` : `#${i + 1} · game over`}</div>
-                  {t.decision && <div className="picked">{t.choice ? t.choice.text : end ? "No choice recorded." : "Waiting for the player…"}</div>}
+                  {t.decision && <div className="picked">{t.choice ? (t.choice.mock ? "Mock: " : "") + t.choice.text : end ? "No choice recorded." : "Waiting for the player…"}</div>}
                   {t.choice && <Reasoning c={t.choice} />}
                 </li>
               ),
@@ -96,7 +96,8 @@ function DecisionView({ s, i, last, end }: { s: Step; i: number; last: boolean; 
 function Reasoning({ c }: { c: Chosen }) {
   return (
     <>
-      {c.reasoning ? <div className="reason">{c.reasoning}</div> : <div className="dim no-reason">No reasoning recorded.</div>}
+      {c.mock && <div className="dim no-reason">Mock step due to an engine version difference: added or reordered when this game was migrated to the current engine.</div>}
+      {c.reasoning ? <div className="reason">{c.reasoning}</div> : !c.mock && <div className="dim no-reason">No reasoning recorded.</div>}
       {c.thinking && (
         <details className="thinking" onClick={(e) => e.stopPropagation()}>
           <summary>Model thinking</summary>
