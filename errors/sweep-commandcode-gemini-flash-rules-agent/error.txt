@@ -1,0 +1,7 @@
+job: sweep-commandcode-gemini-flash-rules-agent
+worker: mcbench-worker-0
+time: 2026-11-03T04:37:30Z
+error: run not published: cut short, an infra_error game or a failed push (see the worker log)
+run: /data/results/20261102T192455Z-model_google_gemini-3.8-flash@effort-high@budget-2048__rules_agent+mcbench
+statuses: map[infra_error:77 won:3] of 80 planned games
+resume: mcbench run -config config.yaml -publish=true -provider=commandcode -player=model -model=google/gemini-3.8-flash -reasoning-effort=high -instructions=rules_agent,mcbench -only=spider-man-vs-klaw,spider-man-vs-ultron,iron-man-vs-klaw,iron-man-vs-ultron,iron-man-vs-rhino,captain-marvel-vs-klaw,captain-marvel-vs-ultron,captain-marvel-vs-rhino -seeds=10 -samples=1 -parallel=2 -job=sweep-commandcode-gemini-flash-rules-agent -resume /data/results/20261102T192455Z-model_google_gemini-3.8-flash@effort-high@budget-2048__rules_agent+mcbench
