@@ -1,0 +1,55 @@
+{
+  "runner": "Krzysztof Nasuta",
+  "started": "2026-11-08T18:29:39.169440168Z",
+  "finished": "2026-11-08T19:01:52.171808123Z",
+  "commit": "b57dd8849219bc8da2b71d37be5dbc175dd9d64b",
+  "dirty": true,
+  "machine": {
+    "hostname": "nasusPC",
+    "os": "Fedora Linux 44 (KDE Plasma Desktop Edition)",
+    "kernel": "7.2.15-200.fc44.x86_64",
+    "arch": "amd64",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor",
+    "cores": 12,
+    "memory_mb": 32006,
+    "gpus": [
+      "Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] (rev c4)"
+    ],
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "model": "claude-haiku-5-5",
+    "api": "openai",
+    "server": "http://localhost:1234/v1",
+    "temperature": -1,
+    "max_tokens": 32768,
+    "retries": 3,
+    "rate_limit_wait": 21600000000000,
+    "reasoning_effort": "high",
+    "reasoning_budget": 2048,
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench",
+      "play"
+    ],
+    "seeds": 10,
+    "samples": 1,
+    "parallel": 3,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "iron-man-vs-klaw"
+  ],
+  "planned_games": 10,
+  "statuses": {
+    "lost": 10
+  }
+}
