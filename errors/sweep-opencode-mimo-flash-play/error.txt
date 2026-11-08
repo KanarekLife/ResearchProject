@@ -1,0 +1,7 @@
+job: sweep-opencode-mimo-flash-play
+worker: mcbench-worker-0
+time: 2026-11-08T15:17:22Z
+error: run not published: cut short, an infra_error game or a failed push (see the worker log)
+run: /data/results/20261103T141322Z-model_mimo-v2.6-flash@effort-high@budget-2048__rules_agent+mcbench+play
+statuses: map[infra_error:36 lost:42 won:2] of 80 planned games
+resume: mcbench run -config config.yaml -publish=true -provider=opencode -player=model -model=mimo-v2.6-flash -reasoning-effort=high -instructions=rules_agent,mcbench,play -only=spider-man-vs-klaw,spider-man-vs-ultron,iron-man-vs-klaw,iron-man-vs-ultron,iron-man-vs-rhino,captain-marvel-vs-klaw,captain-marvel-vs-ultron,captain-marvel-vs-rhino -seeds=10 -samples=1 -parallel=2 -job=sweep-opencode-mimo-flash-play -resume /data/results/20261103T141322Z-model_mimo-v2.6-flash@effort-high@budget-2048__rules_agent+mcbench+play
