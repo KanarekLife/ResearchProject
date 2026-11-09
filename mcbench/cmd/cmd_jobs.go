@@ -36,12 +36,29 @@ func cmdJobs(args []string) error {
 		Branch:    jobsBranch(cfg),
 		Host:      host,
 		Args:      []string{"-config", flagValue(args, "config", defaultConfigFile), "-publish=true"},
-		Play:      func(args []string) error { return playRun(play, args) },
+		Play:      func(args []string) error { return playJob(play, cfg.Jobs.LogDir, args) },
 		Ready:     jobReady(drain, cfg),
 		LatestRun: func(job string, since time.Time) *jobs.Run { return latestJobRun(cfg.Run.Out, job, since) },
 	}
 	w.Watch(drain, *watch)
 	return nil
+}
+
+// playJob plays a job's run with its full log in <logDir>/<job>.log, so the
+// worker's own log keeps only job events, warnings and errors.
+func playJob(ctx context.Context, logDir string, args []string) error {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
+		return err
+	}
+	path := filepath.Join(logDir, flagValue(args, constants.FlagJob, "job")+".log")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	slog.Info("job log", "file", path)
+	defer setupLogging(defaultLogLevel, nil)
+	return playRun(ctx, args, f)
 }
 
 // drainOnSignal gives the worker's two contexts. The first SIGTERM (how a
@@ -104,7 +121,8 @@ func latestJobRun(out, job string, since time.Time) *jobs.Run {
 		}
 		var info runInfo
 		if json.Unmarshal(b, &info) == nil && info.Job == job && !info.Started.Before(since) {
-			latest = &jobs.Run{Dir: dir, Statuses: info.Statuses, Planned: info.Planned, Published: trace.Published(dir) != ""}
+			latest = &jobs.Run{Dir: dir, Statuses: info.Statuses, Planned: info.Planned,
+				Complete: runComplete(info.Statuses, info.Planned), Published: trace.Published(dir) != ""}
 		}
 	}
 	return latest

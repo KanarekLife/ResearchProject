@@ -1,12 +1,16 @@
 package main
 
 import (
-	"mcbench/benchmark"
-	"mcbench/constants"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mcbench/benchmark"
+	"mcbench/constants"
+	"mcbench/online"
+	"mcbench/trace"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -170,5 +174,62 @@ func TestMergeRunsSkipsEmpty(t *testing.T) {
 	os.WriteFile(filepath.Join(run, constants.RunInfoFile), []byte(`{"planned_games":1}`), 0o644)
 	if _, err := mergeRuns([]string{run}, t.TempDir(), true); err == nil || !strings.Contains(err.Error(), "no graded games") {
 		t.Errorf("err=%v, want a refusal to publish a run with no graded games", err)
+	}
+}
+
+// A job's incomplete run publishes its finished games, and publishing it again
+// once resumed replaces them instead of adding a second copy.
+func TestPublishRunPublishesAJobsFinishedGamesThenReplacesThem(t *testing.T) {
+	root := t.TempDir()
+	remote := filepath.Join(root, "remote.git")
+	repo := filepath.Join(root, "repo")
+	for _, args := range [][]string{
+		{"init", "--quiet", "--bare", remote},
+		{"clone", "--quiet", remote, repo},
+		{"-C", repo, "config", "user.name", "test"},
+		{"-C", repo, "config", "user.email", "test@example.com"},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+	}
+	st := online.Store{Repo: repo, Remote: "origin", Branch: "results", Dir: filepath.Join(root, "results")}
+
+	run := filepath.Join(root, "local", "r1")
+	os.MkdirAll(filepath.Join(run, liveSubdir), 0o755)
+	write := func(games string) {
+		os.WriteFile(filepath.Join(run, gamesFile), []byte(games), 0o644)
+		for _, seed := range []string{"1", "2"} {
+			os.WriteFile(filepath.Join(run, liveSubdir, "s_seed"+seed+"_s0.jsonl"), []byte("{}\n"), 0o644)
+		}
+	}
+	won := `{"scenario":"s","player":"p","seed":1,"status":"won"}` + "\n"
+	write(won + `{"scenario":"s","player":"p","seed":2,"status":"infra_error"}` + "\n")
+	info := runInfo{Planned: 2, Statuses: map[string]int{"won": 1, "infra_error": 1}, Job: "j"}
+	if err := info.write(run); err != nil {
+		t.Fatal(err)
+	}
+
+	if publishRun(run, info, st) {
+		t.Fatal("an incomplete run was reported complete")
+	}
+	if got := trace.Published(run); got != "r1" {
+		t.Fatalf("published as %q, want r1", got)
+	}
+	if _, err := os.Stat(filepath.Join(st.Dir, "r1", liveSubdir, "s_seed2_s0.jsonl")); err == nil {
+		t.Error("the infra_error game was published")
+	}
+
+	write(won + `{"scenario":"s","player":"p","seed":2,"status":"lost"}` + "\n")
+	info.Statuses = map[string]int{"won": 1, "lost": 1}
+	if !publishRun(run, info, st) {
+		t.Fatal("the resumed, complete run was not published")
+	}
+	st.Sync()
+	if _, err := os.Stat(filepath.Join(st.Dir, "r1-2")); err == nil {
+		t.Error("the resumed run was published as a second copy")
+	}
+	if _, err := os.Stat(filepath.Join(st.Dir, "r1", liveSubdir, "s_seed2_s0.jsonl")); err != nil {
+		t.Errorf("the resumed game is missing: %v", err)
 	}
 }

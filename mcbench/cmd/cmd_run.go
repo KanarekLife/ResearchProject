@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"mcbench/online"
 	"mcbench/player"
 	"mcbench/player/instruction"
+	"mcbench/trace"
 )
 
 // runSettings are the parsed flags of `mcbench run`.
@@ -60,11 +62,12 @@ type runSettings struct {
 func cmdRun(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return playRun(ctx, args)
+	return playRun(ctx, args, nil)
 }
 
-// playRun is `run` until ctx ends, which stops the games being played.
-func playRun(ctx context.Context, args []string) error {
+// playRun is `run` until ctx ends, which stops the games being played. With a
+// jobLog, the run logs there in full and only warnings and errors on stderr.
+func playRun(ctx context.Context, args []string, jobLog io.Writer) error {
 	fs, cfg, err := newFlagSet(cmdNameRun, args)
 	if err != nil {
 		return err
@@ -90,7 +93,7 @@ func playRun(ctx context.Context, args []string) error {
 	if rs != nil {
 		o.resume, o.label = rs.dir, rs.label()
 	}
-	if err := setupLogging(o.logLevel); err != nil {
+	if err := setupLogging(o.logLevel, jobLog); err != nil {
 		return err
 	}
 	scs, err := l.load()
@@ -213,6 +216,12 @@ func executeRun(ctx context.Context, scs []*scenario.Scenario, p player.Player, 
 		return err
 	}
 	log.Info("run started", "player", p.Name(), "games", total, "parallel", o.parallel, "live_dir", runCfg.TraceDir)
+	ctx, stop := context.WithCancelCause(ctx)
+	defer stop(nil)
+	ctx = inference.WithSpentPlan(ctx, cfg.Inference.SpentErrors, func(err error) {
+		log.Warn("provider plan spent: stopping the run; -resume plays the rest", "error", err)
+		stop(err)
+	})
 	benchmark.Run(ctx, scs, p, instr, runCfg, benchmark.Weights(cfg.Scoring), func(r benchmark.Record) {
 		done++
 		enc.Encode(r)
@@ -228,7 +237,7 @@ func executeRun(ctx context.Context, scs []*scenario.Scenario, p player.Player, 
 	if err := info.finish(dir, recs); err != nil {
 		return err
 	}
-	// A job the worker gave up on is finished once its resumed run is published.
+	// A job the worker gave up on is finished once its resumed run is complete and published.
 	if o.publish && publishRun(dir, info, store(cfg)) && rs != nil && info.Job != "" {
 		if err := jobsBranch(cfg).ArchiveFailed(info.Job); err != nil {
 			log.Error("job not archived", "job", info.Job, "error", err)
@@ -237,22 +246,34 @@ func executeRun(ctx context.Context, scs []*scenario.Scenario, p player.Player, 
 	return nil
 }
 
-// publishRun skips a run cut short or with an infra_error game: it is incomplete.
+// publishRun publishes a run and reports whether it was complete: every
+// planned game finished and none in infra_error. An incomplete run is not
+// published, except a job's: its finished games are, as `publish -partial`
+// would, so they do not wait on the worker, and publishing the run again after
+// `-resume` replaces them.
 func publishRun(dir string, info runInfo, st online.Store) bool {
 	log := slog.Default().With("run", filepath.Base(dir))
-	finished := 0
-	for _, n := range info.Statuses {
-		finished += n
+	complete := runComplete(info.Statuses, info.Planned)
+	src := dir
+	if !complete {
+		log := log.With("statuses", info.Statuses, "planned", info.Planned)
+		if info.Job == "" {
+			log.Warn("run not published: cut short or an infra_error game")
+			return false
+		}
+		tmp, err := os.MkdirTemp("", "mcbench-publish-")
+		if err != nil {
+			log.Error("run not published", "error", err)
+			return false
+		}
+		defer os.RemoveAll(tmp)
+		if src, err = mergeRuns([]string{dir}, tmp, true); err != nil {
+			log.Warn("run not published", "error", err)
+			return false
+		}
+		log.Warn("run incomplete: publishing its finished games")
 	}
-	switch {
-	case finished < info.Planned:
-		log.Warn("run not published: cut short", "finished", finished, "planned", info.Planned)
-		return false
-	case info.Statuses[constants.InfraError] > 0:
-		log.Warn("run not published: flaky", "infra_errors", info.Statuses[constants.InfraError])
-		return false
-	}
-	name, err := st.Publish(dir)
+	name, err := st.Publish(src, trace.Published(dir))
 	if err != nil {
 		log.Error("run not published", "error", err)
 		return false
@@ -260,8 +281,17 @@ func publishRun(dir string, info runInfo, st online.Store) bool {
 	if err := os.WriteFile(filepath.Join(dir, constants.PublishedFile), []byte(name+"\n"), 0o644); err != nil {
 		log.Error("run published, but recording that failed", "error", err)
 	}
-	log.Info("run published", "remote", st.Remote, "branch", st.Branch, "dir", name)
-	return true
+	log.Info("run published", "remote", st.Remote, "branch", st.Branch, "dir", name, "complete", complete)
+	return complete
+}
+
+// runComplete says whether every planned game finished without an infra_error.
+func runComplete(statuses map[string]int, planned int) bool {
+	finished := 0
+	for _, n := range statuses {
+		finished += n
+	}
+	return finished >= planned && statuses[constants.InfraError] == 0
 }
 
 // prepareRunDir creates results/<run>-<player>[__<instructions>]/, the live/

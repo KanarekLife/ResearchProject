@@ -26,7 +26,7 @@ func TestPublishKeepsCollidingRuns(t *testing.T) {
 
 	var got []string
 	for _, s := range stores {
-		name, err := s.Publish(run)
+		name, err := s.Publish(run, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -42,6 +42,24 @@ func TestPublishKeepsCollidingRuns(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(stores[0].Dir, name, "live", "g.jsonl")); err != nil {
 			t.Errorf("%s missing from the synced branch: %v", name, err)
 		}
+	}
+
+	// A resumed run replaces its partial publish instead of adding a copy.
+	os.Remove(filepath.Join(run, "live", "g.jsonl"))
+	os.WriteFile(filepath.Join(run, "live", "h.jsonl"), []byte("{}\n"), 0o644)
+	name, err := stores[0].Publish(run, got[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != got[0] {
+		t.Fatalf("republished as %s, want %s", name, got[0])
+	}
+	stores[1].Sync()
+	if _, err := os.Stat(filepath.Join(stores[1].Dir, name, "live", "g.jsonl")); err == nil {
+		t.Error("the replaced publish kept a file the run no longer has")
+	}
+	if _, err := os.Stat(filepath.Join(stores[1].Dir, name, "live", "h.jsonl")); err != nil {
+		t.Errorf("the replacing publish is missing: %v", err)
 	}
 }
 

@@ -207,6 +207,9 @@ caller builds; it reads no files and no environment variables. It:
   a request that gives up ends its game as `infra_error` and fails the job, and
   the next job meets the same limit. The game only waits; scoring counts
   rounds, not time. With 0 a rate limit is retried like any other failure;
+- fails a request at once when its error contains one of the provider's
+  `spent_errors` (a monthly limit, no credits left): waiting cannot help, so
+  the run stops and leaves its unfinished games for `-resume`;
 - sends `max_tokens`, or falls back to `max_completion_tokens` when a provider
   asks for it;
 - sends `reasoning_effort` (`-reasoning-effort`, a named level for hosted
@@ -310,8 +313,10 @@ suffix. When it ends, `cmd run` publishes the run directory (unless
 top-level directory, with the same suffixing if another run already holds the
 name, and a push that loses a race is retried on the new branch tip. A run cut
 short or with any `infra_error` game is not published, because reports leave
-infra errors out and the run would be incomplete. A published local run records
-its name on the branch in a `published` file. The branch is kept in a detached
+infra errors out and the run would be incomplete, except a job's run (below). A
+published local run records its name on the branch in a `published` file, and
+publishing it again (after `-resume`, or with `cmd publish`) replaces that
+directory instead of adding a copy whose games the reports would count twice. The branch is kept in a detached
 worktree (`online-results/`) that only this step writes to.
 
 `report`, `analyze`, `view` and `board_gui` read `-source local` (the results
@@ -334,16 +339,21 @@ plan (`usage`); the worker then reads the plan's usage windows before a claim
 (`integrations/usage`: OpenCode Go's `/usage`, Command Code's billing credits)
 and passes over a job whose provider has a window at `jobs.max_usage` or above,
 so a spent plan holds back only its own jobs. A plan that cannot be read holds
-nothing back. The first SIGTERM stops claiming but lets the job being played
+nothing back. A plan that runs out during a job stops the run through its
+`spent_errors`. The first SIGTERM stops claiming but lets the job being played
 finish and publish, so a rollout waits for it; a second signal stops the job.
-The worker always publishes, and
-a published job moves to `archive/`. Any other ending (an error, a cut-short or
-`infra_error` run, or a failed push) moves the job to `errors/<job>/` with an
-`error.txt` that holds the reason, the run directory, its statuses and the
-`run -resume` command. Nothing is resumed automatically. A manual resume that
-publishes the run moves the job to `archive/`. On start, the worker settles the
-jobs it left in `running/` (their runs are on its volume): archived when
-published, otherwise moved to `errors/`. The worker image has no repository, so
+The worker always publishes: a cut-short or
+`infra_error` run publishes its finished games as `publish -partial` would, so
+they do not wait on the worker's volume. A complete, published job moves to
+`archive/`. Any other ending (an error, an incomplete run, or a failed push)
+moves the job to `errors/<job>/` with an `error.txt` that holds the reason, the
+run directory, its statuses and the `run -resume` command. Nothing is resumed
+automatically. A manual resume whose run is complete and published moves the
+job to `archive/`. On start, the worker settles the jobs it left in `running/`
+(their runs are on its volume): archived when complete and published, otherwise
+moved to `errors/`. Each job's run logs in full to `jobs.log_dir/<job>.log` on
+the volume; the worker's stderr keeps job events, warnings and errors, so the
+container log does not rotate away a job's history. The worker image has no repository, so
 the commit it was built from is compiled in (`main.buildCommit`), and it pushes
 from a clone on its volume (`online.repo`). The clone authenticates with a
 GitHub deploy key, and GitHub's published SSH host keys are fetched when the

@@ -33,7 +33,7 @@ func main() {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
 	}
-	setupLogging(defaultLogLevel) // run overrides it with -log-level
+	setupLogging(defaultLogLevel, nil) // run overrides it with -log-level
 	cmds := map[string]func([]string) error{
 		cmdNameList: cmdList, cmdNameValidate: cmdValidate,
 		cmdNamePlay: cmdPlay, cmdNameRun: cmdRun, cmdNameReport: cmdReport, cmdNameAnalyze: cmdAnalyze,

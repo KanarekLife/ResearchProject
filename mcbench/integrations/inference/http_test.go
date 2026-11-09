@@ -2,6 +2,7 @@ package inference
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -61,5 +62,20 @@ func TestRetryAfterReadsSecondsAndDates(t *testing.T) {
 	}
 	if got := retryAfter("soon"); got != 0 {
 		t.Errorf("junk: %v", got)
+	}
+}
+
+// A spent plan (a monthly limit) answers 429 for days: waiting it out per
+// request idled the worker for hours per game, so it ends at once instead.
+func TestRetryStopsAtOnceWhenThePlanIsSpent(t *testing.T) {
+	var spent error
+	ctx := WithSpentPlan(context.Background(), []string{"GoUsageLimitError"}, func(err error) { spent = err })
+	calls := 0
+	_, err := Retry(ctx, 3, time.Hour, func() (Reply, error) {
+		calls++
+		return Reply{}, &HTTPError{Status: http.StatusTooManyRequests, Body: `{"type":"GoUsageLimitError","limitName":"monthly"}`}
+	})
+	if !errors.Is(err, ErrPlanSpent) || calls != 1 || !errors.Is(spent, ErrPlanSpent) {
+		t.Fatalf("err=%v spent=%v after %d calls, want ErrPlanSpent at once and reported", err, spent, calls)
 	}
 }
