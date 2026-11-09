@@ -71,6 +71,9 @@ func Run(ctx context.Context, scenarios []*scenario.Scenario, p player.Player, i
 		go func() {
 			defer wg.Done()
 			for j := range work {
+				if ctx.Err() != nil {
+					continue // stopped: an unplayed game is left for -resume
+				}
 				rec := play(ctx, j.sc, p, instr, j.seed, j.sample, cfg.TraceDir, weights, cfg.Resume)
 				rec.RunID = runID
 				results <- rec

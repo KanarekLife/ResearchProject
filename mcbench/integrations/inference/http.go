@@ -18,6 +18,10 @@ const requestTimeout = 10 * time.Minute
 
 var httpClient = &http.Client{Timeout: requestTimeout}
 
+// streamClient has no overall timeout: a streamed reply may arrive for longer
+// than requestTimeout, and watchStall ends one that goes quiet.
+var streamClient = &http.Client{}
+
 // BackoffBase is the first retry delay, doubled per attempt up to backoffMax.
 // It is a variable only so tests need not wait.
 var BackoffBase = 2 * time.Second
@@ -90,7 +94,8 @@ func retryAfter(v string) time.Duration {
 // (429) is waited out for up to rateLimitWait in all, without counting against
 // retries: a hosted plan's usage window resets after hours, and failing the
 // request fails the game. With no rateLimitWait a rate limit is retried like
-// any other transient failure.
+// any other transient failure. An error that ctx names a spent plan
+// (WithSpentPlan) is returned at once.
 func Retry(ctx context.Context, retries int, rateLimitWait time.Duration, do func() (Reply, error)) (Reply, error) {
 	var (
 		failures, limits int
@@ -100,6 +105,13 @@ func Retry(ctx context.Context, retries int, rateLimitWait time.Duration, do fun
 		reply, err := do()
 		if err == nil {
 			return reply, nil
+		}
+		if ctx.Err() != nil {
+			return Reply{}, err // stopped, e.g. by another request's spent plan
+		}
+		if spent := planSpent(ctx, err); spent != nil {
+			slog.Warn("chat request refused: provider plan spent", "error", err)
+			return Reply{}, spent
 		}
 		if !retryable(err) {
 			slog.Warn("chat request failed", "error", err)

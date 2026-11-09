@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,15 +25,49 @@ const (
 )
 
 // setupLogging installs the default structured logger. Every package logs
-// through slog.Default, so the level is set in one place.
-func setupLogging(level string) error {
+// through slog.Default, so the level is set in one place. With a file, the
+// level applies there and stderr shows only warnings and errors.
+func setupLogging(level string, file io.Writer) error {
 	var l slog.Level
 	if err := l.UnmarshalText([]byte(level)); err != nil {
 		return err
 	}
-	slog.SetDefault(slog.New(&consoleHandler{mu: &sync.Mutex{}, w: os.Stderr, level: l, theme: terminalTheme(os.Stderr)}))
+	stderr := &consoleHandler{mu: &sync.Mutex{}, w: os.Stderr, level: l, theme: terminalTheme(os.Stderr)}
+	if file == nil {
+		slog.SetDefault(slog.New(stderr))
+		return nil
+	}
+	stderr.level = slog.LevelWarn
+	slog.SetDefault(slog.New(teeHandler{stderr, &consoleHandler{mu: &sync.Mutex{}, w: file, level: l}}))
 	return nil
 }
+
+// teeHandler sends each record to every handler that takes its level.
+type teeHandler []slog.Handler
+
+func (t teeHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return slices.ContainsFunc(t, func(h slog.Handler) bool { return h.Enabled(ctx, l) })
+}
+
+func (t teeHandler) Handle(ctx context.Context, r slog.Record) error {
+	var errs []error
+	for _, h := range t {
+		if h.Enabled(ctx, r.Level) {
+			errs = append(errs, h.Handle(ctx, r.Clone()))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (t teeHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	c := make(teeHandler, len(t))
+	for i, h := range t {
+		c[i] = h.WithAttrs(attrs)
+	}
+	return c
+}
+
+func (t teeHandler) WithGroup(string) slog.Handler { return t }
 
 // consoleHandler writes one line per record for a person reading a terminal:
 // time, level, message, then key=value pairs in their own column. Groups are

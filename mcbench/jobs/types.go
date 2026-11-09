@@ -46,9 +46,13 @@ type Claimed struct {
 
 // Run is a local run directory of a job, as the worker reads it back.
 type Run struct {
-	Dir       string
-	Statuses  map[string]int
-	Planned   int
+	Dir      string
+	Statuses map[string]int
+	Planned  int
+	// Complete: every planned game finished and none in infra_error.
+	Complete bool
+	// Published: the run, or only its finished games when incomplete, is on
+	// the results branch.
 	Published bool
 }
 

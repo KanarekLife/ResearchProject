@@ -36,12 +36,19 @@ type providerConfig struct {
 	// Usage names the plan whose usage windows the jobs worker reads before it
 	// takes a job for this provider: opencode or commandcode; empty never waits.
 	Usage string `yaml:"usage"`
+	// SpentErrors are texts of the provider's errors that mean its plan is
+	// spent (a monthly limit, no credits). The first request that fails with
+	// one stops the run; `run -resume` plays the rest once the plan has room.
+	SpentErrors []string `yaml:"spent_errors"`
 }
 
 // jobsConfig is the branch of job files on online.remote and its checkout.
 type jobsConfig struct {
 	Branch string `yaml:"branch"`
 	Dir    string `yaml:"dir"`
+	// LogDir holds each job's full log, <job>.log, appended across its runs.
+	// It is never published.
+	LogDir string `yaml:"log_dir"`
 	// MaxUsage is the percent of a provider's usage window at which the
 	// worker leaves that provider's jobs pending until the window resets.
 	MaxUsage float64 `yaml:"max_usage"`
@@ -64,8 +71,9 @@ type inferenceConfig struct {
 	ReasoningBudget int    `yaml:"reasoning_budget"`
 	// Stream asks for streamed replies, whichever protocol is used.
 	Stream bool `yaml:"stream"`
-	// Headers come only from a provider.
-	Headers map[string]string `yaml:"-"`
+	// Headers and SpentErrors come only from a provider.
+	Headers     map[string]string `yaml:"-"`
+	SpentErrors []string          `yaml:"-"`
 }
 
 type playerConfig struct {
@@ -111,7 +119,7 @@ func defaultConfig() config {
 			Remote: defaultRemote, Branch: defaultResultsBranch, Dir: defaultOnlineDir,
 			Publish: defaultPublish, Source: sourceHybrid,
 		},
-		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir, MaxUsage: defaultMaxUsage},
+		Jobs:    jobsConfig{Branch: defaultJobsBranch, Dir: defaultJobsDir, LogDir: defaultJobLogDir, MaxUsage: defaultMaxUsage},
 		Scoring: map[string]float64{},
 	}
 }
@@ -156,6 +164,7 @@ func (cfg config) withProvider(name string) (config, error) {
 	if p.RateLimitWait != nil {
 		in.RateLimitWait = *p.RateLimitWait
 	}
+	in.SpentErrors = p.SpentErrors
 	in.Headers = headerFlag{}
 	for k, v := range p.Headers {
 		if err := headerFlag(in.Headers).Set(k + ": " + v); err != nil {

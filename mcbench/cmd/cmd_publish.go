@@ -11,13 +11,15 @@ import (
 
 	"mcbench/benchmark"
 	"mcbench/constants"
+	"mcbench/trace"
 )
 
 const publishUsage = "usage: mcbench publish [-partial] RUN_DIR...\n"
 
 // cmdPublish merges the games of runs of one player and publishes them as a
 // single run. A game that ended in infra_error is dropped, or replaced by the
-// same game in a later run, so a run and its retries publish together.
+// same game in a later run, so a run and its retries publish together. A first
+// run published before is replaced on the branch, not added again.
 func cmdPublish(args []string) error {
 	flags, cfg, err := newFlagSet(cmdNamePublish, args)
 	if err != nil {
@@ -43,7 +45,7 @@ func cmdPublish(args []string) error {
 	if err != nil {
 		return err
 	}
-	name, err := store(cfg).Publish(merged)
+	name, err := store(cfg).Publish(merged, trace.Published(dirs[0]))
 	if err != nil {
 		return err
 	}

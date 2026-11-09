@@ -143,6 +143,7 @@ providers:
     retries: 3
     rate_limit_wait: 6h
     usage: opencode    # jobs worker: wait while the plan's usage is spent
+    spent_errors: [GoUsageLimitError]   # an error with this text stops the run
 ```
 
 ### Jobs
@@ -186,11 +187,19 @@ worker takes the next one; it checks again on the next pass. On SIGTERM (a
 rollout) the worker claims nothing more and exits once the job being played has
 finished and published; a second signal stops that job too.
 
-A published job moves to `archive/`. A job that fails moves to
+A plan can also run out during a job. When a request fails with one of the
+provider's `spent_errors` (e.g. OpenCode's monthly limit, Command Code's
+"insufficient credits"), the run stops at once instead of waiting out each
+remaining game. The games it did not finish are left for `-resume`.
+
+A complete, published job moves to `archive/`. A job that fails moves to
 `errors/<job>/` with an `error.txt` that gives the reason and, when it has a run,
-the `run -resume` command to continue it on the worker (`kubectl exec`). Jobs are
-never resumed automatically; once a resumed run is published, its job moves to
-`archive/`.
+the `run -resume` command to continue it on the worker (`kubectl exec`). An
+incomplete run still publishes its finished games, and publishing the resumed
+run replaces them on the branch. Jobs are never resumed automatically; once a
+resumed run is complete and published, its job moves to `archive/`. Each job's
+full log is in `jobs.log_dir` (`<job>.log`, never published), and the worker's
+own log keeps only job events, warnings and errors.
 
 ## Docs
 

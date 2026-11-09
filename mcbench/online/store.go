@@ -59,15 +59,30 @@ func (s Store) Sync() error {
 	return err
 }
 
-// Publish pushes runDir to the branch as a new top-level directory and returns
-// its name there, suffixed -2, -3, ... when taken.
-func (s Store) Publish(runDir string) (string, error) {
+// Publish pushes runDir to the branch and returns its name there. With a
+// replace name already on the branch (the run's earlier, partial publish), it
+// takes that directory's place; otherwise it is a new top-level directory,
+// suffixed -2, -3, ... when the name is taken.
+func (s Store) Publish(runDir, replace string) (string, error) {
 	var name string
 	err := s.Commit(func(dir string) (string, error) {
-		name = freeName(dir, filepath.Base(runDir))
-		return "chore(results): add " + name, os.CopyFS(filepath.Join(dir, name), os.DirFS(runDir))
+		verb := "add"
+		if name = replace; name != "" && exists(filepath.Join(dir, name)) {
+			verb = "update"
+			if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+				return "", err
+			}
+		} else {
+			name = freeName(dir, filepath.Base(runDir))
+		}
+		return "chore(results): " + verb + " " + name, os.CopyFS(filepath.Join(dir, name), os.DirFS(runDir))
 	})
 	return name, err
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // Commit runs change on a freshly synced checkout and pushes what it did as one

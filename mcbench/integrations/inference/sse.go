@@ -33,7 +33,7 @@ func PostSSE(ctx context.Context, url string, headers map[string]string, body []
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := httpClient.Do(req)
+	resp, err := streamClient.Do(req)
 	if err != nil {
 		return watch.err(err)
 	}

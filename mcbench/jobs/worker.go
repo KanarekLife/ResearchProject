@@ -52,7 +52,7 @@ func (w Worker) next() bool {
 }
 
 // play runs a claimed job as `run` would, always publishing, and archives it
-// once its run is published.
+// once its run is complete and published.
 func (w Worker) play(name string, data []byte) {
 	log := slog.With("job", name)
 	args, err := w.runArgs(name, data)
@@ -71,8 +71,12 @@ func (w Worker) play(name string, data []byte) {
 		f.reason = err.Error()
 	case run == nil:
 		f.reason = "the run wrote no run directory"
+	case !run.Complete && run.Published:
+		f.reason = "run incomplete (cut short or an infra_error game): its finished games are published; resume it to play the rest"
+	case !run.Complete:
+		f.reason = "run incomplete (cut short or an infra_error game) and not published (see the worker log)"
 	case !run.Published:
-		f.reason = "run not published: cut short, an infra_error game or a failed push (see the worker log)"
+		f.reason = "run not published: the push failed (see the worker log)"
 	default:
 		w.archive(name)
 		return
@@ -95,8 +99,8 @@ func (w Worker) recover() {
 			slog.Info("running job left alone: no local run", "job", name)
 			continue // another worker's, or stopped before its run started
 		}
-		slog.Info("recovering job", "job", name, "run", run.Dir, "published", run.Published)
-		if run.Published {
+		slog.Info("recovering job", "job", name, "run", run.Dir, "complete", run.Complete, "published", run.Published)
+		if run.Complete && run.Published {
 			w.archive(name)
 			continue
 		}
