@@ -87,6 +87,9 @@ func start(cfg Config, dir, session string, resume bool, system string, tools []
 		// skills or commands of the machine it runs on.
 		"--tools", "", "--strict-mcp-config", "--mcp-config", string(mcp), "--allowedTools", "mcp__" + mcpServer,
 		"--setting-sources", "", "--disable-slash-commands",
+		// The CLI omits the thinking text by default; ask for its summary so
+		// the trace shows what the model weighed.
+		"--thinking-display", "summarized",
 	}
 	if cfg.Effort != "" {
 		args = append(args, "--effort", cfg.Effort)

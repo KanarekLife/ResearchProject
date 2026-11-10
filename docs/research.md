@@ -178,6 +178,41 @@ Planned grid: every set includes `mcbench`; the rules base is none,
 `rules_reference` or `rules_agent`; `strategy` is on or off. Six conditions, each
 answering one question, with several games per seed.
 
+## Iron Man vs Ultron: the clocks across scheme stages
+
+Iron Man vs Ultron was lost by every player, model or scripted, until the
+changes below. Sonnet (through Claude Code, with `play`) lost it two ways:
+
+- **To hit points, early.** In round 1 it changed to Iron Man, took Ultron's
+  attack undefended and answered it with a Drone rather than threat, as the old
+  `play` said: a hero's basic power is worth more than the HP its DEF saves.
+  Iron Man has low HP and a DEF equal to his ATK, Ultron's encounter deck has
+  +3 boosts and treacheries that make Ultron attack again, and single hits of
+  4 to 6 damage decided most games. The planning value of a +2 boost and one
+  attack understated them.
+- **To the final scheme stage.** Ultron's scheme has three stages, and the
+  last one forbids removing threat, so once it is revealed the game has a
+  fixed few rounds left. With a damage-or-threat trade judged on the current
+  stage only (where an advance "does not lose"), Sonnet chose threat more
+  often, reached the final stage early and ran out of rounds there.
+
+`play` and `strategy` now plan HP against a worst case (one more villain attack
+with a high boost, and +3 once such a boost has been seen), have the hero defend
+when HP is the shorter clock or its DEF is at least its ATK, apply the
+damage-or-threat trade in every decision, and count the scheme clock to the end
+of the final stage. With the first three of these, Sonnet won Ultron for the
+first time and lost to HP less often, but more often to the final stage, which
+led to the last change. Sonnet's Spider-Man vs Rhino play with the same
+version was as strong as with `strategy`; its losses there were single
+treachery-driven hits that its clock check had already flagged.
+
+These changes were written after reading the same Ultron seeds they were tried
+on, so their effect needs a check on seeds or scenarios they were not tuned on.
+
+The Claude Code runs now record a summary of the model's thinking, and `play`
+asks for the clock check in the reasoning of the first choice of each turn.
+Before that, whether the model did the check could not be seen in the trace.
+
 ## What the harness taught us
 
 - Models look things up a lot, and the lookups must not count against them. Only
