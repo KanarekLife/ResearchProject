@@ -40,6 +40,9 @@ func (m *Model) Play(ctx context.Context, s *session.Session) (player.Usage, err
 	var u player.Usage
 	g := player.GameFrom(ctx)
 	ctx = inference.WithGame(ctx, g.Run, g.Name)
+	if e, ok := m.Client.(inference.GameEnder); ok {
+		defer e.EndGame(ctx)
+	}
 	msgs, err := m.restore(s, player.ResumeFrom(ctx), &u)
 	if err != nil {
 		return u, fmt.Errorf("%w: resuming: %w", player.ErrInference, err)

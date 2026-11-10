@@ -28,10 +28,11 @@ const (
 
 // API protocols accepted by -api.
 const (
-	apiOpenAI    = "openai"
-	apiGoogle    = "google"
-	apiAnthropic = "anthropic"
-	apiResponses = "responses"
+	apiOpenAI     = "openai"
+	apiGoogle     = "google"
+	apiAnthropic  = "anthropic"
+	apiResponses  = "responses"
+	apiClaudeCode = "claude_code"
 )
 
 // defaultRecentEvents is how many log lines the systemone player sends.
@@ -71,6 +72,9 @@ const (
 	defaultJobLogDir       = "job-logs"
 	defaultMaxUsage        = 90
 	defaultPublish         = true
+	// claudeCodeStateDir, under the user cache directory, holds the working
+	// directory and session id of each game played through Claude Code.
+	claudeCodeStateDir = "mcbench/claude-code"
 )
 
 // Result sources accepted by -source.

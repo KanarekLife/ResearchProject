@@ -28,18 +28,27 @@ func ValidateHeaderValue(value string) error {
 
 type varsKey struct{}
 
+type gameVars struct{ run, game string }
+
 // WithGame returns a context that fills the placeholders with this run and game.
 func WithGame(ctx context.Context, run, game string) context.Context {
-	return context.WithValue(ctx, varsKey{}, strings.NewReplacer(PlaceholderRun, run, PlaceholderGame, game))
+	return context.WithValue(ctx, varsKey{}, gameVars{run, game})
+}
+
+// GameFrom is the run and game set by WithGame, empty outside a game.
+func GameFrom(ctx context.Context) (run, game string) {
+	v, _ := ctx.Value(varsKey{}).(gameVars)
+	return v.run, v.game
 }
 
 // ExpandHeaders returns headers with the placeholders filled from ctx; outside
 // a game they are left as written.
 func ExpandHeaders(ctx context.Context, headers map[string]string) map[string]string {
-	r, ok := ctx.Value(varsKey{}).(*strings.Replacer)
+	v, ok := ctx.Value(varsKey{}).(gameVars)
 	if !ok {
 		return headers
 	}
+	r := strings.NewReplacer(PlaceholderRun, v.run, PlaceholderGame, v.game)
 	out := make(map[string]string, len(headers))
 	for k, v := range headers {
 		out[k] = r.Replace(v)

@@ -13,6 +13,13 @@ type Client interface {
 	Complete(ctx context.Context, msgs []Message, tools []Tool) (Reply, error)
 }
 
+// GameEnder is a Client that keeps something running for each game (Claude
+// Code keeps a process); the player calls EndGame, with the game's context,
+// once the game is over.
+type GameEnder interface {
+	EndGame(ctx context.Context)
+}
+
 // Role is who sent a message.
 type Role string
 
