@@ -9,7 +9,7 @@ This strategy is not advice. It is a standing order for every decision in this g
 4. End the turn only when no ally, action, basic power or playable card is left unused. A card kept in hand needs a reason you can state: an event waiting for its moment, or a card you cannot pay for.
 
 ## Hard rules
-- Never defend with the hero unless the attack could defeat you or leave you too low to stay in hero form. Defend with an ally, or take the hit.
+- Never defend with the hero unless the attack could defeat you or leave you too low to stay in hero form, or your hit points will run out before the villain does. Otherwise defend with an ally, or take the hit.
 - Never end a turn in alter-ego when the villain's SCH, every minion's SCH and a high boost could complete the main scheme. Stay a hero.
 - Paying with cards from your hand is the normal cost of playing cards; it is not a reason to skip a play.
 
@@ -31,9 +31,11 @@ Games are won by pressure. Every round the villain survives brings another villa
 Before ending your turn, estimate what the coming villain phase will do:
 - **Threat:** per-round threat + acceleration icons + acceleration tokens. In alter-ego form, add the villain's SCH, each engaged minion's SCH and the villain's boost card. Leave a margin for encounter cards that add threat.
 - **Damage (hero form):** the villain's ATK plus attachment bonuses and its boost card, plus each engaged minion's ATK. Subtract what your defense will stop.
-- Treat the boost card as unknown and plan for a high one: most boost cards carry 0, 1 or 2 icons, so a high boost is 2 (rarely 3). Also allow for an encounter card that adds threat or makes an extra attack. Do not end a turn where that would make you lose.
+- Treat the boost card as unknown and plan for a high one: most boost cards carry 0, 1 or 2 icons, so a high boost is 2 (rarely 3); once a boost of 3 or more has been revealed in this game, plan for 3. Also allow for an encounter card that adds threat or makes the villain attack again: the worst case is the damage above plus the villain's ATK and another high boost. Plan your hit points against the worst case, not the average. Do not end a turn where that would make you lose.
 
-If the estimated threat would complete the main scheme, removing threat comes before anything else. If the estimated damage would defeat you, defending, healing or changing to alter-ego comes first.
+If the estimated threat would complete the main scheme, removing threat comes before anything else. If the worst-case damage would defeat you, defending, healing or changing to alter-ego comes first.
+
+Compare the two clocks with the villain's: the rounds you need to defeat the villain, against the rounds before the scheme completes and before your hit points run out. Whichever clock is shorter is the one to protect. Count the scheme to the end of its final stage: each earlier stage that completes only advances it, but brings the final stage closer, and a final stage whose threat cannot be removed gives you a fixed number of rounds once it is revealed.
 
 ## Look for a win first
 At the start of each turn, check whether the damage you can deal this turn (basic attack, allies, events, actions) is enough to defeat the villain's final stage. If it is, spend everything on that.
@@ -52,6 +54,7 @@ At the start of each turn, check whether the damage you can deal this turn (basi
 
 ## Threat management
 - Keep the main scheme well below its target. Threat can arrive in bursts from treacheries, side schemes and the villain's scheme.
+- Look up the later main scheme stages. Advancing an earlier stage does not lose the game, but it is not free: the new stage's effects start, and a stage that forbids removing threat leaves you only the rounds its target allows.
 - Side schemes with **acceleration** add threat every round and those with **hazard** draw extra encounter cards every round; remove them early. A **crisis** side scheme stops you from thwarting the main scheme, so it must be removed before the main scheme gets dangerous.
 - Prefer thwarting a scheme that you can clear completely: a side scheme left with 1 threat still has all of its effects.
 
@@ -73,6 +76,7 @@ At the start of each turn, check whether the damage you can deal this turn (basi
 - A defender stays exhausted through your whole next turn, because you ready only at the end of the player phase. Defending with your hero trades next turn's basic power for the damage DEF stops: do it when that damage matters more, for example when the attack could defeat you or leave you too low to stay in hero form.
 - Defend with an ally when the attack is large; the ally takes all of it, and the excess is lost unless the attack has overkill.
 - Take an attack undefended only when you have the hit points to spare and your defenders are worth more ready.
+- When your hit points would run out before you can defeat the villain, or your hero's DEF is at least its ATK, defend with the hero: the hit points it saves are worth at least the basic power it loses.
 
 ## Cards and resources
 - Every card is either a card to play or the payment for one. Decide which cards matter this turn and pay with the rest.
@@ -93,8 +97,9 @@ Keep cards you can play in the first rounds, especially allies, upgrades and sup
 - Ending the turn without checking the threat and damage that the villain phase will bring.
 - Playing passively: ending turns with ready allies, unused actions or cards you could have played, and letting the villain live for extra rounds.
 - Staying in alter-ego too long while threat piles up, or ending a turn in alter-ego when the villain's scheme with a high boost could complete the main scheme.
-- Defending with your hero against an attack you could afford to take, and so losing next turn's basic power.
+- Defending with your hero against an attack you could afford to take, and so losing next turn's basic power; or the opposite, taking hits undefended when hit points are the clock that runs out first.
 - Leaving a guard or patrol minion in play.
 - Overkilling a villain stage or a weak minion with a big attack.
 - Paying for a card with the card you needed next.
+- Where an effect lets you choose between damage (or a new enemy, which deals damage every round it stays) and threat, taking the one on the clock that is already shorter.
 - Forgetting that a confused or stunned hero still exhausts when attempting the blocked action.

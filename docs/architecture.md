@@ -252,7 +252,9 @@ from the other protocols, which is why they are labelled apart:
   short framing of its own (about 600 tokens);
 - Claude Code compacts the conversation near the context limit, which would
   end the append-only property; the client logs a warning if it happens;
-- the reasoning text is not returned, so traces have none;
+- the CLI returns no thinking text by default; `--thinking-display summarized`
+  makes it return a summary of the thinking, which traces record as the
+  reasoning (a summary, not the full thinking);
 - Claude Code caches the prompt itself (a 1-hour cache), and the usage it
   reports gives the cached tokens;
 - a request rejected by the subscription's usage limit ends Claude Code's
