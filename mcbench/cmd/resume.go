@@ -65,7 +65,7 @@ func (rs *resumeState) overlay(cfg config) config {
 // under another id.
 func (rs *resumeState) label() string {
 	s := rs.info.Settings
-	return modelLabel(runSettings{modelID: s.Model, effort: s.ReasoningEffort, budget: s.ReasoningBudget})
+	return modelLabel(runSettings{api: s.API, modelID: s.Model, effort: s.ReasoningEffort, budget: s.ReasoningBudget})
 }
 
 // check refuses a continuation that would no longer be the same benchmark run.

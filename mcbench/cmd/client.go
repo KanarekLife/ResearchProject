@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"mcbench/integrations/inference"
 	"mcbench/integrations/inference/anthropic"
+	"mcbench/integrations/inference/claudecode"
 	"mcbench/integrations/inference/google"
 	openaicompatible "mcbench/integrations/inference/openai_compatible"
 	openairesponses "mcbench/integrations/inference/openai_responses"
@@ -40,8 +42,16 @@ func newClient(o runSettings, apiKey string) (inference.Client, error) {
 			Temperature: o.temp, MaxTokens: o.maxTokens, Retries: o.retries, RateLimitWait: o.rateLimitWait, Headers: o.headers,
 			ReasoningEffort: o.effort, ReasoningBudget: o.budget, Stream: o.stream,
 		}), nil
+	case apiClaudeCode:
+		dir, err := os.UserCacheDir()
+		if err != nil {
+			return nil, err
+		}
+		return claudecode.New(claudecode.Config{
+			Model: o.modelID, Effort: o.effort, StateDir: filepath.Join(dir, claudeCodeStateDir), RateLimitWait: o.rateLimitWait,
+		}), nil
 	}
-	return nil, fmt.Errorf("unknown -api %q: use %s, %s, %s or %s", o.api, apiOpenAI, apiResponses, apiGoogle, apiAnthropic)
+	return nil, fmt.Errorf("unknown -api %q: use %s, %s, %s, %s or %s", o.api, apiOpenAI, apiResponses, apiGoogle, apiAnthropic, apiClaudeCode)
 }
 
 // systemOneClient builds the System One client. The server is -server or the
@@ -61,9 +71,9 @@ func systemOneClient(o runSettings, apiKey string) *systemone.Client {
 // sentReasoning is the reasoning setting the -api client actually sends, so
 // that the player label (modelLabel) names only what the model was given:
 // chat completions sends both, Gemini and Messages send only the level when
-// both are set, and Responses takes no budget.
+// both are set, and Responses and Claude Code take no budget.
 func sentReasoning(api, effort string, budget int) (string, int) {
-	if api == apiResponses || (api != apiOpenAI && effort != "") {
+	if api == apiResponses || api == apiClaudeCode || (api != apiOpenAI && effort != "") {
 		return effort, 0
 	}
 	return effort, budget

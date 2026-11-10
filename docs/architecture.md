@@ -20,6 +20,7 @@ mcbench/integrations/systemone/   System One client (a classifier, not a chat mo
 mcbench/integrations/inference/
   inference.go            the Client interface and Message/Tool/Reply types
   openai_compatible/      the HTTP implementation
+  claudecode/             Claude through the claude CLI and its login (a subscription)
 mcbench/benchmark/  the harness: play, score, record, report, analyze
 mcbench/cmd/        the CLI and its config.yaml
 mcbench/jobs/       the job schema, the jobs branch layout and the worker (`cmd jobs`)
@@ -231,6 +232,35 @@ caller builds; it reads no files and no environment variables. It:
   without a byte while a retry answers in seconds. A working stream sends
   tokens or keep-alives well within that, so a slow reply that is still
   streaming is kept;
+
+**Claude Code (`-api claude_code`).** `integrations/inference/claudecode` plays
+Claude through the `claude` CLI, billed to its claude.ai login rather than an
+API key (`ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are removed from its
+environment). Each game is one `claude -p` process with stream-json input and
+output, the system prompt as `--system-prompt-file`, no built-in tools, skills,
+settings or other MCP servers, and `--model` and `--effort`. Claude Code runs
+the loop: the client serves the five game tools to it from a local MCP server
+and returns each call to `player/model` as a tool call, so the model player
+still executes, counts, retries and traces every call exactly as above.
+Results get the label `claude-code:<model>@effort-<level>`. These runs differ
+from the other protocols, which is why they are labelled apart:
+
+- the model sees the tools as `mcp__mcbench__<tool>` and Claude Code adds a
+  short framing of its own (about 600 tokens);
+- Claude Code compacts the conversation near the context limit, which would
+  end the append-only property; the client logs a warning if it happens;
+- the reasoning text is not returned, so traces have none;
+- Claude Code caches the prompt itself (a 1-hour cache), and the usage it
+  reports gives the cached tokens;
+- a request rejected by the subscription's usage limit ends Claude Code's
+  turn, so it cannot be sent again unseen as other protocols do: the game
+  waits for the reset time the CLI reports (plus a minute, at most
+  `-rate-limit-wait` in all, then `infra_error`) and opens a new turn with one
+  untraced user message saying the game was resumed. The wait is logged;
+- `run -resume` continues the CLI's own session (its id is kept under the
+  user cache directory, `mcbench/claude-code/<run>/<game>/`), opened with the
+  same untraced message;
+- the jobs worker does not run it.
 
 `config.yaml` (loaded by `cmd`, flags override) holds the endpoint, sampling,
 run size, the scenarios `run` and `play` use (`run.scenarios`, the default of

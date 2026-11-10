@@ -34,9 +34,13 @@ func buildPlayer(o runSettings, client inference.Client, sysone *systemone.Clien
 }
 
 // modelLabel names the model in results. The reasoning setting is part of the
-// name so runs at different settings are reported as separate players.
+// name so runs at different settings are reported as separate players, and so
+// is Claude Code, whose harness differs from the other protocols'.
 func modelLabel(o runSettings) string {
 	label := o.modelID
+	if o.api == apiClaudeCode {
+		label = labelClaudeCode + label
+	}
 	if o.effort != "" {
 		label += labelEffort + o.effort
 	}
@@ -54,7 +58,8 @@ func sysoneLabel(o runSettings) string {
 
 // Suffixes modelLabel adds for the reasoning setting.
 const (
-	labelEffort = "@effort-"
-	labelBudget = "@budget-"
-	labelEvents = "@events-"
+	labelEffort     = "@effort-"
+	labelBudget     = "@budget-"
+	labelEvents     = "@events-"
+	labelClaudeCode = "claude-code:"
 )
