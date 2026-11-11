@@ -1,0 +1,62 @@
+{
+  "runner": "Stanislaw Nieradko",
+  "started": "2026-11-11T08:25:12.658490615Z",
+  "finished": "2026-11-11T09:05:46.69292379Z",
+  "commit": "cc24b226fc06f6e03231707dc38d11b11f6372b3",
+  "dirty": false,
+  "machine": {
+    "hostname": "workstation",
+    "os": "Fedora Linux 44.20261111.0 (Kinoite)",
+    "kernel": "7.3.3-200.fc44.x86_64",
+    "arch": "amd64",
+    "cpu": "AMD Ryzen 7 7700X 8-Core Processor",
+    "cores": 16,
+    "memory_mb": 31150,
+    "gpus": [
+      "Advanced Micro Devices, Inc. [AMD/ATI] Navi 31 [Radeon RX 7900 XT/7900 XTX/7900 GRE/7900M] (rev c8)",
+      "Advanced Micro Devices, Inc. [AMD/ATI] Raphael [Radeon 610M] (rev c3)"
+    ],
+    "go": "go1.27.1"
+  },
+  "settings": {
+    "player": "model",
+    "model": "claude-haiku-5-5",
+    "api": "claude_code",
+    "server": "https://opencode.ai/zen/go/v1",
+    "temperature": -1,
+    "max_tokens": 32768,
+    "retries": 3,
+    "rate_limit_wait": 21600000000000,
+    "reasoning_effort": "medium",
+    "max_failures": 5,
+    "instructions": [
+      "rules_agent",
+      "mcbench",
+      "play"
+    ],
+    "seeds": 10,
+    "samples": 1,
+    "parallel": 10,
+    "scoring": {
+      "hero_hp": 0.1,
+      "speed": 0.15,
+      "threat": 0.1,
+      "villain_damage": 0.25,
+      "win": 0.4
+    }
+  },
+  "scenarios": [
+    "captain-marvel-vs-klaw",
+    "captain-marvel-vs-rhino",
+    "captain-marvel-vs-ultron",
+    "iron-man-vs-klaw",
+    "iron-man-vs-rhino",
+    "iron-man-vs-ultron",
+    "spider-man-vs-klaw",
+    "spider-man-vs-ultron"
+  ],
+  "planned_games": 80,
+  "statuses": {
+    "lost": 80
+  }
+}
